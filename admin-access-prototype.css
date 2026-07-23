@@ -1,0 +1,9 @@
+.admin-login-overlay,.admin-panel-overlay{position:fixed;inset:0;z-index:12000;display:grid;place-items:center;padding:20px;background:rgba(5,4,3,.9);font-family:system-ui,sans-serif}
+.admin-login-card,.admin-panel{width:min(520px,100%);max-height:90vh;overflow:auto;padding:24px;border:1px solid #d4af37;border-radius:14px;background:#18110c;color:#fff3d1}
+.admin-panel{width:min(900px,100%)}.admin-login-card h2,.admin-panel h2{margin-top:0;color:#f1d16b}
+.admin-login-card input{display:block;width:100%;margin:10px 0;padding:12px;border:1px solid #80652d;border-radius:8px;background:#0d0907;color:#fff}
+.admin-login-card button,.admin-panel button{margin:4px;padding:9px 13px;border:1px solid #ae8731;border-radius:8px;background:#30220f;color:#fff0bd;cursor:pointer}
+.admin-panel button.danger{border-color:#dc5555;color:#ffcaca}.admin-panel-head{display:flex;gap:10px;justify-content:space-between;align-items:center}
+.admin-user-row{display:grid;grid-template-columns:minmax(180px,1fr) minmax(220px,1.4fr) auto;gap:12px;align-items:center;padding:14px 0;border-top:1px solid #4a3820}
+.admin-user-row small{display:block;color:#cbbb9a;word-break:break-all}.admin-state{font-weight:800}.admin-state.approved{color:#81d99b}.admin-state.pending{color:#f3ca64}
+@media(max-width:700px){.admin-user-row{grid-template-columns:1fr}.admin-panel-head{align-items:flex-start;flex-direction:column}}

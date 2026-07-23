@@ -1,0 +1,45 @@
+.access-gate {
+  position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center;
+  padding: 24px; background: radial-gradient(circle at top, #38220f, #0b0806 64%);
+  color: #fff8e7; font-family: system-ui, sans-serif;
+}
+.access-gate[hidden] { display: none; }
+.access-panel {
+  width: min(460px, 100%); padding: 34px; border: 1px solid #d4af37;
+  border-radius: 16px; background: rgba(22, 14, 9, .96); text-align: center;
+  box-shadow: 0 24px 80px rgba(0,0,0,.6);
+}
+.access-panel h2 { margin: 0 0 10px; color: #f4d36b; font-size: 1.45rem; }
+.access-panel p { color: #d8c9b2; line-height: 1.65; }
+.access-panel .uid { padding: 10px; border-radius: 8px; background: #0d0907; word-break: break-all; font-size: .75rem; }
+.access-action {
+  border: 1px solid #e3c451; border-radius: 9px; padding: 11px 18px;
+  background: linear-gradient(#f2d86f, #b98b20); color: #241505; font-weight: 800; cursor: pointer;
+}
+.access-action.secondary { background: transparent; color: #eadfae; }
+.list-workspace {
+  position: sticky; top: 8px; z-index: 100; display: flex; gap: 8px; align-items: center;
+  flex-wrap: wrap; margin: 0 0 18px; padding: 10px; border: 1px solid rgba(212,175,55,.55);
+  border-radius: 12px; background: rgba(15,10,7,.9); backdrop-filter: blur(12px);
+}
+.list-workspace select, .list-workspace button {
+  min-height: 38px; border: 1px solid #8e6c2d; border-radius: 8px; padding: 7px 10px;
+  background: #25170e; color: #fff2c9; font-weight: 700;
+}
+.list-workspace select { min-width: 180px; flex: 1; }
+.list-workspace button { cursor: pointer; }
+.list-workspace .user-chip { margin-left: auto; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #e9dcae; font-size: .78rem; }
+.list-card-actions { display: flex; gap: 5px; margin-top: 6px; }
+.list-card-actions button {
+  flex: 1; border: 1px solid rgba(212,175,55,.5); border-radius: 5px; padding: 5px;
+  background: rgba(20,12,8,.76); color: #f7e6b5; font-size: .65rem; cursor: pointer;
+}
+body.theme-modern .list-workspace { border-color: #7c3aed; background: rgba(17,15,35,.92); }
+body.theme-modern .list-workspace select, body.theme-modern .list-workspace button { border-color: #7c3aed; background: #211b42; }
+body.theme-japanese .list-workspace { border-color: #4f46e5; background: rgba(247,247,255,.94); }
+body.theme-japanese .list-workspace select, body.theme-japanese .list-workspace button { color: #27215b; background: #fff; border-color: #4f46e5; }
+@media (max-width: 700px) {
+  .list-workspace { position: static; }
+  .list-workspace select { min-width: 100%; }
+  .list-workspace .user-chip { margin-left: 0; max-width: 130px; }
+}

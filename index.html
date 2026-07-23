@@ -1,0 +1,3590 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="description" content="鉄拳8 メンバーネームカード＆手配書リスト">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  <meta name="theme-color" content="#1b120c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="T8 Cards">
+  <title>TEKKEN 8 Member Cards</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Rye&family=Cinzel:wght@700;900&family=Shippori+Mincho:wght@600;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap"
+    rel="stylesheet">
+
+  <!-- Firebase SDK (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <link rel="stylesheet" href="user-lists-prototype.css">
+  <link rel="stylesheet" href="admin-access-prototype.css">
+
+  <!-- Cropper.js (画像トリミング・クロップ用) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+
+  <style>
+    /* ========== Reset & Base & Dark Mode Complete Block (OSダークモード勝手変更完全阻止) ========== */
+    :root, html, body {
+      color-scheme: light !important;
+      supported-color-schemes: light !important;
+      forced-color-adjust: none !important;
+      -webkit-text-size-adjust: 100% !important;
+    }
+
+    /* OSのダークモードメディアクエリによる自動暗色化を完全相殺 */
+    @media (prefers-color-scheme: dark) {
+      :root, html, body {
+        color-scheme: light !important;
+        forced-color-adjust: none !important;
+      }
+    }
+
+    *,
+    *::before,
+    *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      forced-color-adjust: none !important;
+    }
+
+    /* 入力フォームのOSダークモード化け・文字色消滅を100%防ぐ強制ルール */
+    input, select, textarea, button, form {
+      color-scheme: light !important;
+      forced-color-adjust: none !important;
+    }
+
+    /* ========== THEME 1: WANTED (酒場の賞金首) ========== */
+    body.theme-wanted {
+      --wood-dark: #1b120c;
+      --wood-mid: #2d1e14;
+      --wood-light: #3d2a1c;
+      --wood-border: #4a3424;
+      --parchment-bg: #edd9b4;
+      --parchment-dark: #dfc498;
+      --parchment-border: #8c6a46;
+      --text-ink: #2b1a0e;
+      --text-red: #8b0000;
+      --gold-accent: #d4af37;
+      --gold-hover: #f3cf55;
+      --x-color: #000000;
+      --ewgf-color: #1e3a8a;
+      --wavu-color: #7c2d12;
+
+      font-family: 'Shippori Mincho', 'Cinzel', serif;
+      background-color: #1b120c !important;
+      background: var(--wood-dark);
+      background-image:
+        radial-gradient(circle at 50% 20%, rgba(212, 175, 55, 0.08) 0%, transparent 60%),
+        repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15) 2px, transparent 2px, transparent 4px),
+        linear-gradient(90deg, #140d08 0%, #28190e 25%, #1c1109 50%, #2a1b10 75%, #120c07 100%);
+      color: var(--text-ink);
+      min-height: 100vh;
+      padding: 40px 20px 80px;
+    }
+
+    /* ========== THEME 2: MODERN (ネオンリッチグラデーション) ========== */
+    body.theme-modern {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #12121a;
+      --bg-card: rgba(255, 255, 255, 0.05);
+      --border-card: rgba(255, 255, 255, 0.1);
+      --text-primary: #e8e8ed;
+      --text-secondary: #8a8a9a;
+      --accent-1: #818cf8;
+      --accent-2: #c084fc;
+      --gold-accent: #818cf8;
+
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #0a0a0f !important;
+      background: var(--bg-primary);
+      background-image:
+        radial-gradient(ellipse at top left, rgba(129, 140, 248, 0.12) 0%, transparent 50%),
+        radial-gradient(ellipse at bottom right, rgba(192, 132, 252, 0.1) 0%, transparent 50%);
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding: 40px 20px 80px;
+    }
+
+    /* ========== THEME 3: JAPANESE (爽やか涼感和風・藤紫雲海) ========== */
+    body.theme-japanese {
+      --wafu-sky: #dbeafe;
+      --wafu-purple: #4338ca;
+      --wafu-purple-dark: #312e81;
+      --wafu-accent: #6366f1;
+      --gold-accent: #4f46e5;
+
+      font-family: 'Shippori Mincho', serif;
+      background-color: #e0e7ff !important;
+      background: #e0e7ff;
+      background-image:
+        radial-gradient(circle at 50% 10%, rgba(224, 242, 254, 0.9) 0%, transparent 60%),
+        radial-gradient(circle at 80% 80%, rgba(199, 210, 254, 0.6) 0%, transparent 50%),
+        linear-gradient(135deg, #e0f2fe 0%, #dbeafe 50%, #e0e7ff 100%);
+      color: #1e1b4b;
+      min-height: 100vh;
+      padding: 40px 20px 80px;
+    }
+
+    /* Modern Theme Buttons Override */
+    body.theme-modern .link-btn.x-btn {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+    }
+
+    body.theme-modern .link-btn.x-btn:hover {
+      background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+    }
+
+    body.theme-modern .link-btn.ewgf-btn {
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      border: 1px solid rgba(147, 197, 253, 0.35);
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+    }
+
+    body.theme-modern .link-btn.ewgf-btn:hover {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+    }
+
+    body.theme-modern .link-btn.wavu-btn {
+      background: linear-gradient(135deg, #e11d48 0%, #9f1239 100%);
+      border: 1px solid rgba(253, 164, 175, 0.35);
+      box-shadow: 0 4px 14px rgba(225, 29, 72, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+    }
+
+    body.theme-modern .link-btn.wavu-btn:hover {
+      background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+      box-shadow: 0 6px 20px rgba(244, 63, 94, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+    }
+
+    /* Japanese (爽やか涼感) Theme Buttons Override */
+    body.theme-japanese .link-btn.x-btn {
+      background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+      color: #ffffff;
+    }
+
+    body.theme-japanese .link-btn.ewgf-btn {
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      border: 1px solid rgba(186, 230, 253, 0.4);
+      box-shadow: 0 4px 10px rgba(2, 132, 199, 0.35);
+      color: #ffffff;
+    }
+
+    body.theme-japanese .link-btn.wavu-btn {
+      background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+      border: 1px solid rgba(221, 214, 254, 0.4);
+      box-shadow: 0 4px 10px rgba(124, 58, 237, 0.35);
+      color: #ffffff;
+    }
+
+    /* Common Layout */
+    .app-container {
+      max-width: 1080px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    body.theme-wanted .board-container {
+      background: var(--wood-mid);
+      border: 12px solid var(--wood-border);
+      border-radius: 8px;
+      box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.8), 0 20px 50px rgba(0, 0, 0, 0.9);
+      padding: 40px 30px;
+      position: relative;
+    }
+
+    body.theme-modern .board-container {
+      background: transparent;
+      padding: 0;
+    }
+
+    body.theme-japanese .board-container {
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(16px);
+      border: 2px solid rgba(99, 102, 241, 0.25);
+      border-radius: 16px;
+      box-shadow: 0 20px 50px rgba(67, 56, 202, 0.12);
+      padding: 40px 30px;
+      position: relative;
+    }
+
+    body.theme-wanted .board-container::before,
+    body.theme-wanted .board-container::after {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      background: radial-gradient(circle, #8a8a8a 20%, #333 80%);
+      border-radius: 50%;
+      box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.4), 0 2px 4px rgba(0, 0, 0, 0.8);
+    }
+
+    body.theme-wanted .board-container::before {
+      top: 10px;
+      left: 10px;
+    }
+
+    body.theme-wanted .board-container::after {
+      top: 10px;
+      right: 10px;
+    }
+
+    .saloon-header {
+      text-align: center;
+      margin-bottom: 40px;
+      position: relative;
+    }
+
+    .top-controls {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      margin-bottom: 20px;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid var(--gold-accent);
+      border-radius: 20px;
+      color: var(--gold-accent);
+      font-size: 0.8rem;
+      letter-spacing: 2px;
+      flex-shrink: 0;
+    }
+
+    body.theme-japanese .status-badge {
+      background: rgba(255, 255, 255, 0.8);
+      border-color: #6366f1;
+      color: #312e81;
+    }
+
+    .status-badge .dot {
+      width: 8px;
+      height: 8px;
+      background: #22c55e;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #22c55e;
+    }
+
+    .status-badge .dot.offline {
+      background: #ef4444;
+      box-shadow: 0 0 8px #ef4444;
+    }
+
+    /* 画面右上固定 UI Theme Select Box */
+    .theme-select-box {
+      position: fixed;
+      top: 16px;
+      right: 20px;
+      z-index: 90;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      background: rgba(0, 0, 0, 0.75);
+      border: 1px solid var(--gold-accent);
+      border-radius: 20px;
+      color: #fff;
+      font-size: 0.8rem;
+      font-weight: 600;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+      width: 175px;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    body.theme-japanese .theme-select-box {
+      background: rgba(255, 255, 255, 0.9);
+      border-color: #6366f1;
+      color: #312e81;
+      box-shadow: 0 4px 16px rgba(99, 102, 241, 0.25);
+    }
+
+    .theme-select-dropdown {
+      background: transparent !important;
+      border: none !important;
+      color: inherit !important;
+      -webkit-text-fill-color: inherit !important;
+      font-family: inherit !important;
+      font-size: 0.8rem !important;
+      font-weight: 700 !important;
+      outline: none !important;
+      cursor: pointer !important;
+      width: 100% !important;
+    }
+
+    body.theme-japanese .theme-select-dropdown {
+      color: #312e81 !important;
+      -webkit-text-fill-color: #312e81 !important;
+    }
+
+    .theme-select-dropdown option {
+      background: #1e1713 !important;
+      color: #edd9b4 !important;
+      -webkit-text-fill-color: #edd9b4 !important;
+    }
+
+    body.theme-modern .theme-select-dropdown option {
+      background: #0a0a0f !important;
+      color: #fff !important;
+      -webkit-text-fill-color: #fff !important;
+    }
+
+    body.theme-japanese .theme-select-dropdown option {
+      background: #ffffff !important;
+      color: #312e81 !important;
+      -webkit-text-fill-color: #312e81 !important;
+    }
+
+    .saloon-title-wrap {
+      border-radius: 6px;
+      padding: 16px 24px;
+      display: inline-block;
+      max-width: 90%;
+      position: relative;
+    }
+
+    body.theme-wanted .saloon-title-wrap {
+      background: linear-gradient(180deg, #4a150b 0%, #2b0b05 100%);
+      border: 3px double var(--gold-accent);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
+    }
+
+    body.theme-modern .saloon-title-wrap {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(12px);
+    }
+
+    body.theme-japanese .saloon-title-wrap {
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      box-shadow: 0 8px 24px rgba(67, 56, 202, 0.15);
+      border-radius: 12px;
+    }
+
+    .saloon-title {
+      font-size: 2.6rem;
+      letter-spacing: 3px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: opacity 0.2s;
+    }
+
+    body.theme-wanted .saloon-title {
+      font-family: 'Rye', cursive;
+      color: var(--gold-accent);
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.9);
+    }
+
+    body.theme-modern .saloon-title {
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      background: linear-gradient(135deg, #fff 0%, #a78bfa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    body.theme-japanese .saloon-title {
+      font-family: 'Shippori Mincho', serif;
+      font-weight: 800;
+      background: linear-gradient(135deg, #312e81 0%, #4338ca 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .title-input {
+      font-size: 2.2rem;
+      background: #140c07;
+      border: 2px solid var(--gold-accent);
+      border-radius: 4px;
+      padding: 4px 16px;
+      text-align: center;
+      outline: none;
+      width: 100%;
+      max-width: 480px;
+      color: #fff;
+    }
+
+    .saloon-subtitle {
+      font-size: 1rem;
+      margin-top: 12px;
+      letter-spacing: 1px;
+    }
+
+    body.theme-wanted .saloon-subtitle {
+      color: #d1b894;
+    }
+
+    body.theme-modern .saloon-subtitle {
+      color: var(--text-secondary);
+    }
+
+    body.theme-japanese .saloon-subtitle {
+      color: #4338ca;
+      font-weight: 600;
+    }
+
+    .btn-add-bounty {
+      margin-top: 24px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 28px;
+      color: #fff;
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: 1px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      transition: all 0.2s ease;
+    }
+
+    body.theme-wanted .btn-add-bounty {
+      background: linear-gradient(180deg, #8b0000 0%, #5a0000 100%);
+      border: 2px solid var(--gold-accent);
+      font-family: 'Cinzel', serif;
+    }
+
+    body.theme-modern .btn-add-bounty {
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      border: none;
+      border-radius: 8px;
+      font-family: 'Inter', sans-serif;
+    }
+
+    body.theme-japanese .btn-add-bounty {
+      background: linear-gradient(135deg, #4338ca 0%, #312e81 100%);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      color: #ffffff;
+      border-radius: 12px;
+      font-family: 'Shippori Mincho', serif;
+      box-shadow: 0 6px 16px rgba(67, 56, 202, 0.35);
+    }
+
+    /* Grid */
+    .poster-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 28px;
+      padding: 10px;
+    }
+
+    .poster-card {
+      position: relative;
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Theme 1: Wanted Card */
+    body.theme-wanted .poster-card {
+      background: var(--parchment-bg);
+      background-image:
+        radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.2) 0%, transparent 80%),
+        linear-gradient(135deg, rgba(140, 106, 70, 0.15) 0%, transparent 100%);
+      border: 2px solid var(--parchment-border);
+      border-radius: 2px;
+      padding: 24px 20px 16px;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.7);
+      transform: rotate(calc(var(--rand-deg, 0) * 1deg));
+    }
+
+    body.theme-wanted .poster-card:hover {
+      transform: scale(1.03) rotate(0deg);
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.85);
+      z-index: 10;
+    }
+
+    /* Theme 2: Modern Card */
+    body.theme-modern .poster-card {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 20px 20px 16px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    body.theme-modern .poster-card:hover {
+      background: rgba(255, 255, 255, 0.07);
+      border-color: rgba(129, 140, 248, 0.4);
+      transform: translateY(-4px);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+    }
+
+    /* Theme 3: Japanese Card (爽やか涼感・藤紫ヘキサゴン手配札) */
+    body.theme-japanese .poster-card {
+      background: linear-gradient(180deg, #4338ca 0%, #312e81 100%);
+      border: 1.5px solid rgba(199, 210, 254, 0.5);
+      border-radius: 16px 16px 28px 28px;
+      padding: 24px 20px 16px;
+      box-shadow: 0 12px 32px rgba(49, 46, 129, 0.35);
+      color: #ffffff;
+    }
+
+    body.theme-japanese .poster-card:hover {
+      transform: translateY(-4px);
+      border-color: #ffffff;
+      box-shadow: 0 18px 40px rgba(67, 56, 202, 0.5);
+      z-index: 10;
+    }
+
+    .poster-pin {
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 14px;
+      height: 14px;
+      background: radial-gradient(circle at 35% 35%, #e63946, #780000);
+      border-radius: 50%;
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.6);
+      z-index: 5;
+    }
+
+    body.theme-modern .poster-pin {
+      display: none;
+    }
+
+    body.theme-japanese .poster-pin {
+      top: 8px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    body.theme-japanese .poster-pin::after {
+      content: '✦';
+      color: #fff;
+      font-size: 0.75rem;
+    }
+
+    .poster-header-text {
+      text-align: center;
+      font-size: 2.2rem;
+      line-height: 1;
+      margin-bottom: 2px;
+    }
+
+    body.theme-wanted .poster-header-text {
+      font-family: 'Rye', cursive;
+      color: var(--text-red);
+      letter-spacing: 4px;
+    }
+
+    body.theme-japanese .poster-header-text {
+      font-family: 'Shippori Mincho', serif;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: 6px;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    body.theme-modern .poster-header-text {
+      display: none;
+    }
+
+    .poster-sub-header {
+      text-align: center;
+      font-size: 0.75rem;
+      font-weight: 900;
+      padding: 2px 0;
+      margin-bottom: 14px;
+    }
+
+    body.theme-wanted .poster-sub-header {
+      font-family: 'Cinzel', serif;
+      color: var(--text-ink);
+      letter-spacing: 3px;
+      border-top: 2px solid var(--text-ink);
+      border-bottom: 2px solid var(--text-ink);
+    }
+
+    body.theme-japanese .poster-sub-header {
+      font-family: 'Shippori Mincho', serif;
+      color: #c7d2fe;
+      letter-spacing: 4px;
+      border-top: 1px solid rgba(255, 255, 255, 0.3);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    body.theme-modern .poster-sub-header {
+      display: none;
+    }
+
+    .avatar-frame {
+      width: 100%;
+      height: 160px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+      position: relative;
+      overflow: hidden;
+      background: #111;
+    }
+
+    body.theme-wanted .avatar-frame {
+      border: 3px double var(--text-ink);
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+    }
+
+    body.theme-japanese .avatar-frame {
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 12px;
+      box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.5);
+    }
+
+    body.theme-modern .avatar-frame {
+      border-radius: 12px;
+      height: 150px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .avatar-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    body.theme-wanted .avatar-frame img {
+      filter: sepia(0.15) contrast(1.05);
+    }
+
+    .avatar-initials {
+      font-size: 3.5rem;
+      font-weight: 900;
+      color: #fff;
+      text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.7);
+    }
+
+    .poster-name {
+      text-align: center;
+      font-size: 1.4rem;
+      font-weight: 800;
+      margin-bottom: 4px;
+      line-height: 1.2;
+    }
+
+    body.theme-wanted .poster-name {
+      font-family: 'Shippori Mincho', serif;
+      color: var(--text-ink);
+    }
+
+    body.theme-japanese .poster-name {
+      font-family: 'Shippori Mincho', serif;
+      color: #ffffff;
+      font-weight: 800;
+    }
+
+    body.theme-modern .poster-name {
+      font-family: 'Inter', sans-serif;
+      color: #fff;
+    }
+
+    .poster-nickname {
+      text-align: center;
+      font-size: 0.85rem;
+      margin-bottom: 12px;
+      opacity: 0.8;
+    }
+
+    /* ===== Prototype Stats & Radar Chart Styles ===== */
+    .card-stats-container {
+      margin: 8px 0 10px;
+      padding: 10px 8px;
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.05);
+      border: 1px dashed rgba(43, 26, 14, 0.3);
+      text-align: center;
+      position: relative;
+    }
+
+    body.theme-modern .card-stats-container {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    body.theme-japanese .card-stats-container {
+      background: rgba(248, 250, 255, 0.92);
+      border: 1px solid rgba(129, 140, 248, 0.48);
+      color: #1e1b4b;
+    }
+
+    .last-seen-badge {
+      display: grid;
+      width: 100%;
+      box-sizing: border-box;
+      grid-template-columns: auto auto auto;
+      grid-template-areas:
+        "icon label time"
+        "icon exact exact";
+      align-items: center;
+      justify-content: center;
+      column-gap: 5px;
+      row-gap: 2px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 12px;
+      margin-bottom: 6px;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+    }
+
+    .last-seen-badge-wrapper {
+      width: 100%;
+    }
+
+    .last-seen-label {
+      grid-area: label;
+      opacity: 0.78;
+      font-size: 0.65rem;
+      font-weight: 600;
+    }
+
+    .last-seen-icon {
+      grid-area: icon;
+      font-size: 0.9rem;
+      line-height: 1;
+      transform: translateX(-3px);
+    }
+
+    .last-seen-time {
+      grid-area: time;
+      font-weight: 800;
+    }
+
+    .last-seen-exact {
+      grid-area: exact;
+      opacity: 0.8;
+      font-size: 0.61rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .last-seen-badge.active {
+      background: rgba(220, 38, 38, 0.15);
+      color: #991b1b;
+      border: 1px solid #ef4444;
+    }
+
+    .last-seen-badge.recent {
+      background: rgba(217, 119, 6, 0.15);
+      color: #92400e;
+      border: 1px solid #f59e0b;
+    }
+
+    .last-seen-badge.inactive {
+      background: rgba(75, 85, 99, 0.15);
+      color: #374151;
+      border: 1px solid #9ca3af;
+    }
+
+    body.theme-modern .last-seen-badge.active {
+      color: #f87171;
+      border-color: rgba(239, 68, 68, 0.5);
+    }
+
+    body.theme-modern .last-seen-badge.recent {
+      color: #fbbf24;
+      border-color: rgba(245, 158, 11, 0.5);
+    }
+
+    body.theme-modern .last-seen-badge.inactive {
+      color: #9ca3af;
+      border-color: rgba(156, 163, 175, 0.5);
+    }
+
+    body.theme-japanese .last-seen-badge.active {
+      color: #991b1b;
+    }
+
+    body.theme-japanese .last-seen-badge.recent {
+      color: #92400e;
+    }
+
+    body.theme-japanese .last-seen-badge.inactive {
+      color: #374151;
+    }
+
+    .radar-canvas-wrapper {
+      position: relative;
+      width: 100%;
+      height: 140px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 4px 0;
+    }
+
+    .radar-canvas {
+      width: 170px;
+      height: 135px;
+    }
+
+    .stats-info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      font-size: 0.7rem;
+      margin-top: 6px;
+      padding-top: 4px;
+      border-top: 1px dotted rgba(0, 0, 0, 0.15);
+      font-weight: 600;
+    }
+
+    body.theme-modern .stats-info-grid {
+      border-top-color: rgba(255, 255, 255, 0.1);
+      color: #cbd5e1;
+    }
+
+    body.theme-japanese .stats-info-grid {
+      border-top-color: rgba(99, 102, 241, 0.2);
+      color: #312e81;
+    }
+
+    .stats-info-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 1px 4px;
+    }
+
+    .stats-info-label {
+      opacity: 0.75;
+    }
+
+    .stats-info-val {
+      font-weight: 700;
+    }
+
+    .val-rating {
+      color: var(--text-red);
+      font-weight: 700;
+    }
+
+    body.theme-modern .val-rating {
+      color: #f43f5e;
+    }
+
+    body.theme-japanese .val-rating {
+      color: #4338ca;
+    }
+
+    .card-refresh-btn {
+      background: transparent;
+      border: 1px dashed var(--gold-accent);
+      color: var(--text-ink);
+      padding: 3px 8px;
+      font-size: 0.7rem;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 6px;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    body.theme-modern .card-refresh-btn {
+      color: #e2e8f0;
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    body.theme-japanese .card-refresh-btn {
+      color: #312e81;
+      border-color: #818cf8;
+    }
+
+    .card-refresh-btn:hover {
+      background: rgba(212, 175, 55, 0.2);
+    }
+
+    /* ===== Stats layout preview: Recent main を主役にしたコンパクト表示 ===== */
+    .card-stats-container {
+      padding: 11px !important;
+      text-align: left;
+      border-style: solid;
+    }
+
+    .stats-preview-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      margin: 4px 0 10px;
+    }
+
+    .stats-preview-eyebrow {
+      margin: 0 0 3px;
+      color: #fff0c9;
+      font-size: 0.61rem;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+    }
+
+    .stats-preview-main {
+      font-size: 1.02rem;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .stats-preview-main .stats-preview-games {
+      margin-left: 4px;
+      opacity: 0.72;
+      font-size: 0.67rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .stats-preview-badge {
+      flex: 0 0 auto;
+      padding: 4px 7px;
+      border: 1px solid rgba(212, 175, 55, 0.5);
+      border-radius: 999px;
+      color: var(--gold-accent);
+      font-size: 0.56rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .stats-preview-metrics {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.82fr) minmax(0, 1fr);
+      overflow: hidden;
+      border: 1px solid rgba(212, 175, 55, 0.28);
+      border-radius: 5px;
+    }
+
+    /* Wantedでは羊皮紙の上に金文字を置かず、濃い木目パネルで十分なコントラストを確保する。 */
+    body.theme-wanted .stats-preview-metrics {
+      background: #2a180d;
+      border-color: #7e5a2f;
+      box-shadow: inset 0 1px 0 rgba(255, 236, 190, 0.08);
+    }
+
+    body.theme-wanted .stats-preview-metric + .stats-preview-metric { border-left-color: #5f4227; }
+    body.theme-wanted .stats-preview-label { color: #f0cf80; }
+    body.theme-wanted .stats-preview-value { color: #fff5df; text-shadow: 0 1px 1px rgba(0, 0, 0, 0.6); }
+    body.theme-wanted .stats-preview-rating { color: #ffda68; }
+    body.theme-wanted .stats-preview-badge {
+      background: #2a180d;
+      border-color: #7e5a2f;
+      color: #fff5df;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    }
+
+    .stats-preview-metric { min-width: 0; padding: 8px 7px; }
+    .stats-preview-metric + .stats-preview-metric { border-left: 1px solid rgba(212, 175, 55, 0.22); }
+    .stats-preview-label { display: block; margin-bottom: 3px; color: #f3ddb0; font-size: 0.56rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+    .stats-preview-value { display: block; overflow: hidden; font-size: 0.74rem; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+    .stats-preview-metric-rank .stats-preview-value { overflow: visible; text-overflow: clip; white-space: normal; line-height: 1.15; }
+    .stats-preview-rating { color: var(--text-red); }
+    .stats-preview-missing { font-size: 0.61rem; line-height: 1.15; white-space: normal; }
+    .card-stats-container .card-refresh-btn { display: flex; justify-content: center; width: 100%; margin-top: 9px; }
+
+    body.theme-modern .stats-preview-rating { color: #f43f5e; }
+    body.theme-japanese .stats-preview-rating { color: #4338ca; }
+    body.theme-modern .stats-preview-eyebrow { color: #e9d5ff; }
+    body.theme-modern .stats-preview-label { color: #c4b5fd; }
+    body.theme-japanese .stats-preview-eyebrow { color: #312e81; text-shadow: none; }
+    body.theme-japanese .stats-preview-label { color: #3730a3; }
+    body.theme-japanese .stats-preview-main,
+    body.theme-japanese .stats-preview-value { color: #1e1b4b; }
+    body.theme-japanese .stats-preview-metrics {
+      background: #eef2ff;
+      border-color: rgba(99, 102, 241, 0.42);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    }
+    body.theme-japanese .stats-preview-metric + .stats-preview-metric {
+      border-left-color: rgba(99, 102, 241, 0.3);
+    }
+    body.theme-japanese .stats-preview-badge {
+      background: #e0e7ff;
+      border-color: rgba(99, 102, 241, 0.5);
+      color: #312e81;
+    }
+    body.theme-japanese .card-refresh-btn:hover { background: rgba(129, 140, 248, 0.16); }
+
+    @media (max-width: 420px) {
+      .stats-preview-metric { padding: 7px 5px; }
+      .stats-preview-value { font-size: 0.64rem; }
+      .stats-preview-badge { font-size: 0.5rem; }
+    }
+
+    body.theme-wanted .poster-nickname {
+      color: #5c3a21;
+    }
+
+    body.theme-japanese .poster-nickname {
+      color: #c7d2fe;
+      font-style: normal;
+    }
+
+    body.theme-modern .poster-nickname {
+      color: var(--text-secondary);
+    }
+
+    .id-box {
+      border-radius: 4px;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      margin-bottom: 14px;
+      transition: background 0.2s;
+    }
+
+    body.theme-wanted .id-box {
+      background: rgba(0, 0, 0, 0.06);
+      border: 1px dashed var(--parchment-border);
+    }
+
+    body.theme-japanese .id-box {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+    }
+
+    body.theme-modern .id-box {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+    }
+
+    .id-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      display: block;
+    }
+
+    body.theme-wanted .id-label {
+      color: #6b4c33;
+    }
+
+    body.theme-japanese .id-label {
+      color: #c7d2fe;
+    }
+
+    body.theme-modern .id-label {
+      color: var(--text-secondary);
+    }
+
+    .id-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    body.theme-wanted .id-value {
+      color: var(--text-red);
+    }
+
+    body.theme-japanese .id-value {
+      color: #a5f3fc;
+    }
+
+    body.theme-modern .id-value {
+      color: #6ee7b7;
+    }
+
+    .copy-badge {
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    body.theme-wanted .copy-badge {
+      color: #6b4c33;
+    }
+
+    body.theme-japanese .copy-badge {
+      color: #c7d2fe;
+    }
+
+    body.theme-modern .copy-badge {
+      color: var(--text-secondary);
+    }
+
+    .links-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+      gap: 6px;
+      margin-top: auto;
+      width: 100%;
+    }
+
+    /* ★文字位置・アイコン中央揃え完全強制 (display: flex; align-items: center; justify-content: center; text-align: center)★ */
+    .link-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      width: 100%;
+      padding: 8px 4px;
+      border-radius: 4px;
+      text-decoration: none;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #fff;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+      word-break: break-all;
+    }
+
+    .link-btn span {
+      display: block;
+      width: 100%;
+      text-align: center;
+      margin: 0 auto;
+      line-height: 1.1;
+    }
+
+    .link-btn svg {
+      width: 14px;
+      height: 14px;
+      margin: 0 auto 2px auto;
+      fill: currentColor;
+      display: block;
+    }
+
+    body.theme-modern .link-btn,
+    body.theme-japanese .link-btn {
+      border-radius: 8px;
+    }
+
+    .link-btn:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .link-btn.x-btn {
+      background: var(--x-color);
+    }
+
+    .link-btn.ewgf-btn {
+      background: var(--ewgf-color);
+    }
+
+    .link-btn.wavu-btn {
+      background: var(--wavu-color);
+    }
+
+    /* スマートな最下部管理バー */
+    .card-admin-bar {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px dashed rgba(0, 0, 0, 0.12);
+    }
+
+    body.theme-modern .card-admin-bar {
+      border-top-color: rgba(255, 255, 255, 0.08);
+    }
+
+    body.theme-japanese .card-admin-bar {
+      border-top-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .card-admin-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 4px;
+      border: 1px solid rgba(0, 0, 0, 0.15);
+      background: rgba(255, 255, 255, 0.6);
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #2b1a0e;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    body.theme-modern .card-admin-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.15);
+      color: #e8e8ed;
+    }
+
+    body.theme-japanese .card-admin-btn {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.3);
+      color: #ffffff;
+    }
+
+    .card-admin-btn:hover {
+      background: #fff;
+      color: #000;
+    }
+
+    body.theme-modern .card-admin-btn:hover {
+      background: rgba(255, 255, 255, 0.25);
+      color: #fff;
+    }
+
+    body.theme-japanese .card-admin-btn:hover {
+      background: rgba(255, 255, 255, 0.35);
+      color: #fff;
+    }
+
+    .card-admin-btn.delete-btn {
+      color: #b91c1c;
+      border-color: rgba(185, 28, 28, 0.3);
+    }
+
+    body.theme-modern .card-admin-btn.delete-btn {
+      color: #fca5a5;
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    body.theme-japanese .card-admin-btn.delete-btn {
+      color: #fca5a5;
+      border-color: rgba(254, 202, 202, 0.4);
+    }
+
+    .card-admin-btn.delete-btn:hover {
+      background: #ef4444;
+      color: #fff;
+      border-color: #ef4444;
+    }
+
+    .card-admin-btn svg {
+      width: 11px;
+      height: 11px;
+    }
+
+    /* Modals & Inputs OSダークモード勝手変更防止 (モーダル内フォームのみ限定) */
+    .modal-wood input[type="text"],
+    .modal-wood input[type="url"],
+    .modal-wood select,
+    .modal-wood textarea,
+    .modal-content input[type="text"],
+    .modal-content input[type="url"],
+    .modal-content select,
+    .modal-content textarea {
+      color-scheme: only light !important;
+      forced-color-adjust: none !important;
+      background-color: #1a120b !important;
+      color: #edd9b4 !important;
+      -webkit-text-fill-color: #edd9b4 !important;
+      border: 1px solid var(--parchment-border) !important;
+    }
+
+    .drop-zone {
+      border: 2px dashed var(--wood-border);
+      border-radius: 6px;
+      padding: 16px;
+      text-align: center;
+      background: rgba(0, 0, 0, 0.4);
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .drop-zone.dragover {
+      border-color: var(--gold-accent);
+      background: rgba(212, 175, 55, 0.1);
+    }
+
+    .photo-upload-area {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .photo-preview {
+      width: 70px;
+      height: 70px;
+      border: 2px solid var(--gold-accent);
+      border-radius: 6px;
+      background: #111;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      flex-shrink: 0;
+      color: var(--gold-accent);
+      font-size: 0.75rem;
+    }
+
+    .photo-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .photo-controls {
+      flex: 1;
+    }
+
+    .file-input-btn {
+      display: inline-block;
+      padding: 6px 14px;
+      background: rgba(212, 175, 55, 0.15);
+      border: 1px solid var(--gold-accent);
+      color: var(--gold-accent);
+      border-radius: 4px;
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
+
+    .btn-remove-photo {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 4px 10px;
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid #ef4444;
+      color: #fca5a5;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+
+    .drop-hint {
+      font-size: 0.75rem;
+      color: #a89278;
+      margin-top: 6px;
+    }
+
+    .form-note {
+      font-size: 0.75rem;
+      color: #d1b894;
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+
+    /* Cropper Modal */
+    .crop-container {
+      width: 100%;
+      max-height: 360px;
+      overflow: hidden;
+      background: #000;
+      margin-bottom: 16px;
+      border-radius: 4px;
+    }
+
+    .crop-container img {
+      max-width: 100%;
+    }
+
+    .color-presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .color-swatch {
+      width: 28px;
+      height: 28px;
+      border-radius: 4px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+
+    .color-swatch:hover {
+      transform: scale(1.15);
+    }
+
+    .color-swatch.selected {
+      border-color: var(--gold-accent);
+      box-shadow: 0 0 0 2px #fff;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+      padding: 20px;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-wood {
+      background: #1e1713;
+      border: 3px solid var(--gold-accent);
+      border-radius: 12px;
+      padding: 28px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);
+      color: #edd9b4;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-title {
+      font-size: 1.6rem;
+      color: var(--gold-accent);
+      margin-bottom: 20px;
+      text-align: center;
+      letter-spacing: 2px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--gold-accent);
+      margin-bottom: 6px;
+      letter-spacing: 1px;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 10px 12px;
+      background: #140c07;
+      border: 1px solid var(--wood-border);
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      color: #fff;
+      outline: none;
+    }
+
+    .form-input:focus {
+      border-color: var(--gold-accent);
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 24px;
+    }
+
+    .btn-wood {
+      padding: 8px 20px;
+      border: 1px solid var(--gold-accent);
+      border-radius: 4px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-cancel {
+      background: transparent;
+      color: #edd9b4;
+    }
+
+    .btn-save {
+      background: var(--gold-accent);
+      color: #2b1a0e;
+    }
+
+    .btn-danger {
+      background: var(--text-red);
+      color: #fff;
+      border-color: var(--text-red);
+    }
+
+    /* Theme-aware member editor, cropper, and confirmation dialogs */
+    body.theme-modern .modal-overlay {
+      background: rgba(2, 6, 23, 0.82);
+    }
+
+    body.theme-modern .modal-wood {
+      background: linear-gradient(145deg, #172554, #2e1065);
+      border-color: #a78bfa;
+      color: #e0e7ff;
+      box-shadow: 0 24px 70px rgba(2, 6, 23, 0.82);
+    }
+
+    body.theme-modern .modal-title,
+    body.theme-modern .form-label { color: #c4b5fd; }
+    body.theme-modern .form-note,
+    body.theme-modern .drop-hint { color: #cbd5e1; }
+    body.theme-modern .modal-wood input[type="text"],
+    body.theme-modern .modal-wood input[type="url"],
+    body.theme-modern .modal-wood select,
+    body.theme-modern .modal-wood textarea {
+      background-color: #0f172a !important;
+      border-color: rgba(167, 139, 250, 0.55) !important;
+      color: #f8fafc !important;
+      -webkit-text-fill-color: #f8fafc !important;
+    }
+    body.theme-modern .form-input:focus { border-color: #a78bfa !important; box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.2); }
+    body.theme-modern .drop-zone { background: rgba(15, 23, 42, 0.72); border-color: #818cf8; }
+    body.theme-modern .drop-zone.dragover { background: rgba(129, 140, 248, 0.16); border-color: #c4b5fd; }
+    body.theme-modern .photo-preview { border-color: #a78bfa; color: #c4b5fd; }
+    body.theme-modern .file-input-btn { background: rgba(167, 139, 250, 0.16); border-color: #a78bfa; color: #e9d5ff; }
+    body.theme-modern .color-swatch.selected { border-color: #c4b5fd; }
+    body.theme-modern .btn-wood { border-color: #a78bfa; }
+    body.theme-modern .btn-cancel { color: #e0e7ff; }
+    body.theme-modern .btn-save { background: #8b5cf6; border-color: #8b5cf6; color: #fff; }
+
+    body.theme-japanese .modal-overlay {
+      background: rgba(30, 27, 75, 0.58);
+    }
+
+    body.theme-japanese .modal-wood {
+      background: linear-gradient(160deg, #fafaff, #eef2ff);
+      border-color: #818cf8;
+      color: #1e1b4b;
+      box-shadow: 0 24px 70px rgba(49, 46, 129, 0.35);
+    }
+
+    body.theme-japanese .modal-title,
+    body.theme-japanese .form-label { color: #3730a3; }
+    body.theme-japanese .form-note,
+    body.theme-japanese .drop-hint { color: #4f46a5; }
+    body.theme-japanese .modal-wood input[type="text"],
+    body.theme-japanese .modal-wood input[type="url"],
+    body.theme-japanese .modal-wood select,
+    body.theme-japanese .modal-wood textarea {
+      background-color: #ffffff !important;
+      border-color: rgba(99, 102, 241, 0.52) !important;
+      color: #1e1b4b !important;
+      -webkit-text-fill-color: #1e1b4b !important;
+    }
+    body.theme-japanese .form-input:focus { border-color: #4f46e5 !important; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.16); }
+    body.theme-japanese .drop-zone { background: #f8faff; border-color: #818cf8; }
+    body.theme-japanese .drop-zone.dragover { background: #e0e7ff; border-color: #4f46e5; }
+    body.theme-japanese .photo-preview { border-color: #6366f1; color: #4338ca; background: #e0e7ff; }
+    body.theme-japanese .file-input-btn { background: #e0e7ff; border-color: #818cf8; color: #3730a3; }
+    body.theme-japanese .color-swatch.selected { border-color: #4f46e5; }
+    body.theme-japanese .btn-wood { border-color: #818cf8; }
+    body.theme-japanese .btn-cancel { color: #3730a3; }
+    body.theme-japanese .btn-save { background: #4f46e5; border-color: #4f46e5; color: #fff; }
+
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(30px);
+      background: #2b1a0e;
+      border: 2px solid var(--gold-accent);
+      color: var(--gold-accent);
+      padding: 12px 24px;
+      border-radius: 4px;
+      font-size: 0.95rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s ease;
+      z-index: 200;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .loading-state,
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--gold-accent);
+    }
+
+    /* Mobile Optimization */
+    @media (max-width: 640px) {
+      body {
+        padding: 12px 6px 48px;
+      }
+
+      body.theme-wanted .board-container,
+      body.theme-modern .board-container,
+      body.theme-japanese .board-container {
+        padding: 16px 8px;
+        border-width: 6px;
+      }
+
+      .top-controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+
+      .top-controls>div {
+        justify-content: space-between;
+        width: 100%;
+      }
+
+      .status-badge {
+        padding: 4px 10px;
+        font-size: 0.7rem;
+        letter-spacing: 1px;
+        align-self: flex-start;
+      }
+
+      .theme-select-box {
+        position: relative;
+        top: auto;
+        right: auto;
+        width: 100%;
+        max-width: none;
+        margin-bottom: 10px;
+        justify-content: center;
+      }
+
+      .saloon-title {
+        font-size: 1.5rem;
+        letter-spacing: 1px;
+      }
+
+      .saloon-subtitle {
+        font-size: 0.8rem;
+      }
+
+      .btn-add-bounty {
+        padding: 10px 16px;
+        font-size: 0.85rem;
+        width: 100%;
+        justify-content: center;
+      }
+
+      .poster-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        padding: 2px 0;
+      }
+
+      .poster-card {
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      body.theme-wanted .poster-card,
+      body.theme-japanese .poster-card {
+        padding: 12px 8px 10px;
+      }
+
+      body.theme-modern .poster-card {
+        padding: 10px 8px;
+        border-radius: 12px;
+      }
+
+      .poster-pin {
+        width: 10px;
+        height: 10px;
+        top: 4px;
+      }
+
+      .poster-header-text {
+        font-size: 1.2rem;
+        letter-spacing: 1px;
+      }
+
+      .poster-sub-header {
+        font-size: 0.5rem;
+        letter-spacing: 1px;
+        margin-bottom: 6px;
+      }
+
+      .avatar-frame {
+        height: 95px;
+        margin-bottom: 6px;
+      }
+
+      .avatar-initials {
+        font-size: 2rem;
+      }
+
+      .poster-name {
+        font-size: 0.95rem;
+        margin-bottom: 2px;
+        overflow-wrap: anywhere;
+      }
+
+      .poster-nickname {
+        font-size: 0.68rem;
+        margin-bottom: 6px;
+      }
+
+      /* モバイルでのカード内ステータスボックス最適化 */
+      .card-stats-container {
+        padding: 6px 4px;
+        margin: 4px 0 8px;
+      }
+
+      .last-seen-badge {
+        display: flex;
+        flex-wrap: wrap;
+        font-size: 0.58rem;
+        padding: 2px 4px;
+        margin-bottom: 4px;
+        max-width: 100%;
+        line-height: 1.25;
+        text-align: center;
+      }
+
+      .last-seen-badge span {
+        display: inline-block !important;
+        /* スマホでも詳細日時(YYYY/MM/DD HH:mm)を表示 */
+        font-size: 0.52rem !important;
+        opacity: 0.85;
+        margin-left: 2px;
+      }
+
+      .stats-info-grid {
+        grid-template-columns: 1fr;
+        gap: 2px;
+        font-size: 0.64rem;
+        padding-top: 2px;
+      }
+
+      .stats-info-item {
+        padding: 0 2px;
+      }
+
+      .card-refresh-btn {
+        padding: 2px 6px;
+        font-size: 0.62rem;
+        margin-top: 4px;
+        width: 100%;
+        justify-content: center;
+      }
+
+      /* 2列表示では統計を2段にして、長いランク名や数値がカード外へ出ないようにする。 */
+      .stats-preview-head {
+        display: block;
+        margin: 3px 0 7px;
+      }
+
+      .stats-preview-head > div {
+        min-width: 0;
+      }
+
+      .stats-preview-main {
+        font-size: 0.82rem;
+      }
+
+      .stats-preview-main .stats-preview-games {
+        display: block;
+        margin: 2px 0 0;
+        font-size: 0.56rem;
+        white-space: normal;
+      }
+
+      .stats-preview-badge {
+        display: block;
+        width: 100%;
+        margin-top: 4px;
+        padding: 3px 4px;
+        font-size: 0.48rem;
+        text-align: center;
+        white-space: normal;
+      }
+
+      .stats-preview-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .stats-preview-metric {
+        padding: 6px 4px;
+      }
+
+      /* Rating は桁数が長くなりやすいため、モバイルでは1行分の幅を確保する。 */
+      .stats-preview-metric:nth-child(2),
+      .stats-preview-metric:nth-child(3) {
+        grid-column: span 2;
+        border-top: 1px solid rgba(212, 175, 55, 0.22);
+        border-left: 0;
+      }
+
+
+      .stats-preview-label {
+        font-size: 0.5rem;
+      }
+
+      .stats-preview-value {
+        font-size: 0.62rem;
+      }
+
+      .id-box {
+        padding: 5px 6px;
+        margin-bottom: 6px;
+        gap: 4px;
+        min-width: 0;
+      }
+
+      .id-box > div {
+        min-width: 0;
+      }
+
+      .id-label {
+        font-size: 0.5rem;
+      }
+
+      .id-value {
+        display: block;
+        font-size: 0.68rem;
+        letter-spacing: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .copy-badge {
+        font-size: 0.6rem;
+      }
+
+      .links-grid {
+        gap: 3px;
+      }
+
+      .link-btn {
+        padding: 5px 2px;
+        font-size: 0.6rem;
+      }
+
+      .link-btn svg {
+        width: 10px;
+        height: 10px;
+        margin-bottom: 1px;
+      }
+
+      .card-admin-bar {
+        margin-top: 4px;
+        padding-top: 4px;
+        gap: 4px;
+        justify-content: space-between;
+      }
+
+      .card-admin-btn {
+        padding: 2px 4px;
+        font-size: 0.6rem;
+        flex: 1;
+        justify-content: center;
+      }
+
+      .card-admin-btn svg {
+        width: 9px;
+        height: 9px;
+      }
+    }
+
+  </style>
+  <script>
+    // UI assets always bypass the browser HTTP cache; stats data keeps its separate 1h cache.
+    (() => {
+      const assetVersion = Date.now();
+      const stylesheet = document.createElement('link');
+      stylesheet.rel = 'stylesheet';
+      stylesheet.href = `stats-integration-v4.css?v=${assetVersion}`;
+      document.head.appendChild(stylesheet);
+    })();
+  </script>
+</head>
+
+<body class="theme-wanted">
+
+  <!-- 画面右上固定のUI切り替えボックス -->
+  <div class="theme-select-box">
+    <span>🎨</span>
+    <select id="themeSelectDropdown" class="theme-select-dropdown" onchange="selectTheme(this.value)"
+      aria-label="UIテーマ選択">
+      <option value="wanted">WANTED (酒場)</option>
+      <option value="modern">MODERN (ネオン)</option>
+      <option value="japanese">JAPANESE (涼風和風)</option>
+    </select>
+  </div>
+
+  <div class="app-container">
+    <div class="board-container">
+
+      <div class="top-controls"
+        style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div class="status-badge">
+          <span class="dot" id="statusDot"></span>
+          <span id="statusText">CONNECTING SALOON</span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+            <span id="apiQuotaText"
+              style="font-size: 0.72rem; color: #ffffff; opacity: 0.95; font-weight: 600; background: rgba(0,0,0,0.55); padding: 3px 10px; border-radius: 12px; border: 1px solid var(--gold-accent);">
+              🔑 ewgf API 本日使用: 約0回 (残り 100/100回目安・1hキャッシュ)
+            </span>
+            <span id="lastUpdateLogText"
+              style="font-size: 0.68rem; color: #edd9b4; opacity: 0.9; font-weight: 600; background: rgba(0,0,0,0.55); padding: 2px 9px; border-radius: 10px; border: 1px dashed var(--gold-accent);">
+              🕒 最終データ更新: 記録読み込み中...
+            </span>
+          </div>
+          <button class="btn-wood"
+            style="padding: 5px 12px; font-size: 0.75rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;"
+            onclick="refreshAllWavuStats()">
+            ⚡ 全ステータス一括更新
+          </button>
+        </div>
+      </div>
+
+      <header class="saloon-header">
+        <div class="saloon-title-wrap">
+          <h1 class="saloon-title" id="pageTitle" onclick="startEditTitle()" title="クリックしてタイトルを変更">
+            <span id="titleText">TEKKEN 8 WANTED</span>
+            <span class="title-edit-hint">✏️</span>
+          </h1>
+          <input class="title-input" type="text" id="titleInput" maxlength="40" style="display:none;"
+            aria-label="タイトル編集">
+          <div class="saloon-subtitle" id="subTitleText">鉄拳8 プレイヤー手配書掲示板 (WANTED LIST)</div>
+        </div>
+        <br>
+        <button class="btn-add-bounty" onclick="openAddModal()" id="btnAddMember">
+          ➕ 手配書（メンバー）を追加
+        </button>
+      </header>
+
+      <!-- Loading -->
+      <div class="loading-state" id="loadingState">
+        <p>掲示板データを読み込み中...</p>
+      </div>
+
+      <!-- Empty State -->
+      <div class="empty-state" id="emptyState" style="display:none;">
+        <p>📜 現在、登録されたメンバーはいません</p>
+      </div>
+
+      <!-- Poster Grid -->
+      <div class="poster-grid" id="posterGrid"></div>
+    </div>
+  </div>
+
+  <!-- Add / Edit Modal -->
+  <div class="modal-overlay" id="editModal">
+    <div class="modal-wood">
+      <div class="modal-title" id="modalTitle">メンバーを作成</div>
+      <form id="memberForm" onsubmit="saveMember(event)">
+        <input type="hidden" id="editKey" value="">
+        <input type="hidden" id="photoData" value="">
+
+        <div class="form-group">
+          <label class="form-label" for="inputName">プレイヤー名 / 容疑者名（任意・IDから自動取得）</label>
+          <input class="form-input" type="text" id="inputName" placeholder="未入力ならTEKKEN 8 IDから取得" maxlength="50">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="inputId">鉄拳8 ID (12桁ハイフン不要)</label>
+          <input class="form-input" type="text" id="inputId" placeholder="例: 3A4B5C6D7E8F (ハイフン不要)" required
+            maxlength="60">
+          <div class="form-note">※ハイフン無しの12桁IDを入力してください。ハイフンを含めて入力しても自動で除去・整形されます。</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="inputSubtitle">二つ名 / 役職 / メモ（任意）</label>
+          <input class="form-input" type="text" id="inputSubtitle" placeholder="例: 俺は全てを支配する" maxlength="40">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="inputXUrl">X (Twitter) URL または ユーザー名</label>
+          <input class="form-input" type="text" id="inputXUrl" placeholder="例: @username または URL" maxlength="200">
+          <div class="form-note">※アカウントをお持ちでない場合は空欄のまま保存してください。（カード上のXボタンが非表示になります）</div>
+        </div>
+
+
+
+        <!-- Photo Upload & Drag/Drop Area -->
+        <div class="form-group">
+          <label class="form-label">プロフィール画像（ドラッグ＆ドロップ対応）</label>
+          <div class="drop-zone" id="dropZone" onclick="triggerFileInput()">
+            <div class="photo-upload-area">
+              <div class="photo-preview" id="photoPreview">
+                <span>無画像</span>
+              </div>
+              <div class="photo-controls">
+                <label class="file-input-btn" onclick="event.stopPropagation()">
+                  📷 画像を選択
+                  <input type="file" id="inputPhotoFile" accept="image/*" style="display:none;"
+                    onchange="handleFileSelect(event)">
+                </label>
+                <div>
+                  <button class="btn-remove-photo" type="button" id="btnRemovePhoto" style="display:none;"
+                    onclick="event.stopPropagation(); removePhoto()">画像を消去</button>
+                </div>
+              </div>
+            </div>
+            <div class="drop-hint">PCの方はここに画像をドラッグ＆ドロップして入力できます</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">画像未設定時の背景カラー</label>
+          <div class="color-presets" id="colorPresets"></div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn-wood btn-cancel" type="button" onclick="closeModal('editModal')">キャンセル</button>
+          <button class="btn-wood btn-save" type="submit" id="btnSaveSubmit">保存する</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Crop Modal (トリミング・領域選択モーダル) -->
+  <div class="modal-overlay" id="cropModal">
+    <div class="modal-wood" style="max-width: 520px;">
+      <div class="modal-title">切り抜き領域を選択</div>
+      <p style="font-size:0.8rem; color:#d1b894; text-align:center; margin-bottom: 12px;">
+        枠をドラッグ・ズームして最適な領域を決定してください
+      </p>
+      <div class="crop-container">
+        <img id="cropImage" src="" alt="Crop Source">
+      </div>
+      <div class="modal-actions">
+        <button class="btn-wood btn-cancel" type="button" onclick="closeModal('cropModal')">キャンセル</button>
+        <button class="btn-wood btn-save" type="button" onclick="applyCrop()">領域を決定（切り抜き）</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirm Modal -->
+  <div class="modal-overlay" id="deleteModal">
+    <div class="modal-wood">
+      <div class="modal-title">メンバーを削除</div>
+      <p style="text-align:center; margin-bottom: 20px;">
+        <span id="deleteName" style="color:var(--gold-accent); font-weight:bold;"></span> を削除しますか？
+      </p>
+      <input type="hidden" id="deleteKey" value="">
+      <div class="modal-actions">
+        <button class="btn-wood btn-cancel" type="button" onclick="closeModal('deleteModal')">キャンセル</button>
+        <button class="btn-wood btn-danger" type="button" onclick="confirmDelete()">削除する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast">
+    <span id="toastMsg">完了</span>
+  </div>
+
+  <script>
+    // Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCij2LLTmV-DVKGeSS1AOT0tkc81jpn3a4",
+      authDomain: "tekken-private-lists.firebaseapp.com",
+      databaseURL: "https://tekken-private-lists-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "tekken-private-lists",
+      storageBucket: "tekken-private-lists.firebasestorage.app",
+      messagingSenderId: "337528363035",
+      appId: "1:337528363035:web:15b84bfcff3888020980be"
+    };
+
+    const PRESET_COLORS = [
+      '#6366f1', '#818cf8', '#8b5cf6', '#a78bfa', '#c084fc',
+      '#ec4899', '#f43f5e', '#fb923c', '#f59e0b', '#eab308',
+      '#a3e635', '#22c55e', '#14b8a6', '#06b6d4', '#0ea5e9',
+      '#8b0000', '#2b1a0e', '#3d2a1c', '#4a3424'
+    ];
+
+    let db = null;
+    let membersRef = null;
+    let settingsRef = null;
+    let selectedColor = PRESET_COLORS[0];
+    let toastTimer = null;
+    let cropper = null;
+    let currentTheme = 'wanted'; // 'wanted', 'modern', or 'japanese'
+
+    // === 1h自動更新の無限ループ防止フラグ ===
+    // setLocalStats → Firebase書込み → membersRef.on('value')再発火 → renderPosters再呼出 → fetchEwgfStats → setLocalStats → ... の連鎖を断つ
+    let isFetchingInBackground = false;  // バックグラウンドフェッチ中フラグ
+    let isOwnFirebaseWrite = false;      // 自分自身のsetLocalStatsによるFirebase書込み中フラグ
+
+    function cleanTekkenId(rawId) {
+      if (!rawId) return '';
+      return rawId.replace(/[-ー−\s]/g, '').trim();
+    }
+
+    // SVG Icons
+    const ICON_EDIT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`;
+    const ICON_DELETE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
+    const ICON_X = `<svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`;
+    const ICON_LIGHTNING = `<svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>`;
+    const ICON_WAVU = `<svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 12l10 5 10-5"/></svg>`;
+
+    function init() {
+      const savedTheme = localStorage.getItem('preferred_theme');
+      if (['wanted', 'modern', 'japanese'].includes(savedTheme)) {
+        currentTheme = savedTheme;
+      }
+      document.getElementById('themeSelectDropdown').value = currentTheme;
+      applyTheme(currentTheme);
+
+      try {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
+        membersRef = db.ref('members');
+        settingsRef = db.ref('settings');
+
+        db.ref('.info/connected').on('value', (snap) => {
+          const dot = document.getElementById('statusDot');
+          const text = document.getElementById('statusText');
+          if (snap.val() === true) {
+            dot.classList.remove('offline');
+            if (currentTheme === 'wanted') text.textContent = 'SALOON ONLINE';
+            else if (currentTheme === 'japanese') text.textContent = '涼風 ONLINE';
+            else text.textContent = 'ONLINE';
+          } else {
+            dot.classList.add('offline');
+            text.textContent = 'OFFLINE';
+          }
+        });
+
+        settingsRef.child('title').on('value', (snap) => {
+          const title = snap.val();
+          if (title) {
+            document.getElementById('titleText').textContent = title;
+            document.title = title;
+          }
+        });
+
+        // 初期表示を LocalStorage カウント & 最終更新ログで即時描画
+        updateApiCallBadge(getLocalCallCount());
+        updateLastUpdateLogBadge();
+
+        // Firebase リアルタイム全デバイス同期 API カウンターリスナー (settings ノード)
+        db.ref('settings/api_quota').on('value', (snap) => {
+          const val = snap.val();
+          const today = getTodayString();
+          if (val && val.lastDate === today) {
+            updateApiCallBadge(val.callCount || 0);
+          } else {
+            updateApiCallBadge(getLocalCallCount());
+          }
+        });
+
+        // Firebase リアルタイム全デバイス同期 最終更新ログリスナー (settings ノード)
+        db.ref('settings/last_update_log').on('value', (snap) => {
+          updateLastUpdateLogBadge(snap.val());
+        });
+
+        membersRef.on('value', (snapshot) => {
+          document.getElementById('loadingState').style.display = 'none';
+          // 自分自身のsetLocalStatsによるFirebase書込みの反射を無視（無限ループ防止）
+          if (isOwnFirebaseWrite) {
+            // fetchedStats更新のみの変更なので再描画をスキップ
+            // ただしcurrentMembersDataは最新に保つ
+            window.currentMembersData = snapshot.val();
+            return;
+          }
+          renderPosters(snapshot.val());
+        });
+
+        setupDragAndDrop();
+
+      } catch (e) {
+        document.getElementById('loadingState').innerHTML = `<p style="color:#ef4444;">エラー: ${e.message}</p>`;
+      }
+    }
+
+    function selectTheme(newTheme) {
+      currentTheme = newTheme;
+      localStorage.setItem('preferred_theme', currentTheme);
+      applyTheme(currentTheme);
+
+      let themeLabel = 'WANTED (酒場)';
+      if (currentTheme === 'modern') themeLabel = 'MODERN (ネオン)';
+      if (currentTheme === 'japanese') themeLabel = 'JAPANESE (涼風和風)';
+
+      showToast(`UIテーマを [ ${themeLabel} ] に変更しました`);
+    }
+
+    function applyTheme(theme) {
+      document.body.className = `theme-${theme}`;
+      const statusText = document.getElementById('statusText');
+      const btnAdd = document.getElementById('btnAddMember');
+
+      if (theme === 'wanted') {
+        if (statusText.textContent.includes('ONLINE')) statusText.textContent = 'SALOON ONLINE';
+        btnAdd.innerHTML = '➕ 手配書（メンバー）を追加';
+      } else if (theme === 'modern') {
+        if (statusText.textContent.includes('ONLINE')) statusText.textContent = 'ONLINE';
+        btnAdd.innerHTML = '➕ メンバーを追加';
+      } else {
+        if (statusText.textContent.includes('ONLINE')) statusText.textContent = '涼風 ONLINE';
+        btnAdd.innerHTML = '➕ 手配札（メンバー）を追加';
+      }
+
+      if (membersRef) {
+        membersRef.once('value', (snap) => renderPosters(snap.val()));
+      }
+    }
+
+    function setupDragAndDrop() {
+      const dropZone = document.getElementById('dropZone');
+      ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropZone.classList.add('dragover');
+        }, false);
+      });
+
+      ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropZone.classList.remove('dragover');
+        }, false);
+      });
+
+      dropZone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files && files.length > 0) {
+          processImageFile(files[0]);
+        }
+      });
+    }
+
+    function triggerFileInput() {
+      document.getElementById('inputPhotoFile').click();
+    }
+
+    function handleFileSelect(e) {
+      const files = e.target.files;
+      if (files && files.length > 0) {
+        processImageFile(files[0]);
+      }
+    }
+
+    function processImageFile(file) {
+      if (!file.type.startsWith('image/')) {
+        showToast('⚠️ 画像ファイルを選択してください');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const cropImage = document.getElementById('cropImage');
+        cropImage.src = e.target.result;
+        openModal('cropModal');
+
+        if (cropper) {
+          cropper.destroy();
+        }
+
+        cropper = new Cropper(cropImage, {
+          aspectRatio: 4 / 3,
+          viewMode: 1,
+          autoCropArea: 0.9,
+          background: false,
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function applyCrop() {
+      if (!cropper) return;
+
+      const canvas = cropper.getCroppedCanvas({
+        width: 320,
+        height: 240,
+        imageSmoothingEnabled: true,
+        imageSmoothingQuality: 'high',
+      });
+
+      const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      setPhotoPreview(croppedDataUrl);
+      closeModal('cropModal');
+
+      if (cropper) {
+        cropper.destroy();
+        cropper = null;
+      }
+    }
+
+    function getInitials(name) {
+      if (!name) return '??';
+      const parts = name.trim().split(/[\s\u3000]+/);
+      if (parts.length >= 2) return parts[0].charAt(0) + parts[1].charAt(0);
+      return name.slice(0, 2);
+    }
+
+    /* ===== Prototype Stats & Radar Chart Logic (ewgf.gg Official API) ===== */
+    const DEFAULT_EWGF_API_KEY = 'ewgf_48599735d7a64a109401945131210139';
+    const LOCAL_STATS_CACHE_KEY = 't8_wanted_ewgf_stats_v3';
+    const CACHE_TTL_MS = 60 * 60 * 1000; // 自動更新: 1時間キャッシュ
+
+    function getEwgfApiKey() {
+      return localStorage.getItem('t8_ewgf_api_key') || DEFAULT_EWGF_API_KEY;
+    }
+
+    function setEwgfApiKey(key) {
+      if (key) localStorage.setItem('t8_ewgf_api_key', key.trim());
+    }
+
+    function getLocalStats(gameId, memberData = null) {
+      // 1. Firebase から全端末リアルタイム同期されてきた m.fetchedStats があれば最優先使用
+      if (memberData && memberData.fetchedStats) {
+        try {
+          localStorage.setItem(`${LOCAL_STATS_CACHE_KEY}_${gameId}`, JSON.stringify(memberData.fetchedStats));
+        } catch (e) {}
+        return memberData.fetchedStats;
+      }
+
+      // 2. ローカルストレージを参照
+      try {
+        const raw = localStorage.getItem(`${LOCAL_STATS_CACHE_KEY}_${gameId}`);
+        if (!raw) return null;
+        return JSON.parse(raw);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function setLocalStats(gameId, stats, memberKey = null) {
+      try {
+        stats.cachedAt = Date.now();
+        localStorage.setItem(`${LOCAL_STATS_CACHE_KEY}_${gameId}`, JSON.stringify(stats));
+
+        // 非同期取得の完了後に別リストへ切り替わっている場合、現在のリストへ
+        // fetchedStatsだけのゴーストメンバーを作らない。現在表示中の実在メンバーと
+        // TEKKEN 8 IDが一致する場合に限ってFirebaseへ同期する。
+        if (!membersRef || !window.currentMembersData) return;
+
+        let verifiedKey = null;
+        if (memberKey) {
+          const member = window.currentMembersData[memberKey];
+          if (member && cleanTekkenId(member.gameId) === cleanTekkenId(gameId)) verifiedKey = memberKey;
+        } else {
+          for (const [key, member] of Object.entries(window.currentMembersData)) {
+            if (member && cleanTekkenId(member.gameId) === cleanTekkenId(gameId)) {
+              verifiedKey = key;
+              break;
+            }
+          }
+        }
+        if (!verifiedKey) {
+          console.info('Skipped stale stats write after list switch', gameId, memberKey);
+          return;
+        }
+
+        isOwnFirebaseWrite = true;
+        membersRef.child(verifiedKey).child('fetchedStats').set(stats)
+          .then(() => setTimeout(() => { isOwnFirebaseWrite = false; }, 500))
+          .catch(error => {
+            console.warn('Stats Firebase sync failed', error);
+            setTimeout(() => { isOwnFirebaseWrite = false; }, 500);
+          });
+      } catch (e) {
+        console.error('Stats cache write error', e);
+        isOwnFirebaseWrite = false;
+      }
+    }
+    function formatTimeAgo(ts) {
+      if (!ts) return '未計測';
+      const diffSec = Math.floor((Date.now() - ts) / 1000);
+      if (diffSec < 60) return 'たった今';
+      const diffMin = Math.floor(diffSec / 60);
+      if (diffMin < 60) return `${diffMin}分前`;
+      const diffHour = Math.floor(diffMin / 60);
+      if (diffHour < 24) return `${diffHour}時間前`;
+      const diffDay = Math.floor(diffHour / 24);
+      if (diffDay < 30) return `${diffDay}日前`;
+      return new Date(ts).toLocaleDateString('ja-JP');
+    }
+
+    function formatExactDateTime(ts) {
+      if (!ts) return '';
+      const d = new Date(ts);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const date = String(d.getDate()).padStart(2, '0');
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      return `${year}/${month}/${date} ${hours}:${minutes}`;
+    }
+
+    function getLastSeenBadgeHtml(ts) {
+      if (!ts) {
+        return `<div class="last-seen-badge inactive"><span class="last-seen-icon">❓</span><span class="last-seen-label">最終対戦</span><span class="last-seen-time">データ未取得</span></div>`;
+      }
+      const diffHour = (Date.now() - ts) / (1000 * 3600);
+      const timeStr = formatTimeAgo(ts);
+      const exactStr = formatExactDateTime(ts);
+      const badgeContent = (icon) => `<span class="last-seen-icon">${icon}</span><span class="last-seen-label">最終対戦</span><span class="last-seen-time">${timeStr}</span><span class="last-seen-exact">${exactStr}</span>`;
+
+      if (diffHour <= 24) {
+        return `<div class="last-seen-badge active" title="最新対戦日時: ${exactStr}">${badgeContent('🔥')}</div>`;
+      } else if (diffHour <= 168) {
+        return `<div class="last-seen-badge recent" title="最新対戦日時: ${exactStr}">${badgeContent('⚡')}</div>`;
+      } else {
+        return `<div class="last-seen-badge inactive" title="最新対戦日時: ${exactStr}">${badgeContent('💤')}</div>`;
+      }
+    }
+
+    function getTodayString() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function getLocalCallCount() {
+      const today = getTodayString();
+      const savedDate = localStorage.getItem('t8_api_quota_date');
+      if (savedDate !== today) {
+        localStorage.setItem('t8_api_quota_date', today);
+        localStorage.setItem('t8_api_quota_count', '0');
+        return 0;
+      }
+      return parseInt(localStorage.getItem('t8_api_quota_count') || '0', 10);
+    }
+
+    function incrementApiCallCounter() {
+      const today = getTodayString();
+      let currentCount = getLocalCallCount();
+      currentCount++;
+      localStorage.setItem('t8_api_quota_date', today);
+      localStorage.setItem('t8_api_quota_count', String(currentCount));
+      updateApiCallBadge(currentCount);
+
+      if (db) {
+        try {
+          const quotaRef = db.ref('settings/api_quota');
+          quotaRef.transaction((currentData) => {
+            if (!currentData || currentData.lastDate !== today) {
+              return { callCount: currentCount, lastDate: today };
+            } else {
+              const newCount = Math.max(currentCount, (currentData.callCount || 0) + 1);
+              return { callCount: newCount, lastDate: today };
+            }
+          });
+        } catch (e) {
+          console.warn('Firebase transaction warning:', e);
+        }
+      }
+    }
+
+    function updateApiCallBadge(count) {
+      const badge = document.getElementById('apiQuotaText');
+      if (badge) {
+        const localCount = getLocalCallCount();
+        const savedCount = Math.max(count !== undefined ? count : 0, localCount);
+        const remaining = Math.max(0, 100 - savedCount);
+        badge.textContent = `🔑 ewgf API 本日全体使用: 約${savedCount}回 (残り ${remaining}/100回目安・1hキャッシュ)`;
+      }
+    }
+
+    function formatLogTime(ts) {
+      if (!ts) return '未更新';
+      const d = new Date(ts);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const date = String(d.getDate()).padStart(2, '0');
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      return `${year}/${month}/${date} ${hours}:${minutes}`;
+    }
+
+    function recordLastUpdateLog(updateType, targetName = '') {
+      const ts = Date.now();
+      const formattedTime = formatLogTime(ts);
+      const typeLabel = updateType === 'manual' ? '手動更新' : '1h自動更新';
+      const targetStr = targetName ? ` (${targetName})` : '';
+
+      const logData = {
+        timestamp: ts,
+        type: updateType,
+        targetName: targetName || '',
+        formattedTime: formattedTime,
+        displayText: `🕒 最終データ更新: ${formattedTime} [${typeLabel}${targetStr}]`
+      };
+
+      try {
+        localStorage.setItem('t8_last_update_log', JSON.stringify(logData));
+        updateLastUpdateLogBadge(logData);
+      } catch (e) {}
+
+      if (db) {
+        try {
+          db.ref('settings/last_update_log').set(logData);
+        } catch (e) {
+          console.warn('Firebase last_update_log write error:', e);
+        }
+      }
+    }
+
+    function updateLastUpdateLogBadge(logData) {
+      const badge = document.getElementById('lastUpdateLogText');
+      if (!badge) return;
+
+      if (logData && logData.displayText) {
+        badge.textContent = logData.displayText;
+        if (logData.type === 'manual') {
+          badge.style.borderColor = 'var(--gold-accent)';
+          badge.style.color = '#f3cf55';
+        } else {
+          badge.style.borderColor = 'rgba(129, 140, 248, 0.6)';
+          badge.style.color = '#edd9b4';
+        }
+      } else {
+        try {
+          const localRaw = localStorage.getItem('t8_last_update_log');
+          if (localRaw) {
+            const parsed = JSON.parse(localRaw);
+            updateLastUpdateLogBadge(parsed);
+            return;
+          }
+        } catch (e) {}
+        badge.textContent = '🕒 最終データ更新: 記録なし';
+      }
+    }
+
+    const DEFAULT_WORKER_URL = 'https://cold-cherry-2333.uracil123.workers.dev';
+
+    function getCustomWorkerUrl() {
+      return localStorage.getItem('t8_custom_worker_url') || DEFAULT_WORKER_URL;
+    }
+
+    function setCustomWorkerUrl(url) {
+      if (url) localStorage.setItem('t8_custom_worker_url', url.trim());
+      else localStorage.removeItem('t8_custom_worker_url');
+    }
+
+    function promptCustomWorkerUrl() {
+      const current = getCustomWorkerUrl();
+      const res = prompt('Cloudflare Worker (または Wavu プロキシ) の URL を入力してください:\n(例: https://my-wavu-proxy.workers.dev)', current);
+      if (res !== null) {
+        setCustomWorkerUrl(res);
+        if (res.trim()) {
+          showToast('🌐 自前 Worker URL を保存しました！');
+        } else {
+          showToast('🧹 Worker URL をクリアしました');
+        }
+      }
+    }
+
+    // σ² < 75 のキャラだけから最多試合キャラを選ぶ。該当者がいない場合だけ全キャラに広げる。
+    function selectWavuMain(charGamesMap, charRatingMap, charSigmaMap = {}) {
+      let mainChar = null;
+      let mainCharGames = 0;
+      const allEntries = Object.entries(charGamesMap || {});
+      const leaderboardEntries = allEntries.filter(([charName]) => {
+        const sigma = Number(charSigmaMap[charName]);
+        return Number.isFinite(sigma) && sigma < 75;
+      });
+      const candidates = leaderboardEntries.length > 0 ? leaderboardEntries : allEntries;
+
+      for (const [charName, rawGames] of candidates) {
+        const games = Number(rawGames);
+        if (Number.isFinite(games) && games > mainCharGames) {
+          mainChar = charName;
+          mainCharGames = games;
+        }
+      }
+
+      return {
+        mainChar,
+        mainCharGames: mainChar ? mainCharGames : null,
+        ratingMu: mainChar && charRatingMap && charRatingMap[mainChar] !== undefined
+          ? Number(charRatingMap[mainChar])
+          : null
+      };
+    }
+
+    // Wavu の rating カードを DOM から読む。正規表現で入れ子の div を読むと
+    // ページ構造の小さな変更で壊れるため、各カードを独立して解析する。
+    function parseWavuRatings(html) {
+      const charGamesMap = {};
+      const charRatingMap = {};
+      const charSigmaMap = {};
+      const qualifiedCharGamesMap = {};
+      const qualifiedCharRatingMap = {};
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const ratingCards = doc.querySelectorAll('.rating');
+
+      ratingCards.forEach((card) => {
+        const charName = card.querySelector('.char')?.textContent?.trim();
+        const muText = card.querySelector('.mu')?.textContent || '';
+        const sigmaText = card.querySelector('.sigma')?.textContent || '';
+        const gamesText = card.querySelector('.games')?.textContent || '';
+        const muMatch = muText.match(/μ\s*([\d,]+)/u);
+        const sigmaMatch = sigmaText.match(/σ²\s*([\d,]+)/u);
+        const gamesMatch = gamesText.match(/([\d,]+)\s*games?/i);
+        if (!charName || !gamesMatch) return;
+
+        charGamesMap[charName] = Number(gamesMatch[1].replace(/,/g, ''));
+        if (muMatch) charRatingMap[charName] = Number(muMatch[1].replace(/,/g, ''));
+        if (sigmaMatch) charSigmaMap[charName] = Number(sigmaMatch[1].replace(/,/g, ''));
+        const groupLabel = card.closest('.rating-group')?.querySelector('.label')?.textContent || '';
+        if (/Leaderboard/i.test(groupLabel)) {
+          qualifiedCharGamesMap[charName] = charGamesMap[charName];
+          if (muMatch) qualifiedCharRatingMap[charName] = charRatingMap[charName];
+        }
+      });
+
+      return { charGamesMap, charRatingMap, charSigmaMap, qualifiedCharGamesMap, qualifiedCharRatingMap };
+    }
+
+    // wank.wavu.wiki から全キャラの試合数と μ を取得する。
+    async function fetchRealWavuData(cleanId) {
+      let ratingMu = null;
+      let mainChar = null;
+      let mainCharGames = null;
+      let charGamesMap = {};
+      let charRatingMap = {};
+      let charSigmaMap = {};
+      let wavuLatestTs = null;
+
+      // 自前 Worker URL が設定されている場合は優先使用 (Cloudflare ブロック完全回避)
+      const customWorker = getCustomWorkerUrl();
+      if (customWorker) {
+        try {
+          const workerEndpoint = `${customWorker.replace(/\/$/, '')}?gameId=${encodeURIComponent(cleanId)}`;
+          const res = await fetch(workerEndpoint);
+          if (res.ok) {
+            const data = await res.json();
+            if (data) {
+              if (data.ratingMu !== undefined && data.ratingMu !== null) ratingMu = data.ratingMu;
+              if (data.mainChar) mainChar = data.mainChar;
+              if (data.mainCharGames) mainCharGames = data.mainCharGames;
+              if (data.latestBattle && data.latestBattle.battle_at) {
+                const raw = Number(data.latestBattle.battle_at);
+                wavuLatestTs = raw < 1e11 ? raw * 1000 : raw;
+              } else if (data.latestBattleAt) {
+                const raw = Number(data.latestBattleAt);
+                wavuLatestTs = raw < 1e11 ? raw * 1000 : raw;
+              }
+              if (data.charGamesMap && Object.keys(data.charGamesMap).length > 0) {
+                charGamesMap = data.charGamesMap;
+              }
+              if (data.charRatingMap) {
+                charRatingMap = data.charRatingMap;
+              }
+              if (data.charSigmaMap) {
+                charSigmaMap = data.charSigmaMap;
+              }
+              // Worker が Leaderboard グループを返した場合は、その中だけで選ぶ。
+              // 古いWavu HTMLでは σ 値の要素名が変わることがあるため、数値のclass名には依存しない。
+              const qualifiedGames = data.qualifiedCharGamesMap || {};
+              const qualifiedRatings = data.qualifiedCharRatingMap || {};
+              const selected = Object.keys(qualifiedGames).length > 0
+                ? selectWavuMain(qualifiedGames, qualifiedRatings)
+                : selectWavuMain(charGamesMap, charRatingMap, charSigmaMap);
+              mainChar = selected.mainChar || mainChar;
+              mainCharGames = selected.mainCharGames || mainCharGames;
+              ratingMu = selected.ratingMu !== null ? selected.ratingMu : ratingMu;
+              if (mainChar || ratingMu !== null || Object.keys(charGamesMap).length > 0) {
+                return { ratingMu, mainChar, mainCharGames, charGamesMap, charRatingMap, charSigmaMap, wavuLatestTs };
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Custom Worker fetch failed:', e);
+        }
+      }
+
+      const targetUrl = `https://wank.wavu.wiki/player/${encodeURIComponent(cleanId)}`;
+      const proxies = [
+        `https://proxy.cors.sh/${targetUrl}`,
+        `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`,
+        `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`,
+        `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`
+      ];
+
+      for (const url of proxies) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 4000);
+          const res = await fetch(url, { signal: controller.signal });
+          clearTimeout(timeoutId);
+
+          if (res.ok) {
+            const html = await res.text();
+
+            // 埋め込み JSON script: const data = [{"battle_at":1784672292,"rating_after":1197,...}]
+            const jsonMatch = html.match(/const\s+data\s*=\s*(\[\s*\{[\s\S]*?\}\s*\]);/);
+            if (jsonMatch) {
+              try {
+                const battleData = JSON.parse(jsonMatch[1]);
+                if (battleData && battleData.length > 0) {
+                  const latest = battleData[0];
+                  if (latest.battle_at) {
+                    const rawTs = Number(latest.battle_at);
+                    wavuLatestTs = rawTs < 1e11 ? rawTs * 1000 : rawTs;
+                  }
+                  if (ratingMu === null) {
+                    ratingMu = latest.rating_after !== undefined ? latest.rating_after : latest.rating_before;
+                  }
+                }
+              } catch (e) {
+                console.warn('Wavu JSON parse error:', e);
+              }
+            }
+
+            const parsedRatings = parseWavuRatings(html);
+            charGamesMap = parsedRatings.charGamesMap;
+            charRatingMap = parsedRatings.charRatingMap;
+            charSigmaMap = parsedRatings.charSigmaMap;
+            const selected = Object.keys(parsedRatings.qualifiedCharGamesMap).length > 0
+              ? selectWavuMain(parsedRatings.qualifiedCharGamesMap, parsedRatings.qualifiedCharRatingMap)
+              : selectWavuMain(charGamesMap, charRatingMap, charSigmaMap);
+            mainChar = selected.mainChar;
+            mainCharGames = selected.mainCharGames;
+            // 対象キャラの μ がなければ、対戦履歴から推定した値を残す。
+            if (selected.ratingMu !== null) ratingMu = selected.ratingMu;
+
+            return { ratingMu, mainChar, mainCharGames, charGamesMap, charRatingMap, charSigmaMap, wavuLatestTs };
+          }
+        } catch (e) {
+          console.warn(`Wavu proxy fetch failed for ${url}:`, e);
+        }
+      }
+      return { ratingMu: null, mainChar: null, mainCharGames: null, charGamesMap: {}, charRatingMap: {}, charSigmaMap: {}, wavuLatestTs: null };
+    }
+
+    async function fetchEwgfStats(gameId, forceRefresh = false, memberKey = null, isManual = false, targetName = '') {
+      const cleanId = cleanTekkenId(gameId);
+      const cached = getLocalStats(cleanId);
+
+      // 1時間以内のキャッシュがあり、強制的更新でなければそのまま返す (1日100回クォータの徹底節約)
+      if (!forceRefresh && cached && (Date.now() - (cached.cachedAt || 0) < CACHE_TTL_MS) && !cached.isError) {
+        return cached;
+      }
+
+      const apiKey = getEwgfApiKey();
+
+      try {
+        incrementApiCallCounter(); // API呼び出しをカウント
+        recordLastUpdateLog(isManual ? 'manual' : 'auto', targetName);
+
+        let json = null;
+        const customWorker = getCustomWorkerUrl();
+
+        // 1. 自前 Worker がある場合は優先使用
+        if (customWorker) {
+          try {
+            const workerEndpoint = `${customWorker.replace(/\/$/, '')}?ewgfId=${encodeURIComponent(cleanId)}`;
+            const res = await fetch(workerEndpoint);
+            if (res.ok) {
+              json = await res.json();
+            }
+          } catch (wErr) {
+            console.warn('Worker ewgf fetch failed:', wErr);
+          }
+        }
+
+        // 2. 直接 fetch または CORS プロキシ経由で api.ewgf.gg を試行
+        if (!json && apiKey) {
+          const targetUrl = `https://api.ewgf.gg/external/battles/${encodeURIComponent(cleanId)}`;
+          const fetchTargets = [
+            { url: targetUrl, headers: { 'Authorization': `Bearer ${apiKey}` } },
+            { url: `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`, headers: { 'Authorization': `Bearer ${apiKey}` } },
+            { url: `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`, headers: { 'Authorization': `Bearer ${apiKey}` } }
+          ];
+
+          for (const target of fetchTargets) {
+            try {
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 5000);
+              const res = await fetch(target.url, { headers: target.headers, signal: controller.signal });
+              clearTimeout(timeoutId);
+              if (res.ok) {
+                json = await res.json();
+                break;
+              }
+            } catch (e) {
+              console.warn(`Fetch failed for ${target.url}`, e);
+            }
+          }
+        }
+
+        const battles = json ? (Array.isArray(json) ? json : (json.data || [])) : [];
+
+        // wank.wavu.wiki から最新 μ レート & メインキャラ試合数 & 最新対戦日時を取得
+        const wavuData = await fetchRealWavuData(cleanId);
+
+        if (battles && battles.length > 0) {
+          const latestBattle = battles[0];
+          const getPlayerBattleInfo = (battle) => {
+            const isP1 = cleanTekkenId(battle.p1_tekken_id) === cleanTekkenId(cleanId);
+            return {
+              char: isP1 ? battle.p1_char : battle.p2_char,
+              rank: isP1 ? battle.p1_dan_rank : battle.p2_dan_rank,
+              power: isP1 ? battle.p1_tekken_power : battle.p2_tekken_power
+            };
+          };
+          const normaliseCharacter = (charName) => String(charName || '')
+            .toLowerCase()
+            .replace(/[\s\-‐‑‒–—―]/g, '');
+          const latestInfo = getPlayerBattleInfo(latestBattle);
+          const recentMain = wavuData && wavuData.mainChar;
+          // ewgf の履歴は新しい順。Recent main と同じキャラが最初に現れた試合の段位を採用する。
+          const recentMainBattle = recentMain
+            ? battles.find((battle) => normaliseCharacter(getPlayerBattleInfo(battle).char) === normaliseCharacter(recentMain))
+            : null;
+          // Recent main が決まっているのに直近50戦にいない場合、他キャラの段位は表示しない。
+          const rankBattleInfo = recentMain
+            ? (recentMainBattle ? getPlayerBattleInfo(recentMainBattle) : null)
+            : latestInfo;
+          const playerChar = latestInfo.char;
+          const playerRank = rankBattleInfo.rank;
+          const playerPower = latestInfo.power;
+
+          let battleTs = null;
+          if (latestBattle.battle_at) {
+            battleTs = new Date(latestBattle.battle_at).getTime();
+          }
+
+          // ewgf の battle_at と wavu の battle_at を比較し、より最新のタイムスタンプを優先
+          let wavuTs = wavuData ? wavuData.wavuLatestTs : null;
+          let finalTs = battleTs;
+          if (wavuTs && (!finalTs || wavuTs > finalTs)) {
+            finalTs = wavuTs;
+          }
+
+          const statsData = {
+            gameId: cleanId,
+            // メインと Rating は Wavu で同じキャラを基準にする。ewgf の最新対戦キャラでは上書きしない。
+            mainChar: (wavuData && wavuData.mainChar) || playerChar || 'Unknown',
+            mainCharGames: (wavuData && wavuData.mainCharGames !== null)
+              ? wavuData.mainCharGames
+              : (cached ? cached.mainCharGames : null),
+            // Recent main を直近50戦で最後に使用した試合時点の段位。
+            danRank: playerRank || (recentMain ? '直近50戦内に記録なし' : 'Unranked'),
+            tekkenPower: playerPower || 0,
+            ratingMu: wavuData.ratingMu !== null ? wavuData.ratingMu : (cached ? cached.ratingMu : null),
+            lastSeenTimestamp: finalTs || Date.now(),
+            totalBattlesFetched: battles.length,
+            isError: false,
+            updatedAt: Date.now()
+          };
+
+          setLocalStats(cleanId, statsData, memberKey);
+          return statsData;
+        } else if (wavuData && wavuData.ratingMu !== null) {
+          // ewgf記録がなくても wavu データが取れた場合
+          let wavuTs = wavuData ? wavuData.wavuLatestTs : null;
+          const wavuOnlyStats = {
+            gameId: cleanId,
+            mainChar: wavuData.mainChar || (cached ? cached.mainChar : 'Wavu取得済'),
+            mainCharGames: wavuData.mainCharGames || null,
+            danRank: cached ? cached.danRank : '-',
+            tekkenPower: cached ? cached.tekkenPower : 0,
+            ratingMu: wavuData.ratingMu,
+            lastSeenTimestamp: wavuTs || (cached ? cached.lastSeenTimestamp : Date.now()),
+            isError: false,
+            updatedAt: Date.now()
+          };
+          setLocalStats(cleanId, wavuOnlyStats, memberKey);
+          return wavuOnlyStats;
+        } else {
+          const noBattleStats = {
+            gameId: cleanId,
+            mainChar: cached ? cached.mainChar : '対戦記録なし',
+            danRank: cached ? cached.danRank : '-',
+            tekkenPower: cached ? cached.tekkenPower : 0,
+            ratingMu: cached ? cached.ratingMu : null,
+            lastSeenTimestamp: cached ? cached.lastSeenTimestamp : null,
+            isError: false,
+            updatedAt: Date.now()
+          };
+          setLocalStats(cleanId, noBattleStats, memberKey);
+          return noBattleStats;
+        }
+      } catch (err) {
+        console.warn(`ewgf API fetch error for ${cleanId}:`, err);
+        const errorStats = {
+          gameId: cleanId,
+          mainChar: (cached && cached.mainChar) ? cached.mainChar : '通信エラー',
+          danRank: (cached && cached.danRank) ? cached.danRank : '-',
+          tekkenPower: (cached && cached.tekkenPower) ? cached.tekkenPower : 0,
+          ratingMu: (cached && cached.ratingMu !== undefined) ? cached.ratingMu : null,
+          lastSeenTimestamp: (cached && cached.lastSeenTimestamp) ? cached.lastSeenTimestamp : null,
+          isError: true,
+          updatedAt: Date.now()
+        };
+        setLocalStats(cleanId, errorStats, memberKey);
+        return errorStats;
+      }
+    }
+
+    function drawRadarChart(canvasId, stats) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+
+      const width = canvas.clientWidth || 170;
+      const height = canvas.clientHeight || 135;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      ctx.scale(dpr, dpr);
+
+      ctx.clearRect(0, 0, width, height);
+
+      const centerX = width / 2;
+      const centerY = height / 2 + 5;
+      const radius = Math.min(width, height) / 2 - 22;
+      const sides = 5;
+
+      const labels = ['ATTACK', 'TECH', 'APPEAL', 'SPIRIT', 'DEFENSE'];
+
+      let scores = null;
+      if (stats && stats.customStats) {
+        scores = [
+          (stats.customStats.attack || 50) / 100,
+          (stats.customStats.technique || 50) / 100,
+          (stats.customStats.appeal || 50) / 100,
+          (stats.customStats.spirit || 50) / 100,
+          (stats.customStats.defense || 50) / 100
+        ];
+      }
+
+      ctx.strokeStyle = currentTheme === 'modern' ? 'rgba(255,255,255,0.15)' : (currentTheme === 'japanese' ? 'rgba(99,102,241,0.25)' : 'rgba(140,106,70,0.3)');
+      ctx.lineWidth = 1;
+
+      for (let level = 1; level <= 3; level++) {
+        const r = (radius / 3) * level;
+        ctx.beginPath();
+        for (let i = 0; i < sides; i++) {
+          const angle = (Math.PI * 2 / sides) * i - Math.PI / 2;
+          const x = centerX + r * Math.cos(angle);
+          const y = centerY + r * Math.sin(angle);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+      }
+
+      ctx.font = '700 7.5px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = currentTheme === 'modern' ? '#94a3b8' : (currentTheme === 'japanese' ? '#4338ca' : '#5c3a21');
+
+      for (let i = 0; i < sides; i++) {
+        const angle = (Math.PI * 2 / sides) * i - Math.PI / 2;
+        const x = centerX + radius * Math.cos(angle);
+        const y = centerY + radius * Math.sin(angle);
+
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+
+        const labelX = centerX + (radius + 12) * Math.cos(angle);
+        const labelY = centerY + (radius + 9) * Math.sin(angle);
+        ctx.fillText(labels[i], labelX, labelY);
+      }
+
+      if (scores) {
+        ctx.beginPath();
+        for (let i = 0; i < sides; i++) {
+          const angle = (Math.PI * 2 / sides) * i - Math.PI / 2;
+          const r = radius * scores[i];
+          const x = centerX + r * Math.cos(angle);
+          const y = centerY + r * Math.sin(angle);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+
+        if (currentTheme === 'modern') {
+          ctx.fillStyle = 'rgba(129, 140, 248, 0.4)';
+          ctx.strokeStyle = '#818cf8';
+        } else if (currentTheme === 'japanese') {
+          ctx.fillStyle = 'rgba(99, 102, 241, 0.35)';
+          ctx.strokeStyle = '#4338ca';
+        } else {
+          ctx.fillStyle = 'rgba(139, 0, 0, 0.35)';
+          ctx.strokeStyle = '#8b0000';
+        }
+        ctx.lineWidth = 2;
+        ctx.fill();
+        ctx.stroke();
+      } else {
+        ctx.font = '600 7px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = currentTheme === 'modern' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)';
+        ctx.fillText('編集でグラフ設定', centerX, centerY);
+      }
+    }
+
+    async function refreshCardStats(gameId, key) {
+      showToast(`🔄 ewgf API から ID[${gameId}] の対戦データを取得中...`);
+      let memberName = '';
+      if (window.currentMembersData && window.currentMembersData[key]) {
+        memberName = window.currentMembersData[key].name || '';
+      }
+      const stats = await fetchEwgfStats(gameId, true, key, true, memberName);
+      const container = document.getElementById(`stats_box_${key}`);
+      if (container && stats) {
+        setLocalStats(cleanTekkenId(gameId), stats, key);
+        const badgeWrapper = container.querySelector('.last-seen-badge-wrapper');
+        if (badgeWrapper) {
+          badgeWrapper.innerHTML = getLastSeenBadgeHtml(stats.lastSeenTimestamp);
+        }
+        const mainCharEl = container.querySelector('.val-main-char');
+        if (mainCharEl) {
+          mainCharEl.textContent = stats.mainChar || 'Unknown';
+        }
+        const gamesEl = container.querySelector('.stats-preview-games');
+        if (gamesEl) {
+          gamesEl.textContent = stats.mainCharGames ? `· ${stats.mainCharGames.toLocaleString()} games` : '';
+        }
+        const rankEl = container.querySelector('.val-rank');
+        if (rankEl) rankEl.textContent = stats.danRank || '-';
+        const ratingEl = container.querySelector('.val-rating');
+        if (ratingEl) {
+          ratingEl.textContent = stats.ratingMu !== null ? `μ ${stats.ratingMu}` : '-';
+        }
+        const powerEl = container.querySelector('.val-power');
+        if (powerEl) {
+          powerEl.textContent = stats.tekkenPower ? stats.tekkenPower.toLocaleString() : '-';
+        }
+
+        const canvasEl = document.getElementById(`radar_${key}`);
+        if (canvasEl) drawRadarChart(`radar_${key}`, stats);
+      }
+      showToast(`✨ ewgf 公式データを最新に更新しました！`);
+      return stats;
+    }
+
+    async function refreshAllWavuStats() {
+      if (!window.currentMembersData) {
+        showToast('⚠️ メンバーデータを読み込み中です...');
+        return;
+      }
+      showToast('⚡ 全賞金首の ewgf 最新データを順次一括更新中...');
+      recordLastUpdateLog('manual', '全メンバー一括');
+      const entries = Object.entries(window.currentMembersData);
+      for (const [key, m] of entries) {
+        const cleanId = cleanTekkenId(m.gameId);
+        if (cleanId) {
+          await refreshCardStats(cleanId, key);
+        }
+      }
+      showToast('🎉 全賞金首の最新データ一括更新が完了しました！');
+    }
+
+    function renderPosters(data) {
+      window.currentMembersData = data;
+      const grid = document.getElementById('posterGrid');
+      const empty = document.getElementById('emptyState');
+      grid.innerHTML = '';
+
+      if (!data || Object.keys(data).length === 0) {
+        empty.style.display = 'block';
+        return;
+      }
+      empty.style.display = 'none';
+
+      const entries = Object.entries(data).sort((a, b) => (a[1].order || 0) - (b[1].order || 0));
+
+      entries.forEach(([key, m], idx) => {
+        const card = document.createElement('div');
+        card.className = 'poster-card';
+        const randTilt = ((idx % 5) - 2) * 1.2;
+        card.style.setProperty('--rand-deg', randTilt);
+
+        const cleanGameId = cleanTekkenId(m.gameId);
+
+        let xUrl = (m.xUrl && typeof m.xUrl === 'string') ? m.xUrl.trim() : '';
+        if (xUrl && !xUrl.startsWith('http')) {
+          if (xUrl.startsWith('@')) xUrl = xUrl.substring(1);
+          xUrl = `https://x.com/${xUrl}`;
+        }
+
+        const ewgfUrl = `https://ewgf.gg/player/${encodeURIComponent(cleanGameId)}`;
+        const wavuUrl = `https://wank.wavu.wiki/player/${encodeURIComponent(cleanGameId)}`;
+        const avatarBg = m.color || PRESET_COLORS[0];
+        const photoData = m.photoData || '';
+
+        let photoHtml = '';
+        if (photoData) {
+          photoHtml = `<img src="${escapeHtml(photoData)}" alt="${escapeHtml(m.name)}">`;
+        } else {
+          photoHtml = `<div class="avatar-initials">${escapeHtml(getInitials(m.name))}</div>`;
+        }
+
+        const xBtnHtml = xUrl
+          ? `<a class="link-btn x-btn" href="${escapeHtml(xUrl)}" target="_blank" rel="noopener">${ICON_X}<span>SNS (X)</span></a>`
+          : '';
+
+        let headerText = 'WANTED';
+        let subHeaderText = 'DEAD OR ALIVE';
+        if (currentTheme === 'japanese') {
+          headerText = '御触書';
+          subHeaderText = '指名手配札';
+        }
+
+        let defaultSubtitle = '手配中';
+        if (currentTheme === 'modern') defaultSubtitle = 'Member';
+        if (currentTheme === 'japanese') defaultSubtitle = '手配者';
+
+        const cachedStats = getLocalStats(cleanGameId, m);
+
+        card.innerHTML = `
+          <div class="poster-pin"></div>
+          <div class="poster-header-text">${headerText}</div>
+          <div class="poster-sub-header">${subHeaderText}</div>
+          
+          <div class="avatar-frame" style="background: linear-gradient(135deg, ${avatarBg} 0%, #111 100%);">
+            ${photoHtml}
+          </div>
+
+          <div class="poster-name">${escapeHtml(m.name)}</div>
+          <div class="poster-nickname">${escapeHtml(m.subtitle || defaultSubtitle)}</div>
+
+          <!-- ewgf.gg / Wavu 公式データ直接連動 (レーダーチャート全撤廃・純粋本物データ表示) -->
+          <div class="card-stats-container" id="stats_box_${key}">
+            <div class="last-seen-badge-wrapper">
+              ${getLastSeenBadgeHtml(cachedStats ? cachedStats.lastSeenTimestamp : null)}
+            </div>
+
+            <div class="stats-preview-head">
+              <div>
+                <p class="stats-preview-eyebrow">Recent main</p>
+                <div class="stats-preview-main"><span class="val-main-char">${cachedStats ? escapeHtml(cachedStats.mainChar) : '取得中'}</span><span class="stats-preview-games">${cachedStats && cachedStats.mainCharGames ? `· ${cachedStats.mainCharGames.toLocaleString()} games` : ''}</span></div>
+              </div>
+              <span class="stats-preview-badge">ewgf + wavu</span>
+            </div>
+
+            <div class="stats-preview-metrics">
+              <div class="stats-preview-metric stats-preview-metric-rank">
+                <span class="stats-preview-label">Rank</span>
+                <span class="stats-preview-value val-rank ${cachedStats && /直近50戦内に記録なし/.test(cachedStats.danRank || '') ? 'stats-preview-missing' : ''}">${cachedStats ? escapeHtml(cachedStats.danRank || '-') : '-'}</span>
+              </div>
+              <div class="stats-preview-metric">
+                <span class="stats-preview-label">μ Rating</span>
+                <span class="stats-preview-value stats-preview-rating val-rating">${cachedStats && cachedStats.ratingMu !== null ? `μ ${cachedStats.ratingMu}` : 'データ取得中'}</span>
+              </div>
+              <div class="stats-preview-metric">
+                <span class="stats-preview-label">Power</span>
+                <span class="stats-preview-value val-power">${cachedStats && cachedStats.tekkenPower ? cachedStats.tekkenPower.toLocaleString() : '-'}</span>
+              </div>
+            </div>
+
+            <button class="card-refresh-btn" onclick="refreshCardStats('${escapeHtml(cleanGameId)}', '${key}')">
+              ⚡ 公式データ更新
+            </button>
+          </div>
+
+          <div class="id-box" onclick="copyId('${escapeHtml(cleanGameId)}', '${escapeHtml(m.name)}')">
+            <div>
+              <span class="id-label">TEKKEN 8 ID</span>
+              <span class="id-value">${escapeHtml(cleanGameId)}</span>
+            </div>
+            <span class="copy-badge">📋 Copy</span>
+          </div>
+
+          <div class="links-grid">
+            ${xBtnHtml}
+            <a class="link-btn ewgf-btn" href="${escapeHtml(ewgfUrl)}" target="_blank" rel="noopener">${ICON_LIGHTNING}<span>ewgf</span></a>
+            <a class="link-btn wavu-btn" href="${escapeHtml(wavuUrl)}" target="_blank" rel="noopener">${ICON_WAVU}<span>wavu</span></a>
+          </div>
+
+          <!-- スマートな最下部管理バー -->
+          <div class="card-admin-bar">
+            <button class="card-admin-btn" onclick="openEditModal('${key}')" title="編集">${ICON_EDIT} 編集</button>
+            <button class="card-admin-btn delete-btn" onclick="openDeleteModal('${key}', '${escapeHtml(m.name)}')" title="削除">${ICON_DELETE} 削除</button>
+          </div>
+        `;
+
+        grid.appendChild(card);
+
+        // バックグラウンドでのデータ非同期フェッチ（1時間キャッシュ切れ時の自動取得 & Firebase全端末同期）
+        // ※ isFetchingInBackground がtrueの場合はスキップ（on('value')再発火による二重フェッチ防止）
+        if (!isFetchingInBackground) {
+          const capturedKey = key;
+          const capturedCleanGameId = cleanGameId;
+          const capturedName = m.name;
+          const capturedMemberData = m;
+          setTimeout(async () => {
+            let stats = getLocalStats(capturedCleanGameId, capturedMemberData);
+            if (!stats || (Date.now() - (stats.cachedAt || 0) >= CACHE_TTL_MS) || stats.isError) {
+              isFetchingInBackground = true;
+              try {
+                stats = await fetchEwgfStats(capturedCleanGameId, false, capturedKey, false, capturedName);
+                const container = document.getElementById(`stats_box_${capturedKey}`);
+                if (container && stats) {
+                  container.querySelector('.last-seen-badge-wrapper').innerHTML = getLastSeenBadgeHtml(stats.lastSeenTimestamp);
+                  const mainCharEl = container.querySelector('.val-main-char');
+                  if (mainCharEl) {
+                    mainCharEl.textContent = stats.mainChar || 'Unknown';
+                  }
+                  const gamesEl = container.querySelector('.stats-preview-games');
+                  if (gamesEl) {
+                    gamesEl.textContent = stats.mainCharGames ? `· ${stats.mainCharGames.toLocaleString()} games` : '';
+                  }
+                  const rankEl = container.querySelector('.val-rank');
+                  if (rankEl) rankEl.textContent = stats.danRank || '-';
+                  const ratingEl = container.querySelector('.val-rating');
+                  if (ratingEl) ratingEl.textContent = stats.ratingMu !== null ? `μ ${stats.ratingMu}` : 'データ取得中';
+                  const powerEl = container.querySelector('.val-power');
+                  if (powerEl) powerEl.textContent = stats.tekkenPower ? stats.tekkenPower.toLocaleString() : '-';
+                }
+              } finally {
+                isFetchingInBackground = false;
+              }
+            }
+          }, 100);
+        }
+      });
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      const d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
+    async function copyId(gameId, name) {
+      try {
+        await navigator.clipboard.writeText(gameId);
+      } catch {
+        const ta = document.createElement('textarea');
+        ta.value = gameId;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      showToast(`🎯 ${name} の 鉄拳8 ID [${gameId}] をコピーしました！`);
+    }
+
+    function renderColorPresets() {
+      const container = document.getElementById('colorPresets');
+      if (!container) return;
+      container.innerHTML = '';
+
+      PRESET_COLORS.forEach(color => {
+        const swatch = document.createElement('div');
+        swatch.className = 'color-swatch' + (color === selectedColor ? ' selected' : '');
+        swatch.style.backgroundColor = color;
+        swatch.onclick = () => {
+          selectedColor = color;
+          document.querySelectorAll('.color-swatch').forEach(el => el.classList.remove('selected'));
+          swatch.classList.add('selected');
+        };
+        container.appendChild(swatch);
+      });
+    }
+
+    function setPhotoPreview(url) {
+      const preview = document.getElementById('photoPreview');
+      const photoDataInput = document.getElementById('photoData');
+      const btnRemove = document.getElementById('btnRemovePhoto');
+
+      if (photoDataInput) photoDataInput.value = url || '';
+
+      if (preview) {
+        if (url) {
+          preview.innerHTML = `<img src="${escapeHtml(url)}" alt="Preview">`;
+        } else {
+          preview.innerHTML = `<span>無画像</span>`;
+        }
+      }
+
+      if (btnRemove) {
+        btnRemove.style.display = url ? 'inline-block' : 'none';
+      }
+    }
+
+    function removePhoto() {
+      setPhotoPreview('');
+      const input = document.getElementById('inputPhotoFile');
+      if (input) input.value = '';
+    }
+
+    function openAddModal() {
+      document.getElementById('modalTitle').textContent = 'メンバーを作成';
+      let btnLabel = '保存する';
+      if (currentTheme === 'wanted') btnLabel = '手配書を貼り付ける';
+      if (currentTheme === 'japanese') btnLabel = '手配カードを作成';
+      document.getElementById('btnSaveSubmit').textContent = btnLabel;
+
+      document.getElementById('editKey').value = '';
+      document.getElementById('inputName').value = '';
+      document.getElementById('inputId').value = '';
+      document.getElementById('inputSubtitle').value = '';
+      document.getElementById('inputXUrl').value = '';
+      document.getElementById('inputPhotoFile').value = '';
+      setPhotoPreview('');
+
+      selectedColor = PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)];
+      renderColorPresets();
+      openModal('editModal');
+    }
+
+    function openEditModal(key) {
+      const populateAndOpen = (m) => {
+        document.getElementById('modalTitle').textContent = 'メンバーを編集';
+        let btnLabel = '保存する';
+        if (currentTheme === 'wanted') btnLabel = '手配書を更新する';
+        if (currentTheme === 'japanese') btnLabel = '手配カードを更新';
+        document.getElementById('btnSaveSubmit').textContent = btnLabel;
+
+        const cleanId = cleanTekkenId(m.gameId);
+
+        document.getElementById('editKey').value = key;
+        document.getElementById('inputName').value = m.name || '';
+        document.getElementById('inputId').value = cleanId;
+        document.getElementById('inputSubtitle').value = m.subtitle || '';
+        document.getElementById('inputXUrl').value = m.xUrl !== undefined ? m.xUrl : '';
+        document.getElementById('inputPhotoFile').value = '';
+        setPhotoPreview(m.photoData || '');
+
+        selectedColor = m.color || PRESET_COLORS[0];
+        renderColorPresets();
+        openModal('editModal');
+      };
+
+      if (window.currentMembersData && window.currentMembersData[key]) {
+        populateAndOpen(window.currentMembersData[key]);
+      } else if (membersRef) {
+        membersRef.child(key).once('value', (snap) => {
+          const m = snap.val();
+          if (m) populateAndOpen(m);
+        });
+      }
+    }
+
+    function openDeleteModal(key, name) {
+      document.getElementById('deleteKey').value = key;
+      document.getElementById('deleteName').textContent = name;
+      openModal('deleteModal');
+    }
+
+    function openModal(id) {
+      document.getElementById(id).classList.add('open');
+    }
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('open');
+      if (id === 'cropModal' && cropper) {
+        cropper.destroy();
+        cropper = null;
+      }
+    }
+
+    async function fetchPlayerNameByGameId(gameId) {
+      const url = `https://r.jina.ai/http://wank.wavu.wiki/player/${encodeURIComponent(gameId)}`;
+      const response = await fetch(url, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`名前取得 HTTP ${response.status}`);
+      const text = await response.text();
+      const titleMatch = text.match(/^Title:\s*(.+?)\s*[•·]\s*Wavu Wank\s*$/mi);
+      const playerName = titleMatch ? titleMatch[1].trim() : '';
+      if (!playerName || /^Just a moment/i.test(playerName)) throw new Error('プレイヤー名が見つかりません');
+      return playerName.slice(0, 50);
+    }
+
+    async function saveMember(e) {
+      e.preventDefault();
+      const key = document.getElementById('editKey').value;
+      const rawGameId = document.getElementById('inputId').value.trim();
+      const gameId = cleanTekkenId(rawGameId);
+      if (!gameId) {
+        showToast('TEKKEN 8 IDを入力してください');
+        return;
+      }
+
+      const submit = document.getElementById('btnSaveSubmit');
+      const originalLabel = submit.textContent;
+      submit.disabled = true;
+      submit.textContent = 'プレイヤー情報を確認中...';
+
+      try {
+        let name = document.getElementById('inputName').value.trim();
+        if (!name) {
+          try {
+            name = await fetchPlayerNameByGameId(gameId);
+            document.getElementById('inputName').value = name;
+          } catch (nameError) {
+            console.warn('Player name lookup failed', nameError);
+            name = gameId;
+          }
+        }
+
+        const data = {
+          name,
+          gameId,
+          subtitle: document.getElementById('inputSubtitle').value.trim(),
+          xUrl: document.getElementById('inputXUrl').value.trim(),
+          profileUrl: null,
+          photoData: document.getElementById('photoData').value,
+          color: selectedColor,
+          updatedAt: Date.now()
+        };
+
+        if (key) {
+          await membersRef.child(key).update(data);
+          closeModal('editModal');
+          showToast(`${name} を更新しました`);
+        } else {
+          data.order = Date.now();
+          await membersRef.push(data);
+          closeModal('editModal');
+          showToast(`${name} を追加しました`);
+        }
+      } catch (err) {
+        console.error('Member save failed', err);
+        showToast(`保存エラー: ${err.code || err.message}`);
+      } finally {
+        submit.disabled = false;
+        submit.textContent = originalLabel;
+      }
+    }
+    function confirmDelete() {
+      const key = document.getElementById('deleteKey').value;
+      const name = document.getElementById('deleteName').textContent;
+      if (!key) return;
+      membersRef.child(key).remove()
+        .then(() => { closeModal('deleteModal'); showToast(`${name} を削除しました`); });
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastMsg').textContent = msg;
+      if (toastTimer) clearTimeout(toastTimer);
+      toast.classList.add('show');
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+
+    function startEditTitle() {
+      const titleEl = document.getElementById('pageTitle');
+      const input = document.getElementById('titleInput');
+      const currentTitle = document.getElementById('titleText').textContent;
+
+      titleEl.style.display = 'none';
+      input.style.display = 'inline-block';
+      input.value = currentTitle;
+      input.focus();
+      input.select();
+
+      input.onblur = () => saveTitle();
+      input.onkeydown = (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); saveTitle(); }
+        if (e.key === 'Escape') { cancelEditTitle(); }
+      };
+    }
+
+    function saveTitle() {
+      const titleEl = document.getElementById('pageTitle');
+      const input = document.getElementById('titleInput');
+      const newTitle = input.value.trim();
+
+      input.onblur = null;
+      input.style.display = 'none';
+      titleEl.style.display = '';
+
+      if (newTitle && settingsRef) {
+        settingsRef.child('title').set(newTitle)
+          .then(() => showToast('タイトルを変更しました'))
+          .catch(err => showToast('エラー: ' + err.message));
+      }
+    }
+
+    function cancelEditTitle() {
+      const titleEl = document.getElementById('pageTitle');
+      const input = document.getElementById('titleInput');
+      input.onblur = null;
+      input.style.display = 'none';
+      titleEl.style.display = '';
+    }
+
+    // GitHub Pagesで古いindex.htmlが残らないよう、以前のService Workerとそのキャッシュを解除する。
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', async () => {
+        try {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map(registration => registration.unregister()));
+          if ('caches' in window) {
+            const cacheNames = await caches.keys();
+            await Promise.all(cacheNames.map(cacheName => caches.delete(cacheName)));
+          }
+          if (navigator.serviceWorker.controller && !sessionStorage.getItem('t8_sw_cleanup_reloaded')) {
+            sessionStorage.setItem('t8_sw_cleanup_reloaded', '1');
+            location.reload();
+          }
+        } catch (error) {
+          console.warn('Service Worker cleanup failed:', error);
+        }
+      });
+    }
+
+  </script>
+  <script src="user-lists-prototype.js"></script>
+  <script src="admin-access-prototype.js"></script>
+  <script>
+    (() => {
+      const integrationScript = document.createElement('script');
+      integrationScript.src = `stats-integration-v4.js?v=${Date.now()}`;
+      integrationScript.async = false;
+      integrationScript.onload = () => {
+        const pentagonStylesheet = document.createElement('link');
+        pentagonStylesheet.rel = 'stylesheet';
+        pentagonStylesheet.href = `stats-pentagon-prototype.css?v=${Date.now()}`;
+        document.head.appendChild(pentagonStylesheet);
+
+        const pentagonScript = document.createElement('script');
+        pentagonScript.src = `stats-pentagon-prototype.js?v=${Date.now()}`;
+        pentagonScript.async = false;
+        pentagonScript.onload = () => init();
+        pentagonScript.onerror = () => {
+          console.warn('Stat Pentagon prototype failed to load');
+          init();
+        };
+        document.body.appendChild(pentagonScript);
+      };
+      integrationScript.onerror = () => { console.warn('Integration script failed to load'); init(); };
+      document.body.appendChild(integrationScript);
+    })();
+  </script>
+</body>
+
+</html>
+
+
+
+
+
+
+
+
