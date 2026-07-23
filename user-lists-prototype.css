@@ -9,7 +9,7 @@
   border-radius: 16px; background: rgba(22, 14, 9, .96); text-align: center;
   box-shadow: 0 24px 80px rgba(0,0,0,.6);
 }
-.access-panel h2 { margin: 0 0 10px; color: #f4d36b; font-size: 1.45rem; }
+.access-panel h2 { margin: 0 0 10px; color: #f4d36b; font-size: clamp(1.05rem, 4.6vw, 1.45rem); line-height: 1.35; text-wrap: balance; }
 .access-panel p { color: #d8c9b2; line-height: 1.65; }
 .access-panel .uid { padding: 10px; border-radius: 8px; background: #0d0907; word-break: break-all; font-size: .75rem; }
 .access-action {
