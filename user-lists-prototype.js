@@ -419,7 +419,9 @@
       const targetIndex = cards.indexOf(nearest.item);
       const centerX = nearest.rect.left + nearest.rect.width / 2;
       const centerY = nearest.rect.top + nearest.rect.height / 2;
-      const columnCount = new Set(measured.map(({ rect }) => Math.round(rect.left))).size;
+      const columnCount = getComputedStyle(grid).gridTemplateColumns
+        .split(/\s+/)
+        .filter(Boolean).length;
       const insertBefore = columnCount > 1 ? clientX < centerX : clientY < centerY;
       const desiredGap = targetIndex + (insertBefore ? 0 : 1);
       const children = [...grid.children];
@@ -438,7 +440,7 @@
             clientX - committedPointerX,
             clientY - committedPointerY
           );
-          if (movedSinceCommit < 18) {
+          if (movedSinceCommit < 28) {
             clearPendingGap();
             return false;
           }
