@@ -5,6 +5,8 @@
   let listsRef = null;
   let listListenerRef = null;
   let settingsLogRef = null;
+  let currentListEntries = [];
+  let listOrderDraft = [];
 
   function beginCardReorder() {
     window.cardReorderInProgress = true;
@@ -101,6 +103,7 @@
         <div class="workspace-menu" role="menu">
           <button id="newListBtn" role="menuitem">＋ 新しいリスト</button>
           <button id="renameListBtn" role="menuitem">リスト名を変更</button>
+          <button id="reorderListsBtn" role="menuitem">↕ リストの並び替え</button>
           <button id="shareListBtn" role="menuitem">このリストを共有</button>
           <button id="importListBtn" role="menuitem">共有・バックアップ取込</button>
           <button id="exportListBtn" role="menuitem">全バックアップ</button>
@@ -108,6 +111,19 @@
         </div>
       </details>
       <input id="importListFile" type="file" accept="application/json" hidden>
+      <dialog class="list-order-dialog" id="listOrderDialog">
+        <div class="list-order-panel">
+          <div class="list-order-heading">
+            <div><strong>マイリストの並び替え</strong><small>PCはドラッグ、スマホは矢印で移動</small></div>
+            <button type="button" id="closeListOrderBtn" aria-label="閉じる">×</button>
+          </div>
+          <ol class="list-order-items" id="listOrderItems"></ol>
+          <div class="list-order-footer">
+            <button type="button" id="cancelListOrderBtn">キャンセル</button>
+            <button type="button" id="saveListOrderBtn" class="workspace-primary-action">並び順を保存</button>
+          </div>
+        </div>
+      </dialog>
       <details class="workspace-dropdown workspace-account" id="accountMenu">
         <summary><span class="user-chip" id="userChip"></span><span aria-hidden="true">▾</span></summary>
         <div class="workspace-menu" role="menu">
@@ -139,11 +155,43 @@
     };
     byId('newListBtn').onclick = () => { closeWorkspaceMenus(); createList(); };
     byId('renameListBtn').onclick = () => { closeWorkspaceMenus(); renameList(); };
+    byId('reorderListsBtn').onclick = () => { closeWorkspaceMenus(); openListOrderDialog(); };
     byId('deleteListBtn').onclick = () => { closeWorkspaceMenus(); deleteList(); };
     byId('shareListBtn').onclick = () => { closeWorkspaceMenus(); exportSharedList(); };
     byId('exportListBtn').onclick = () => { closeWorkspaceMenus(); exportList(); };
     byId('importListBtn').onclick = () => { closeWorkspaceMenus(); byId('importListFile').click(); };
     byId('importListFile').onchange = importList;
+    byId('closeListOrderBtn').onclick = closeListOrderDialog;
+    byId('cancelListOrderBtn').onclick = closeListOrderDialog;
+    byId('saveListOrderBtn').onclick = saveListOrder;
+    byId('listOrderDialog').addEventListener('click', event => {
+      if (event.target === byId('listOrderDialog')) closeListOrderDialog();
+    });
+    byId('listOrderItems').addEventListener('click', event => {
+      const button = event.target.closest('[data-list-move]');
+      if (!button) return;
+      moveListOrder(button.closest('[data-list-id]').dataset.listId, Number(button.dataset.listMove));
+    });
+    byId('listOrderItems').addEventListener('dragstart', event => {
+      const row = event.target.closest('[data-list-id]');
+      if (!row) return;
+      row.classList.add('is-dragging');
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', row.dataset.listId);
+    });
+    byId('listOrderItems').addEventListener('dragend', event => {
+      event.target.closest('[data-list-id]')?.classList.remove('is-dragging');
+    });
+    byId('listOrderItems').addEventListener('dragover', event => {
+      if (event.target.closest('[data-list-id]')) event.preventDefault();
+    });
+    byId('listOrderItems').addEventListener('drop', event => {
+      const target = event.target.closest('[data-list-id]');
+      const sourceId = event.dataTransfer.getData('text/plain');
+      if (!target || !sourceId || sourceId === target.dataset.listId) return;
+      event.preventDefault();
+      moveListOrderTo(sourceId, target.dataset.listId, event.clientY > target.getBoundingClientRect().top + target.offsetHeight / 2);
+    });
     bar.querySelectorAll('[data-theme-choice]').forEach(button => {
       button.onclick = () => {
         const theme = button.dataset.themeChoice;
@@ -170,10 +218,69 @@
     updateLastUpdateLogBadge();
   }
 
+  function renderListOrderItems() {
+    const root = byId('listOrderItems');
+    if (!root) return;
+    root.innerHTML = listOrderDraft.map((item, index) => `
+      <li draggable="true" data-list-id="${item.id}" class="${item.id === activeListId ? 'is-active' : ''}">
+        <span class="list-order-grip" aria-hidden="true">⠿</span>
+        <span class="list-order-name">${escapeHtml(item.name || '名称未設定')}</span>
+        <span class="list-order-current">${item.id === activeListId ? '表示中' : ''}</span>
+        <button type="button" data-list-move="-1" aria-label="上へ" ${index === 0 ? 'disabled' : ''}>↑</button>
+        <button type="button" data-list-move="1" aria-label="下へ" ${index === listOrderDraft.length - 1 ? 'disabled' : ''}>↓</button>
+      </li>`).join('');
+  }
+
+  function openListOrderDialog() {
+    listOrderDraft = currentListEntries.map(item => ({ ...item }));
+    renderListOrderItems();
+    byId('listOrderDialog').showModal();
+  }
+
+  function closeListOrderDialog() {
+    byId('listOrderDialog')?.close();
+  }
+
+  function moveListOrder(listId, direction) {
+    const from = listOrderDraft.findIndex(item => item.id === listId);
+    const to = from + direction;
+    if (from < 0 || to < 0 || to >= listOrderDraft.length) return;
+    const [item] = listOrderDraft.splice(from, 1);
+    listOrderDraft.splice(to, 0, item);
+    renderListOrderItems();
+  }
+
+  function moveListOrderTo(sourceId, targetId, after) {
+    const from = listOrderDraft.findIndex(item => item.id === sourceId);
+    if (from < 0) return;
+    const [item] = listOrderDraft.splice(from, 1);
+    let to = listOrderDraft.findIndex(entry => entry.id === targetId);
+    if (to < 0) return;
+    if (after) to += 1;
+    listOrderDraft.splice(to, 0, item);
+    renderListOrderItems();
+  }
+
+  async function saveListOrder() {
+    const button = byId('saveListOrderBtn');
+    button.disabled = true;
+    try {
+      const updates = {};
+      listOrderDraft.forEach((item, index) => { updates[`${item.id}/order`] = (index + 1) * 1000; });
+      await listsRef.update(updates);
+      closeListOrderDialog();
+      showToast('マイリストの並び順を保存しました');
+    } catch (error) {
+      showToast(`並び順の保存に失敗しました: ${error.message}`);
+    } finally {
+      button.disabled = false;
+    }
+  }
   function subscribeLists() {
     listsRef.on('value', async snapshot => {
       const lists = snapshot.val() || {};
       const entries = Object.entries(lists).sort((a, b) => (a[1].order || 0) - (b[1].order || 0));
+      currentListEntries = entries.map(([id, list]) => ({ id, name: list.name || '名称未設定' }));
       if (!entries.length) {
         const ref = listsRef.push();
         await ref.set({ name: 'マイリスト 1', order: Date.now(), createdAt: firebase.database.ServerValue.TIMESTAMP });
