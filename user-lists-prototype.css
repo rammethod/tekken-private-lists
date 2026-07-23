@@ -39,7 +39,7 @@ body.theme-modern .list-workspace select, body.theme-modern .list-workspace butt
 body.theme-japanese .list-workspace { border-color: #4f46e5; background: rgba(247,247,255,.94); }
 body.theme-japanese .list-workspace select, body.theme-japanese .list-workspace button { color: #27215b; background: #fff; border-color: #4f46e5; }
 @media (max-width: 700px) {
-  .list-workspace { position: static; }
+  .list-workspace { position: relative; top: auto; z-index: 100; }
   .list-workspace select { min-width: 100%; }
   .list-workspace .user-chip { margin-left: 0; max-width: 130px; }
 }
@@ -68,9 +68,11 @@ body.theme-japanese .workspace-refresh-control small { color: #514aa0; }
   background: #25170e; color: #fff2c9; font-weight: 800; cursor: pointer; list-style: none;
 }
 .workspace-dropdown > summary::-webkit-details-marker { display: none; }
+.list-workspace:has(.workspace-dropdown[open]) { z-index: 1000; }
+.workspace-dropdown[open] { z-index: 1001; }
 .workspace-dropdown[open] > summary { border-color: #e3c451; box-shadow: 0 0 0 2px rgba(227,196,81,.14); }
 .workspace-menu {
-  position: absolute; z-index: 300; top: calc(100% + 7px); right: 0; display: grid; gap: 4px;
+  position: absolute; z-index: 1002; top: calc(100% + 7px); right: 0; display: grid; gap: 4px;
   width: max-content; min-width: 210px; padding: 8px; border: 1px solid rgba(212,175,55,.55);
   border-radius: 10px; background: rgba(20,13,9,.98); box-shadow: 0 14px 36px rgba(0,0,0,.45);
 }
@@ -226,3 +228,5 @@ body.workspace-ui-active .app-container { transition: width .22s ease; }
 @media (prefers-reduced-motion: reduce) { body.workspace-ui-active .app-container { transition: none; } }
 
 .member-sort-option{display:flex;align-items:flex-start;gap:6px;padding:2px 8px 7px;color:#d8c795;font-size:.62rem;line-height:1.35;cursor:pointer}.member-sort-option input{flex:0 0 auto;margin-top:1px;accent-color:#d4af37}body.theme-japanese .member-sort-option{color:#514aa0}body.theme-modern .member-sort-option{color:#c4b5fd}
+
+.card-reorder-handle[hidden]{display:none!important}

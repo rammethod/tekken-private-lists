@@ -172,6 +172,16 @@
     }
   }
 
+  function updateCardReorderHandles() {
+    const isManual = currentMemberSortMode === 'manual';
+    document.querySelectorAll('.card-reorder-handle').forEach(handle => {
+      handle.hidden = !isManual;
+      handle.disabled = !isManual;
+      handle.setAttribute('aria-hidden', String(!isManual));
+      handle.tabIndex = isManual ? 0 : -1;
+    });
+  }
+
   function updateMemberSortControls() {
     const mode = byId('memberSortMode');
     const direction = byId('memberSortDirection');
@@ -182,6 +192,7 @@
       direction.disabled = currentMemberSortMode === 'manual';
       direction.textContent = currentMemberSortDirection === 'asc' ? '昇順 ↑' : '降順 ↓';
     }
+    updateCardReorderHandles();
   }
   async function saveMemberSort(mode, direction = currentMemberSortDirection) {
     currentMemberSortMode = mode || 'manual';
@@ -907,6 +918,7 @@
     };
 
     handle.addEventListener('pointerdown', event => {
+      if (currentMemberSortMode !== 'manual') return;
       if (event.pointerType === 'mouse' && event.button !== 0) return;
       event.preventDefault();
       event.stopPropagation();
@@ -923,7 +935,6 @@
       committedPointerY = null;
       clearPendingGap();
       beginCardReorder();
-      disableAutoSortForManualReorder();
 
       slot = document.createElement('div');
       slot.className = 'card-drop-slot';
@@ -957,8 +968,8 @@
     handle.addEventListener('pointerup', finish);
     handle.addEventListener('pointercancel', finish);
     handle.addEventListener('keydown', async event => {
+      if (currentMemberSortMode !== 'manual') return;
       if (!['ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'].includes(event.key)) return;
-      disableAutoSortForManualReorder();
       event.preventDefault();
       const previous = card.previousElementSibling;
       const next = card.nextElementSibling;
@@ -986,6 +997,14 @@
         handle.setAttribute('aria-label', 'メンバーの位置を並べ替え');
         card.prepend(handle);
         bindCardReorder(handle, card);
+      }
+      const reorderHandle = card.querySelector('.card-reorder-handle');
+      if (reorderHandle) {
+        const isManual = currentMemberSortMode === 'manual';
+        reorderHandle.hidden = !isManual;
+        reorderHandle.disabled = !isManual;
+        reorderHandle.setAttribute('aria-hidden', String(!isManual));
+        reorderHandle.tabIndex = isManual ? 0 : -1;
       }
       if (card.querySelector('.list-card-actions')) return;
       const actions = document.createElement('div');
