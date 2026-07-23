@@ -13,6 +13,8 @@
   let listOrderDraft = [];
   let listMenuSignature = '';
   let memberRenderSignature = '';
+  let vsModeActive = false;
+  let vsSelectedKeys = [];
 
   const createListMenuSignature = entries => JSON.stringify(entries.map(([id, list]) => [
     id,
@@ -30,6 +32,52 @@
     ])
   );
 
+  function updateVsModeView() {
+    const button = byId('vsModeToggleBtn');
+    if (button) {
+      button.classList.toggle('is-active', vsModeActive);
+      button.textContent = vsModeActive
+        ? (vsSelectedKeys.length >= 2 ? '⚔ VSモード解除' : `⚔ 対戦相手を選択 ${vsSelectedKeys.length}/2`)
+        : '⚔ VSモード β';
+      button.setAttribute('aria-pressed', String(vsModeActive));
+    }
+    document.body.classList.toggle('vs-mode-active', vsModeActive);
+    document.body.classList.toggle('vs-pair-ready', vsModeActive && vsSelectedKeys.length === 2);
+    document.querySelectorAll('.poster-card').forEach(card => {
+      const selected = vsSelectedKeys.includes(memberKeyFromCard(card));
+      card.classList.toggle('vs-selected', vsModeActive && selected);
+      card.classList.toggle('vs-dimmed', vsModeActive && vsSelectedKeys.length === 2 && !selected);
+      card.setAttribute('aria-pressed', String(vsModeActive && selected));
+    });
+  }
+
+  function toggleVsMode() {
+    vsModeActive = !vsModeActive;
+    vsSelectedKeys = [];
+    updateVsModeView();
+    showToast(vsModeActive ? '比較したいプレイヤーカードを2枚選んでください' : 'VSモードを終了しました');
+  }
+
+  function selectVsCard(key) {
+    if (!vsModeActive || !key) return;
+    const existingIndex = vsSelectedKeys.indexOf(key);
+    if (existingIndex >= 0) {
+      vsSelectedKeys.splice(existingIndex, 1);
+    } else if (vsSelectedKeys.length < 2) {
+      vsSelectedKeys.push(key);
+    } else {
+      vsSelectedKeys.shift();
+      vsSelectedKeys.push(key);
+    }
+    updateVsModeView();
+    if (vsSelectedKeys.length === 2) showToast('VS比較する2枚を選択しました');
+  }
+
+  function resetVsMode() {
+    vsModeActive = false;
+    vsSelectedKeys = [];
+    updateVsModeView();
+  }
   function beginCardReorder() {
     window.cardReorderInProgress = true;
     window.hasDeferredPosterRender = false;
@@ -298,7 +346,7 @@
           <div class="member-sort-setting">
             <select id="memberSortMode" aria-label="メンバーの並べ替え基準">
               <option value="manual">手動順</option><option value="name">あいうえお順</option>
-              <option value="rank">段位順</option><option value="games">メインキャラ試合数順</option>
+              <option value="rank">メインキャラ段位順</option><option value="games">メインキャラ試合数順</option>
               <option value="rating">レート順</option><option value="winrate">メインキャラ勝率順</option><option value="power">鉄拳力順</option>
               <option value="pentagon_attack">ペンタゴン・攻撃順</option><option value="pentagon_technique">ペンタゴン・技術順</option>
               <option value="pentagon_appeal">ペンタゴン・魅力順</option><option value="pentagon_spirit">ペンタゴン・精神順</option><option value="pentagon_defense">ペンタゴン・防御順</option>
@@ -414,6 +462,8 @@
     byId('exportListBtn').onclick = () => { closeWorkspaceMenus(); exportList(); };
     byId('importListBtn').onclick = () => { closeWorkspaceMenus(); byId('importListFile').click(); };
     byId('importListFile').onchange = importList;
+    const vsButton = byId('vsModeToggleBtn');
+    if (vsButton) vsButton.onclick = toggleVsMode;
     byId('memberSortMode').onchange = event => saveMemberSort(event.target.value);
     byId('memberSortDirection').onclick = () => saveMemberSort(currentMemberSortMode, currentMemberSortDirection === 'asc' ? 'desc' : 'asc');
     byId('memberSortExcludeHistorical').onchange = event => { excludeHistoricalFromSkillSort = event.target.checked; saveMemberSort(currentMemberSortMode, currentMemberSortDirection); };
@@ -579,6 +629,7 @@
     if (listListenerRef) listListenerRef.off();
     if (settingsLogRef) settingsLogRef.off();
     if (memberSortRef) memberSortRef.off();
+    resetVsMode();
     activeListId = listId;
     localStorage.setItem(`active_list_${activeUser.uid}`, listId);
     membersRef = nextMembersRef;
@@ -1006,6 +1057,13 @@
       const key = memberKeyFromCard(card);
       if (!key) return;
       card.dataset.memberKey = key;
+      if (!card.dataset.vsBound) {
+        card.dataset.vsBound = 'true';
+        card.addEventListener('click', event => {
+          if (!vsModeActive || event.target.closest('button, a, input, select, textarea, label, .id-box')) return;
+          selectVsCard(key);
+        });
+      }
       if (!card.querySelector('.card-reorder-handle')) {
         const handle = document.createElement('button');
         handle.type = 'button';
@@ -1024,6 +1082,7 @@
         reorderHandle.setAttribute('aria-hidden', String(!isManual));
         reorderHandle.tabIndex = isManual ? 0 : -1;
       }
+      updateVsModeView();
       if (card.querySelector('.list-card-actions')) return;
       const actions = document.createElement('div');
       actions.className = 'list-card-actions';

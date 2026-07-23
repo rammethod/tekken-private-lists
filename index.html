@@ -28,7 +28,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <link rel="stylesheet" href="user-lists-prototype.css?v=20260724-41">
+  <link rel="stylesheet" href="user-lists-prototype.css?v=20260724-42">
   <link rel="stylesheet" href="admin-access-prototype.css?v=20260723-26">
 
   <!-- Cropper.js (画像トリミング・クロップ用) -->
@@ -2044,6 +2044,7 @@
           <input class="title-input" type="text" id="titleInput" maxlength="40" style="display:none;"
             aria-label="タイトル編集">
           <div class="saloon-subtitle" id="subTitleText">鉄拳8 プレイヤーリスト管理</div>
+          <button type="button" class="vs-mode-toggle" id="vsModeToggleBtn" aria-pressed="false">⚔ VSモード β</button>
         </div>
         <br>
         <button class="btn-add-bounty" onclick="openAddModal()" id="btnAddMember">
@@ -3637,7 +3638,7 @@
     }
 
   </script>
-  <script src="user-lists-prototype.js?v=20260724-41"></script>
+  <script src="user-lists-prototype.js?v=20260724-42"></script>
   <script src="admin-access-prototype.js?v=20260723-26"></script>
   <script>
     (() => {

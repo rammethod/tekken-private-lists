@@ -239,3 +239,19 @@ body.workspace-ui-active .app-container { transition: width .22s ease; }
 .workspace-menu-title-short{display:none}
 .workspace-menu-settings-icon{font-size:.9rem;line-height:1}
 @media(max-width:430px){.workspace-menu-title-full{display:none}.workspace-menu-title-short{display:inline}}
+
+/* VS comparison beta */
+.vs-mode-toggle{display:none;margin:7px auto 0;padding:5px 11px;border:1px solid rgba(212,175,55,.6);border-radius:999px;background:rgba(25,15,9,.72);color:#f6dfa0;font-size:.66rem;font-weight:850;letter-spacing:.04em;cursor:pointer;box-shadow:0 3px 9px rgba(0,0,0,.22)}
+body.workspace-ui-active .vs-mode-toggle{display:inline-flex;align-items:center;justify-content:center}
+.vs-mode-toggle.is-active{border-color:#ef4444;background:linear-gradient(135deg,#7f1d1d,#3f1010);color:#fff;box-shadow:0 0 0 2px rgba(239,68,68,.15),0 4px 12px rgba(0,0,0,.3)}
+body.theme-modern .vs-mode-toggle{border-color:#a78bfa;background:rgba(30,27,75,.88);color:#ede9fe}
+body.theme-modern .vs-mode-toggle.is-active{border-color:#fb7185;background:linear-gradient(135deg,#881337,#4c1d95);color:#fff}
+body.theme-japanese .vs-mode-toggle{border-color:#6366f1;background:rgba(255,255,255,.9);color:#3730a3}
+body.theme-japanese .vs-mode-toggle.is-active{border-color:#dc2626;background:linear-gradient(135deg,#fff1f2,#fee2e2);color:#991b1b}
+body.vs-mode-active .poster-card{cursor:crosshair;transition:opacity .24s ease,filter .24s ease,transform .2s ease,box-shadow .2s ease}
+body.vs-mode-active .poster-card.vs-selected{z-index:4;opacity:1!important;outline:4px solid #ef4444!important;outline-offset:5px;box-shadow:0 0 0 3px rgba(255,255,255,.75),0 18px 42px rgba(0,0,0,.55)!important;filter:none!important}
+body.vs-pair-ready .poster-card.vs-dimmed{opacity:.14!important;filter:grayscale(.88) brightness(.42) saturate(.3)!important;transform:scale(.975)}
+body.theme-modern.vs-mode-active .poster-card.vs-selected{outline-color:#fb7185!important;box-shadow:0 0 0 3px rgba(129,140,248,.5),0 0 30px rgba(251,113,133,.48)!important}
+body.theme-japanese.vs-mode-active .poster-card.vs-selected{outline-color:#dc2626!important;box-shadow:0 0 0 3px rgba(255,255,255,.82),0 18px 35px rgba(49,46,129,.38)!important}
+@media(max-width:430px){.vs-mode-toggle{margin-top:6px;padding:4px 9px;font-size:.6rem}body.vs-mode-active .poster-card.vs-selected{outline-width:3px!important;outline-offset:3px}}
+@media(prefers-reduced-motion:reduce){body.vs-mode-active .poster-card{transition:none}}
