@@ -74,7 +74,12 @@
       <div class="workspace-primary">
         <select id="myListSelect" aria-label="表示するマイリスト"></select>
         <button id="workspaceAddMemberBtn" class="workspace-primary-action" title="メンバーを追加">＋ <span>メンバー追加</span></button>
-        <button id="workspaceRefreshBtn" title="全ステータス一括更新" aria-label="全ステータス一括更新">↻</button>
+<div class="workspace-refresh-control">
+          <button id="workspaceRefreshBtn" title="EWGF・Wavuから全員の最新データを取得">
+            <span aria-hidden="true">↻</span><span>全員のデータ更新</span>
+          </button>
+          <small>EWGF・Wavuから取得／登録人数分の通信あり</small>
+        </div>
       </div>
       <details class="workspace-dropdown" id="listActionsMenu">
         <summary aria-label="リスト操作メニュー" title="リスト操作">•••</summary>
@@ -107,7 +112,16 @@
     const closeWorkspaceMenus = () => bar.querySelectorAll('details[open]').forEach(menu => menu.removeAttribute('open'));
     byId('myListSelect').onchange = event => activateList(event.target.value);
     byId('workspaceAddMemberBtn').onclick = () => openAddModal();
-    byId('workspaceRefreshBtn').onclick = () => refreshAllWavuStats();
+    byId('workspaceRefreshBtn').onclick = async event => {
+      const button = event.currentTarget;
+      if (button.disabled) return;
+      button.disabled = true;
+      try {
+        await refreshAllWavuStats();
+      } finally {
+        button.disabled = false;
+      }
+    };
     byId('newListBtn').onclick = () => { closeWorkspaceMenus(); createList(); };
     byId('renameListBtn').onclick = () => { closeWorkspaceMenus(); renameList(); };
     byId('deleteListBtn').onclick = () => { closeWorkspaceMenus(); deleteList(); };
@@ -439,6 +453,7 @@
     } else if (originalSaveTitle) originalSaveTitle();
   };
 })();
+
 
 
 

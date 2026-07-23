@@ -52,7 +52,15 @@ body.workspace-ui-active .top-controls button[onclick*="refreshAllWavuStats"] { 
 .workspace-primary { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1 1 auto; }
 .list-workspace .workspace-primary select { min-width: 160px; max-width: 360px; }
 .list-workspace .workspace-primary-action { background: linear-gradient(#f2d86f,#b98b20); color: #241505; border-color: #e3c451; }
-.list-workspace #workspaceRefreshBtn { width: 40px; padding-inline: 0; font-size: 1.25rem; line-height: 1; }
+.workspace-refresh-control { display: grid; gap: 2px; min-width: 205px; }
+.list-workspace #workspaceRefreshBtn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; padding: 7px 10px; font-size: .75rem; line-height: 1.1;
+}
+.workspace-refresh-control small { color: #c8b98c; font-size: .56rem; line-height: 1.2; text-align: center; }
+body.theme-modern .workspace-refresh-control small { color: #c4b5fd; }
+body.theme-japanese .workspace-refresh-control small { color: #514aa0; }
+.list-workspace #workspaceRefreshBtn:disabled { cursor: wait; opacity: .55; }
 .workspace-dropdown { position: relative; flex: 0 0 auto; }
 .workspace-dropdown > summary {
   display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 38px;
@@ -88,7 +96,8 @@ body.theme-japanese .workspace-menu-label { color: #514aa0; }
 body.theme-japanese .list-workspace .workspace-menu .menu-danger { color: #b42318; }
 @media (max-width: 700px) {
   .list-workspace { display: grid; grid-template-columns: minmax(0,1fr) auto auto; gap: 7px; }
-  .workspace-primary { display: grid; grid-template-columns: minmax(0,1fr) auto auto; grid-column: 1 / -1; width: 100%; }
+  .workspace-primary { display: grid; grid-template-columns: minmax(0,1fr) auto; grid-column: 1 / -1; width: 100%; }
+  .workspace-refresh-control { grid-column: 1 / -1; width: 100%; }
   .list-workspace .workspace-primary select { min-width: 0; max-width: none; width: 100%; }
   .workspace-dropdown { justify-self: start; }
   .workspace-account { justify-self: end; margin-left: 0; }
@@ -100,4 +109,5 @@ body.theme-japanese .list-workspace .workspace-menu .menu-danger { color: #b4231
   .list-workspace .workspace-primary-action span { display: none; }
   .list-workspace .workspace-primary-action { width: 42px; padding-inline: 0; font-size: 1.1rem; }
 }
+
 

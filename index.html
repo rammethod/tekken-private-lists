@@ -28,8 +28,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <link rel="stylesheet" href="user-lists-prototype.css?v=20260723-5">
-  <link rel="stylesheet" href="admin-access-prototype.css?v=20260723-5">
+  <link rel="stylesheet" href="user-lists-prototype.css?v=20260723-6">
+  <link rel="stylesheet" href="admin-access-prototype.css?v=20260723-6">
 
   <!-- Cropper.js (画像トリミング・クロップ用) -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
@@ -2999,7 +2999,7 @@
     }
 
     async function refreshCardStats(gameId, key) {
-      showToast(`🔄 ewgf API から ID[${gameId}] の対戦データを取得中...`);
+      showToast(`🔄 EWGF・Wavuから ID[${gameId}] の最新データを取得中...`);
       let memberName = '';
       if (window.currentMembersData && window.currentMembersData[key]) {
         memberName = window.currentMembersData[key].name || '';
@@ -3034,7 +3034,7 @@
         const canvasEl = document.getElementById(`radar_${key}`);
         if (canvasEl) drawRadarChart(`radar_${key}`, stats);
       }
-      showToast(`✨ ewgf 公式データを最新に更新しました！`);
+      showToast(`✨ EWGF・Wavuの最新データへ更新しました！`);
       return stats;
     }
 
@@ -3043,16 +3043,27 @@
         showToast('⚠️ メンバーデータを読み込み中です...');
         return;
       }
-      showToast('⚡ 全賞金首の ewgf 最新データを順次一括更新中...');
-      recordLastUpdateLog('manual', '全メンバー一括');
-      const entries = Object.entries(window.currentMembersData);
-      for (const [key, m] of entries) {
-        const cleanId = cleanTekkenId(m.gameId);
-        if (cleanId) {
-          await refreshCardStats(cleanId, key);
-        }
+      const uniquePlayers = new Map();
+      for (const [key, member] of Object.entries(window.currentMembersData)) {
+        const cleanId = cleanTekkenId(member.gameId);
+        if (cleanId && !uniquePlayers.has(cleanId)) uniquePlayers.set(cleanId, { key, member });
       }
-      showToast('🎉 全賞金首の最新データ一括更新が完了しました！');
+      if (!uniquePlayers.size) {
+        showToast('更新できるTEKKEN 8 IDがありません');
+        return;
+      }
+      const confirmed = confirm(
+        `現在のリストにいる${uniquePlayers.size}人について、EWGF・Wavuから最新データを取得します。\n` +
+        '通信が発生し、完了まで時間がかかる場合があります。実行しますか？'
+      );
+      if (!confirmed) return;
+
+      showToast(`⚡ ${uniquePlayers.size}人の最新データを順次取得中...`);
+      recordLastUpdateLog('manual', '全メンバー一括');
+      for (const [cleanId, { key }] of uniquePlayers) {
+        await refreshCardStats(cleanId, key);
+      }
+      showToast(`🎉 ${uniquePlayers.size}人のデータ更新が完了しました！`);
     }
 
     function renderPosters(data) {
@@ -3152,10 +3163,6 @@
                 <span class="stats-preview-value val-power">${cachedStats && cachedStats.tekkenPower ? cachedStats.tekkenPower.toLocaleString() : '-'}</span>
               </div>
             </div>
-
-            <button class="card-refresh-btn" onclick="refreshCardStats('${escapeHtml(cleanGameId)}', '${key}')">
-              ⚡ 公式データ更新
-            </button>
           </div>
 
           <div class="id-box" onclick="copyId('${escapeHtml(cleanGameId)}', '${escapeHtml(m.name)}')">
@@ -3502,8 +3509,8 @@
     }
 
   </script>
-  <script src="user-lists-prototype.js?v=20260723-5"></script>
-  <script src="admin-access-prototype.js?v=20260723-5"></script>
+  <script src="user-lists-prototype.js?v=20260723-6"></script>
+  <script src="admin-access-prototype.js?v=20260723-6"></script>
   <script>
     (() => {
       const integrationScript = document.createElement('script');
@@ -3532,6 +3539,8 @@
 </body>
 
 </html>
+
+
 
 
 
