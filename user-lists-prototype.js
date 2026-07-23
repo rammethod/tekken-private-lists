@@ -416,6 +416,8 @@
     grid.style.zoom = '';
     grid.style.width = '';
     grid.style.marginInline = '';
+    grid.style.removeProperty('--mobile-card-scale');
+    grid.style.removeProperty('--mobile-card-base-width');
     grid.dataset.mobileFitColumns = '';
     if (normalized === GRID_COLUMNS_AUTO) {
       grid.style.gridTemplateColumns = '';
@@ -425,16 +427,17 @@
       const columns = Number(normalized);
       const mobileLayout = window.matchMedia('(max-width: 640px)').matches;
       if (mobileLayout) {
-        const cardWidth = columns === 1 ? Math.min(300, Math.max(165, window.innerWidth - 36)) : 165;
         const gap = 8;
-        const gridNaturalWidth = columns * cardWidth + Math.max(0, columns - 1) * gap;
         const availableWidth = Math.max(260, window.innerWidth - 28);
-        const fitScale = Math.min(1, availableWidth / gridNaturalWidth);
-        grid.style.gridTemplateColumns = `repeat(${columns}, ${cardWidth}px)`;
+        const trackWidth = (availableWidth - Math.max(0, columns - 1) * gap) / columns;
+        const cardWidth = columns === 1 ? Math.min(300, trackWidth) : 165;
+        const cardScale = Math.min(1, trackWidth / cardWidth);
+        grid.style.gridTemplateColumns = `repeat(${columns}, ${trackWidth}px)`;
         grid.style.justifyContent = 'start';
-        grid.style.width = `${gridNaturalWidth}px`;
-        grid.style.zoom = String(fitScale);
+        grid.style.width = `${availableWidth}px`;
         grid.style.marginInline = 'auto';
+        grid.style.setProperty('--mobile-card-scale', String(cardScale));
+        grid.style.setProperty('--mobile-card-base-width', `${cardWidth}px`);
         grid.dataset.mobileFitColumns = normalized;
         if (app) {
           app.style.width = `${Math.max(280, window.innerWidth - 12)}px`;
@@ -597,7 +600,15 @@
     byId('myListSelect').onchange = event => activateList(event.target.value);
     byId('gridColumnSelect').onchange = event => saveGridColumns(event.target.value);
     restoreGridColumns();
-    window.addEventListener('resize', restoreGridColumns, { passive: true });
+    if (window.workspaceGridResizeHandler) window.removeEventListener('resize', window.workspaceGridResizeHandler);
+    let lastGridViewportWidth = window.innerWidth;
+    window.workspaceGridResizeHandler = () => {
+      const nextWidth = window.innerWidth;
+      if (Math.abs(nextWidth - lastGridViewportWidth) < 2) return;
+      lastGridViewportWidth = nextWidth;
+      restoreGridColumns();
+    };
+    window.addEventListener('resize', window.workspaceGridResizeHandler, { passive: true });
     byId('workspaceAddMemberBtn').onclick = () => openAddModal();
     byId('workspaceRefreshBtn').onclick = async event => {
       const button = event.currentTarget;
@@ -1361,6 +1372,10 @@
         if (listListenerRef) listListenerRef.off();
         if (settingsLogRef) settingsLogRef.off();
         if (memberSortRef) memberSortRef.off();
+        if (window.workspaceGridResizeHandler) {
+          window.removeEventListener('resize', window.workspaceGridResizeHandler);
+          window.workspaceGridResizeHandler = null;
+        }
         if (window.workspaceMenuPositionHandler) {
           window.removeEventListener('resize', window.workspaceMenuPositionHandler);
           window.removeEventListener('scroll', window.workspaceMenuPositionHandler);

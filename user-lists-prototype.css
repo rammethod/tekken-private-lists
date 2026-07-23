@@ -288,3 +288,9 @@ body.theme-japanese.vs-mode-active #posterGrid>.poster-card.vs-selected{box-shad
 body.theme-modern .member-skill-rank-badge{box-shadow:0 0 0 2px rgba(15,23,42,.72),0 0 13px rgba(255,255,255,.22)}
 body.theme-japanese .member-skill-rank-badge{box-shadow:0 3px 9px rgba(49,46,129,.28),inset 0 1px 1px rgba(255,255,255,.78)}
 @media(max-width:430px){.member-skill-rank-badge{top:6px;right:6px;min-width:72px;height:48px;padding:3px 6px}.member-skill-rank-badge em{max-width:84px;font-size:.49rem}}
+/* Stable mobile multi-column fit: scale each card inside a viewport-sized grid track. */
+@media(max-width:640px){
+  body.workspace-ui-active{overflow-x:hidden}
+  #posterGrid[data-mobile-fit-columns]:not([data-mobile-fit-columns='']){max-width:calc(100vw - 28px);overflow:visible}
+  #posterGrid[data-mobile-fit-columns]:not([data-mobile-fit-columns=''])>.poster-card{width:var(--mobile-card-base-width)!important;max-width:none!important;zoom:var(--mobile-card-scale);transform-origin:top left}
+}
