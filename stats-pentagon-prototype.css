@@ -1,0 +1,15 @@
+.stat-pentagon-card{position:relative;margin:0 0 10px;padding:10px 10px 7px;overflow:hidden;border:1px solid rgba(126,90,47,.82);border-radius:7px;background:linear-gradient(145deg,#2a180d,#170d08);box-shadow:inset 0 1px 0 rgba(255,236,190,.08),0 3px 8px rgba(0,0,0,.22);color:#fff5df}
+.stat-pentagon-heading{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:0 2px 2px}
+.stat-pentagon-kicker{color:#f0cf80;font-size:.52rem;font-weight:800;letter-spacing:.16em}
+.stat-pentagon-title{color:#fff5df;font-size:.64rem;font-weight:900;letter-spacing:.1em}
+.stat-pentagon-canvas{display:block;width:min(100%,280px);height:auto;aspect-ratio:1/1;margin:0 auto}
+body.theme-modern .stat-pentagon-card{border-color:rgba(129,140,248,.42);background:linear-gradient(145deg,rgba(15,23,42,.94),rgba(30,27,75,.9));box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 0 16px rgba(99,102,241,.13);color:#f5f3ff}
+body.theme-modern .stat-pentagon-kicker{color:#c4b5fd}
+body.theme-modern .stat-pentagon-title{color:#f5f3ff}
+body.theme-japanese .stat-pentagon-card{border-color:rgba(99,102,241,.48);background:rgba(248,250,255,.94);box-shadow:inset 0 1px 0 rgba(255,255,255,.86),0 3px 8px rgba(49,46,129,.12);color:#1e1b4b}
+body.theme-japanese .stat-pentagon-kicker{color:#4338ca}
+body.theme-japanese .stat-pentagon-title{color:#1e1b4b}
+@media(max-width:420px){.stat-pentagon-card{padding:8px 7px 5px}.stat-pentagon-canvas{width:min(100%,240px)}.stat-pentagon-title{font-size:.58rem}}
+.stats-preview-main .stats-preview-games{display:flex!important;flex-direction:column;align-items:flex-start;width:100%;max-width:100%;margin:3px 0 0!important;overflow:visible!important;line-height:1.25;white-space:normal!important}
+.stats-preview-games-line{display:block;max-width:100%;overflow-wrap:anywhere}
+.stats-preview-win-rate{color:inherit}
