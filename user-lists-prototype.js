@@ -6,6 +6,21 @@
   let listListenerRef = null;
   let settingsLogRef = null;
 
+  function beginCardReorder() {
+    window.cardReorderInProgress = true;
+    window.hasDeferredPosterRender = false;
+    delete window.deferredPosterRenderData;
+  }
+
+  function endCardReorder() {
+    window.cardReorderInProgress = false;
+    if (!window.hasDeferredPosterRender) return;
+    const latestData = window.deferredPosterRenderData;
+    window.hasDeferredPosterRender = false;
+    delete window.deferredPosterRenderData;
+    renderPosters(latestData);
+    setTimeout(addPerCardListActions, 0);
+  }
   const byId = id => document.getElementById(id);
   const safeName = value => String(value || '').trim().slice(0, 40);
   const applyActiveListName = name => {
@@ -503,6 +518,7 @@
       }
       if (moved) await persistCardOrder(grid);
       moved = false;
+      endCardReorder();
     };
 
     handle.addEventListener('pointerdown', event => {
@@ -521,6 +537,7 @@
       committedPointerX = null;
       committedPointerY = null;
       clearPendingGap();
+      beginCardReorder();
 
       slot = document.createElement('div');
       slot.className = 'card-drop-slot';
