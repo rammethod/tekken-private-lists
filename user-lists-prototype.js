@@ -8,6 +8,7 @@
   let memberSortRef = null;
   let currentMemberSortMode = 'manual';
   let currentMemberSortDirection = 'desc';
+  let excludeHistoricalFromSkillSort = false;
   let currentListEntries = [];
   let listOrderDraft = [];
   let listMenuSignature = '';
@@ -131,9 +132,12 @@
     const collator = new Intl.Collator('ja', { numeric: true, sensitivity: 'base' });
     const metric = member => {
       const stats = memberStats(member || {});
+      const isHistorical = Boolean(stats.rankIsAllTimeHighest || stats.ratingIsHistorical);
+      if (excludeHistoricalFromSkillSort && isHistorical && ['rank','rating','winrate','power'].includes(currentMemberSortMode)) return null;
       if (currentMemberSortMode === 'name') return String(member && member.name || '');
       if (currentMemberSortMode === 'rank') return normalizedRankIndex(stats.danRank);
       if (currentMemberSortMode === 'games') return stats.mainCharGames === null || stats.mainCharGames === undefined ? null : Number(stats.mainCharGames);
+      if (currentMemberSortMode === 'winrate') return stats.rankedWinRate === null || stats.rankedWinRate === undefined ? null : Number(stats.rankedWinRate);
       if (currentMemberSortMode === 'rating') return stats.ratingMu === null || stats.ratingMu === undefined ? null : Number(stats.ratingMu);
       if (currentMemberSortMode === 'power') return stats.tekkenPower === null || stats.tekkenPower === undefined ? null : Number(stats.tekkenPower);
       return null;
@@ -156,13 +160,13 @@
     } catch (_) { return null; }
   }
   function writeLocalMemberSort(mode, direction) {
-    try { localStorage.setItem(memberSortStorageKey(), JSON.stringify({ mode, direction })); } catch (_) {}
+    try { localStorage.setItem(memberSortStorageKey(), JSON.stringify({ mode, direction, excludeHistorical: excludeHistoricalFromSkillSort })); } catch (_) {}
   }
   async function persistMemberSortSetting(mode, direction) {
     writeLocalMemberSort(mode, direction);
     if (!settingsRef) return;
     try {
-      await settingsRef.child('memberSort').set({ mode, direction });
+      await settingsRef.child('memberSort').set({ mode, direction, excludeHistorical: excludeHistoricalFromSkillSort });
     } catch (error) {
       console.warn('Firebase memberSort sync unavailable; using list-local setting:', error);
     }
@@ -171,7 +175,9 @@
   function updateMemberSortControls() {
     const mode = byId('memberSortMode');
     const direction = byId('memberSortDirection');
+    const excludeHistorical = byId('memberSortExcludeHistorical');
     if (mode) mode.value = currentMemberSortMode;
+    if (excludeHistorical) excludeHistorical.checked = excludeHistoricalFromSkillSort;
     if (direction) {
       direction.disabled = currentMemberSortMode === 'manual';
       direction.textContent = currentMemberSortDirection === 'asc' ? '昇順 ↑' : '降順 ↓';
@@ -266,10 +272,11 @@
             <select id="memberSortMode" aria-label="メンバーの並べ替え基準">
               <option value="manual">手動順</option><option value="name">あいうえお順</option>
               <option value="rank">段位順</option><option value="games">メインキャラ試合数順</option>
-              <option value="rating">レート順</option><option value="power">鉄拳力順</option>
+              <option value="rating">レート順</option><option value="winrate">メインキャラ勝率順</option><option value="power">鉄拳力順</option>
             </select>
             <button type="button" id="memberSortDirection">降順 ↓</button>
           </div>
+          <label class="member-sort-option"><input type="checkbox" id="memberSortExcludeHistorical"> 最近対戦のない選手を腕前順から除外</label>
           <button id="deleteListBtn" class="menu-danger" role="menuitem">リストを削除</button>
         </div>
       </details>
@@ -380,6 +387,7 @@
     byId('importListFile').onchange = importList;
     byId('memberSortMode').onchange = event => saveMemberSort(event.target.value);
     byId('memberSortDirection').onclick = () => saveMemberSort(currentMemberSortMode, currentMemberSortDirection === 'asc' ? 'desc' : 'asc');
+    byId('memberSortExcludeHistorical').onchange = event => { excludeHistoricalFromSkillSort = event.target.checked; saveMemberSort(currentMemberSortMode, currentMemberSortDirection); };
     updateMemberSortControls();
     byId('closeListOrderBtn').onclick = closeListOrderDialog;
     byId('cancelListOrderBtn').onclick = closeListOrderDialog;
@@ -561,9 +569,10 @@
     memberSortRef.on('value', snapshot => {
       if (activeListId !== listId) return;
       const remoteSetting = snapshot.val();
-      const setting = remoteSetting || readLocalMemberSort() || {};
-      currentMemberSortMode = ['manual','name','rank','games','rating','power'].includes(setting.mode) ? setting.mode : 'manual';
+      const setting = readLocalMemberSort() || remoteSetting || {};
+      currentMemberSortMode = ['manual','name','rank','games','rating','winrate','power'].includes(setting.mode) ? setting.mode : 'manual';
       currentMemberSortDirection = setting.direction === 'asc' ? 'asc' : 'desc';
+      excludeHistoricalFromSkillSort = setting.excludeHistorical === true;
       if (remoteSetting) writeLocalMemberSort(currentMemberSortMode, currentMemberSortDirection);
       window.memberAutoSortActive = currentMemberSortMode !== 'manual';
       updateMemberSortControls();
@@ -996,7 +1005,23 @@
     if (!options[index]) return;
     const source = await membersRef.child(key).once('value');
     if (!source.exists()) return;
-    await listsRef.child(options[index].value).child('members').push(source.val());
+    const sourceMember = source.val();
+    const destinationMembersRef = listsRef.child(options[index].value).child('members');
+    const destinationSnapshot = await destinationMembersRef.once('value');
+    const normalizedSourceId = cleanTekkenId(sourceMember && sourceMember.gameId).toUpperCase();
+    const duplicate = Object.values(destinationSnapshot.val() || {}).find(member =>
+      cleanTekkenId(member && member.gameId).toUpperCase() === normalizedSourceId
+    );
+    if (duplicate) {
+      const destinationName = options[index].textContent;
+      const duplicateName = duplicate.name || '登録済みプレイヤー';
+      alert(move
+        ? `「${destinationName}」には「${duplicateName}」が既にいるため、このメンバーを移動できません。\n移動先で同じTEKKEN 8 IDが重複する操作はできません。`
+        : `「${destinationName}」には「${duplicateName}」が既にいるため、このメンバーを複製できません。\n複製先で同じTEKKEN 8 IDが重複する操作はできません。`);
+      showToast(`別リストへの${move ? '移動' : '複製'}を中止しました`);
+      return;
+    }
+    await destinationMembersRef.push(sourceMember);
     if (move) await membersRef.child(key).remove();
     showToast(`別リストへ${move ? '移動' : '複製'}しました`);
   }

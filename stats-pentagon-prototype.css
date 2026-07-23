@@ -37,3 +37,6 @@ body.theme-wanted .stats-preview-head{margin:4px 0 10px;padding:8px 9px;border:1
 body.theme-wanted .stats-preview-eyebrow{color:#ffd98d;text-shadow:0 1px 2px #160a04}
 body.theme-wanted .stats-preview-main{color:#fff3d6;text-shadow:0 1px 2px #160a04}
 body.theme-wanted .stats-preview-badge{border-color:#c58a47;background:#2a160b;color:#ffe7b3}
+
+/* Historical players: make activity-derived values visually match the sepia rank/rating treatment. */
+.card-stats-container.is-historical-player .stats-preview-game-count,.card-stats-container.is-historical-player .stats-preview-win-rate,.card-stats-container.is-historical-player .val-power{color:#bca77e!important;filter:sepia(.78) saturate(.58);opacity:.86;text-shadow:0 1px 1px rgba(0,0,0,.55)!important}

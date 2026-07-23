@@ -156,6 +156,7 @@
     const id = cleanTekkenId(member.gameId);
     const stats = getLocalStats(id, member);
     if (!stats) return;
+    box.classList.toggle('is-historical-player', Boolean(stats.rankIsAllTimeHighest || stats.ratingIsHistorical));
     if (stats.statsSource !== 'wavu-first-highest-qualified-mu+ewgf-profile-v12' && !pendingIds.has(id)) {
       pendingIds.add(id);
       fetchEwgfStats(id, false, key, false, member.name || '').finally(() => pendingIds.delete(id));
