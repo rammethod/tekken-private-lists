@@ -7,6 +7,24 @@
   let settingsLogRef = null;
   let currentListEntries = [];
   let listOrderDraft = [];
+  let listMenuSignature = '';
+  let memberRenderSignature = '';
+
+  const createListMenuSignature = entries => JSON.stringify(entries.map(([id, list]) => [
+    id,
+    String(list.name || ''),
+    Number(list.order || 0),
+    Number(list.createdAt || 0)
+  ]));
+
+  const createMemberRenderSignature = members => JSON.stringify(
+    Object.entries(members || {}).sort(([a], [b]) => a.localeCompare(b)).map(([key, member]) => [
+      key,
+      Object.entries(member || {})
+        .filter(([field]) => field !== 'fetchedStats')
+        .sort(([a], [b]) => a.localeCompare(b))
+    ])
+  );
 
   function beginCardReorder() {
     window.cardReorderInProgress = true;
@@ -281,6 +299,9 @@
       const lists = snapshot.val() || {};
       const entries = Object.entries(lists).sort((a, b) => (a[1].order || 0) - (b[1].order || 0));
       currentListEntries = entries.map(([id, list]) => ({ id, name: list.name || '名称未設定' }));
+      const nextListMenuSignature = createListMenuSignature(entries);
+      if (nextListMenuSignature === listMenuSignature) return;
+      listMenuSignature = nextListMenuSignature;
       if (!entries.length) {
         const ref = listsRef.push();
         await ref.set({ name: 'マイリスト 1', order: Date.now(), createdAt: firebase.database.ServerValue.TIMESTAMP });
@@ -317,6 +338,7 @@
     window.privateListStorageScope = `${activeUser.uid}_${listId}`;
 
     window.currentMembersData = null;
+    memberRenderSignature = '';
     updateLastUpdateLogBadge();
     settingsLogRef.on('value', snapshot => {
       if (activeListId !== listId) return;
@@ -335,8 +357,16 @@
     nextMembersRef.on('value', snapshot => {
       if (activeListId !== subscribedListId || listListenerRef !== nextMembersRef) return;
       const members = snapshot.val();
+      const nextMemberRenderSignature = createMemberRenderSignature(members);
+      const isStatsOnlyUpdate = Boolean(memberRenderSignature)
+        && nextMemberRenderSignature === memberRenderSignature;
       byId('loadingState').style.display = 'none';
       window.currentMembersData = members;
+      if (isStatsOnlyUpdate) {
+        if (typeof window.refreshVisibleStats === 'function') window.refreshVisibleStats();
+        return;
+      }
+      memberRenderSignature = nextMemberRenderSignature;
       renderPosters(members);
       setTimeout(() => {
         if (activeListId === subscribedListId) addPerCardListActions();

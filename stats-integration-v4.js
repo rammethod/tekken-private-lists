@@ -123,6 +123,7 @@
   }
   let queued = false;
   function queueEnhance() { if (queued) return; queued = true; requestAnimationFrame(() => { queued = false; document.querySelectorAll('.card-stats-container').forEach(enhanceBox); }); }
+  window.refreshVisibleStats = queueEnhance;
   new MutationObserver(queueEnhance).observe(document.body, { childList:true, subtree:true });
   document.addEventListener('pointermove', event => {
     if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
