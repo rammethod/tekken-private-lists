@@ -102,10 +102,23 @@
     }
   }
 
-  const MEMBER_SORT_RANKS = ['Beginner','1st Dan','2nd Dan','Fighter','Strategist','Combatant','Brawler','Ranger','Cavalry','Warrior','Assailant','Dominator','Vanquisher','Destroyer','Eliminator','Garyu','Shinryu','Tenryu','Mighty Ruler','Flame Ruler','Battle Ruler','Fujin','Raijin','Kishin','Bushin','Tekken King','Tekken Emperor','Tekken God','Tekken God Supreme','God of Destruction'];
+  // Tekken 8 rank order (Season 1 base + Season 2 destruction ranks).
+  // References: https://tekken.fandom.com/wiki/Tekken_8/Ranking_List
+  // Official S2 names: https://en.bandainamcoent.eu/tekken/news/tekken-8-patch-20
+  const MEMBER_SORT_RANKS = ['Beginner','1st Dan','2nd Dan','Fighter','Strategist','Combatant','Brawler','Ranger','Cavalry','Warrior','Assailant','Dominator','Vanquisher','Destroyer','Eliminator','Garyu','Shinryu','Tenryu','Mighty Ruler','Flame Ruler','Battle Ruler','Fujin','Raijin','Kishin','Bushin','Tekken King','Tekken Emperor','Tekken God','Tekken God Supreme','God of Destruction','God of Destruction I','God of Destruction II','God of Destruction III','God of Destruction IV','God of Destruction V','God of Destruction VI','God of Destruction VII','God of Destruction Infinity'];
   const normalizedRankIndex = value => {
-    const normalized = String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-    return MEMBER_SORT_RANKS.findIndex(rank => rank.toLowerCase().replace(/[^a-z0-9]/g, '') === normalized);
+    const raw = String(value || '').trim();
+    const normalized = raw.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (normalized === 'tekkenlordsupreme') return 28;
+    if (normalized === 'tekkenlord') return 27;
+    const destructionMatch = normalized.match(/(?:god|lord)ofdestruction(?:(infinity|ouroboros)|([1-7])|(vii|vi|iv|v|iii|ii|i))?$/);
+    if (destructionMatch) {
+      if (raw.includes('∞') || destructionMatch[1]) return 37;
+      const suffix = destructionMatch[2] || destructionMatch[3] || '';
+      const destructionLevel = { '': 0, '1': 1, i: 1, '2': 2, ii: 2, '3': 3, iii: 3, '4': 4, iv: 4, '5': 5, v: 5, '6': 6, vi: 6, '7': 7, vii: 7 }[suffix];
+      return destructionLevel === undefined ? -1 : 29 + destructionLevel;
+    }
+    return MEMBER_SORT_RANKS.slice(0, 29).findIndex(rank => rank.toLowerCase().replace(/[^a-z0-9]/g, '') === normalized);
   };
   function memberStats(member) {
     const id = typeof cleanTekkenId === 'function' ? cleanTekkenId(member && member.gameId) : String(member && member.gameId || '');

@@ -58,6 +58,6 @@ body.theme-japanese .id-box{background:rgba(23,20,72,.9)!important;border-color:
 
 /* Rating values must remain readable even in narrow cards and for future 5-digit μ values. */
 .stats-preview-metric:nth-child(2){padding-inline:4px}
-.stats-preview-rating{display:block!important;max-width:100%;margin-inline:auto;overflow:visible!important;text-align:center;font-size:clamp(.56rem,.9vw,.68rem)!important;font-variant-numeric:tabular-nums;letter-spacing:-.045em;line-height:1.2;text-overflow:clip!important;white-space:nowrap!important}
+.stats-preview-rating{display:block!important;box-sizing:border-box;max-width:100%;margin:0;padding-left:2px;overflow:visible!important;text-align:left;font-size:clamp(.56rem,.9vw,.68rem)!important;font-variant-numeric:tabular-nums;letter-spacing:-.045em;line-height:1.2;text-overflow:clip!important;white-space:nowrap!important}
 .stats-preview-rating.is-historical-rating::after{margin-left:1px!important;font-size:.36rem!important;letter-spacing:0!important}
 @media(max-width:640px){.stats-preview-rating{font-size:clamp(.52rem,2.7vw,.64rem)!important;letter-spacing:-.055em}}
