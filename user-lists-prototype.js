@@ -133,13 +133,18 @@
     const metric = member => {
       const stats = memberStats(member || {});
       const isHistorical = Boolean(stats.rankIsAllTimeHighest || stats.ratingIsHistorical);
-      if (excludeHistoricalFromSkillSort && isHistorical && ['rank','rating','winrate','power'].includes(currentMemberSortMode)) return null;
+      if (excludeHistoricalFromSkillSort && isHistorical && ['rank','games','rating','winrate','power','pentagon_attack','pentagon_technique','pentagon_appeal','pentagon_spirit','pentagon_defense'].includes(currentMemberSortMode)) return null;
       if (currentMemberSortMode === 'name') return String(member && member.name || '');
       if (currentMemberSortMode === 'rank') return normalizedRankIndex(stats.danRank);
       if (currentMemberSortMode === 'games') return stats.mainCharGames === null || stats.mainCharGames === undefined ? null : Number(stats.mainCharGames);
       if (currentMemberSortMode === 'winrate') return stats.rankedWinRate === null || stats.rankedWinRate === undefined ? null : Number(stats.rankedWinRate);
       if (currentMemberSortMode === 'rating') return stats.ratingMu === null || stats.ratingMu === undefined ? null : Number(stats.ratingMu);
       if (currentMemberSortMode === 'power') return stats.tekkenPower === null || stats.tekkenPower === undefined ? null : Number(stats.tekkenPower);
+      const pentagonKey = currentMemberSortMode.startsWith('pentagon_') ? currentMemberSortMode.slice('pentagon_'.length) : '';
+      if (pentagonKey) {
+        const value = stats.statPentagon && stats.statPentagon[pentagonKey];
+        return value === null || value === undefined ? null : Number(value);
+      }
       return null;
     };
     return entries.map((entry, index) => ({ entry, index, value: metric(entry[1]) })).sort((a, b) => {
@@ -284,10 +289,12 @@
               <option value="manual">手動順</option><option value="name">あいうえお順</option>
               <option value="rank">段位順</option><option value="games">メインキャラ試合数順</option>
               <option value="rating">レート順</option><option value="winrate">メインキャラ勝率順</option><option value="power">鉄拳力順</option>
+              <option value="pentagon_attack">ペンタゴン・攻撃順</option><option value="pentagon_technique">ペンタゴン・技術順</option>
+              <option value="pentagon_appeal">ペンタゴン・魅力順</option><option value="pentagon_spirit">ペンタゴン・精神順</option><option value="pentagon_defense">ペンタゴン・防御順</option>
             </select>
             <button type="button" id="memberSortDirection">降順 ↓</button>
           </div>
-          <label class="member-sort-option"><input type="checkbox" id="memberSortExcludeHistorical"> 最近対戦のない選手を腕前順から除外</label>
+          <label class="member-sort-option"><input type="checkbox" id="memberSortExcludeHistorical"> 最近対戦のない選手を試合数・腕前・ペンタゴン順から除外</label>
           <button id="deleteListBtn" class="menu-danger" role="menuitem">リストを削除</button>
         </div>
       </details>
@@ -581,7 +588,7 @@
       if (activeListId !== listId) return;
       const remoteSetting = snapshot.val();
       const setting = readLocalMemberSort() || remoteSetting || {};
-      currentMemberSortMode = ['manual','name','rank','games','rating','winrate','power'].includes(setting.mode) ? setting.mode : 'manual';
+      currentMemberSortMode = ['manual','name','rank','games','rating','winrate','power','pentagon_attack','pentagon_technique','pentagon_appeal','pentagon_spirit','pentagon_defense'].includes(setting.mode) ? setting.mode : 'manual';
       currentMemberSortDirection = setting.direction === 'asc' ? 'asc' : 'desc';
       excludeHistoricalFromSkillSort = setting.excludeHistorical === true;
       if (remoteSetting) writeLocalMemberSort(currentMemberSortMode, currentMemberSortDirection);
