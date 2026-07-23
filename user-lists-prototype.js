@@ -283,6 +283,7 @@
   }
   window.sortMemberEntries = entries => {
     window.memberSkillRanks = {};
+    window.memberSkillRankValues = {};
     if (currentMemberSortMode === 'manual') return entries;
     const direction = currentMemberSortDirection === 'asc' ? 1 : -1;
     const collator = new Intl.Collator('ja', { numeric: true, sensitivity: 'base' });
@@ -309,6 +310,7 @@
     if (skillModes.includes(currentMemberSortMode)) {
       decorated.filter(item => !isMissing(item)).sort((a, b) => Number(b.value) - Number(a.value) || a.index - b.index).slice(0, 3).forEach((item, index) => {
         window.memberSkillRanks[item.entry[0]] = index + 1;
+        window.memberSkillRankValues[item.entry[0]] = item.value;
       });
     }
     return decorated.sort((a, b) => {
@@ -319,6 +321,17 @@
       return compared ? compared * direction : a.index - b.index;
     }).map(item => item.entry);
   };
+  function formatSkillRankValue(mode, value, member) {
+    if (value === null || value === undefined || value === '') return '-';
+    const numeric = Number(value);
+    if (mode === 'rank') return String(memberStats(member || {}).danRank || '-');
+    if (mode === 'games') return Number.isFinite(numeric) ? numeric.toLocaleString() + ' games' : '-';
+    if (mode === 'rating') return Number.isFinite(numeric) ? 'μ ' + numeric : '-';
+    if (mode === 'winrate') return Number.isFinite(numeric) ? numeric.toFixed(1) + '%' : '-';
+    if (mode === 'power') return Number.isFinite(numeric) ? numeric.toLocaleString() : '-';
+    if (mode.startsWith('pentagon_')) return Number.isFinite(numeric) ? String(Math.round(numeric)) : '-';
+    return String(value);
+  }
   const memberSortStorageKey = () => activeUser && activeListId
     ? `t8_member_sort_${activeUser.uid}_${activeListId}`
     : '';
@@ -400,6 +413,10 @@
     if (!grid) return;
     const app = grid.closest('.app-container');
     const normalized = /^[1-5]$/.test(String(value)) ? String(value) : GRID_COLUMNS_AUTO;
+    grid.style.zoom = '';
+    grid.style.width = '';
+    grid.style.marginInline = '';
+    grid.dataset.mobileFitColumns = '';
     if (normalized === GRID_COLUMNS_AUTO) {
       grid.style.gridTemplateColumns = '';
       grid.style.justifyContent = '';
@@ -407,16 +424,34 @@
     } else {
       const columns = Number(normalized);
       const mobileLayout = window.matchMedia('(max-width: 640px)').matches;
-      const cardWidth = mobileLayout ? 165 : 300;
-      const gap = mobileLayout ? 8 : 28;
-      const boardChrome = mobileLayout ? 28 : 84;
-      const naturalWidth = columns * cardWidth + Math.max(0, columns - 1) * gap + boardChrome;
-      const viewportFloor = Math.min(1080, Math.max(280, window.innerWidth - (mobileLayout ? 12 : 40)));
-      grid.style.gridTemplateColumns = `repeat(${columns}, ${cardWidth}px)`;
-      grid.style.justifyContent = 'center';
-      if (app) {
-        app.style.width = `${Math.max(naturalWidth, viewportFloor)}px`;
-        app.style.maxWidth = 'none';
+      if (mobileLayout) {
+        const cardWidth = columns === 1 ? Math.min(300, Math.max(165, window.innerWidth - 36)) : 165;
+        const gap = 8;
+        const gridNaturalWidth = columns * cardWidth + Math.max(0, columns - 1) * gap;
+        const availableWidth = Math.max(260, window.innerWidth - 28);
+        const fitScale = Math.min(1, availableWidth / gridNaturalWidth);
+        grid.style.gridTemplateColumns = `repeat(${columns}, ${cardWidth}px)`;
+        grid.style.justifyContent = 'start';
+        grid.style.width = `${gridNaturalWidth}px`;
+        grid.style.zoom = String(fitScale);
+        grid.style.marginInline = 'auto';
+        grid.dataset.mobileFitColumns = normalized;
+        if (app) {
+          app.style.width = `${Math.max(280, window.innerWidth - 12)}px`;
+          app.style.maxWidth = 'calc(100vw - 12px)';
+        }
+      } else {
+        const cardWidth = 300;
+        const gap = 28;
+        const boardChrome = 84;
+        const naturalWidth = columns * cardWidth + Math.max(0, columns - 1) * gap + boardChrome;
+        const viewportFloor = Math.min(1080, Math.max(280, window.innerWidth - 40));
+        grid.style.gridTemplateColumns = `repeat(${columns}, ${cardWidth}px)`;
+        grid.style.justifyContent = 'center';
+        if (app) {
+          app.style.width = `${Math.max(naturalWidth, viewportFloor)}px`;
+          app.style.maxWidth = 'none';
+        }
       }
     }
     const select = byId('gridColumnSelect');
@@ -1219,8 +1254,21 @@
         skillRankBadge.hidden = !skillRank;
         skillRankBadge.dataset.rank = skillRank || '';
         const rankLabel = MEMBER_SORT_SHORT_LABELS[currentMemberSortMode] || '';
-        skillRankBadge.setAttribute('aria-label', rankLabel + ' ' + (skillRank || '') + '位');
-        skillRankBadge.innerHTML = skillRank ? '<strong>' + skillRank + '</strong><small>' + rankLabel + '</small>' : '';
+        const rankValue = formatSkillRankValue(currentMemberSortMode, window.memberSkillRankValues && window.memberSkillRankValues[key], window.currentMembersData && window.currentMembersData[key]);
+        skillRankBadge.setAttribute('aria-label', rankLabel + ' ' + (skillRank || '') + '位、' + rankValue);
+        skillRankBadge.replaceChildren();
+        if (skillRank) {
+          const heading = document.createElement('span');
+          heading.className = 'member-skill-rank-heading';
+          const number = document.createElement('strong');
+          number.textContent = String(skillRank);
+          const label = document.createElement('small');
+          label.textContent = rankLabel;
+          heading.append(number, label);
+          const valueLine = document.createElement('em');
+          valueLine.textContent = rankValue;
+          skillRankBadge.append(heading, valueLine);
+        }
       }
       updateVsModeView();
       if (card.querySelector('.list-card-actions')) return;
