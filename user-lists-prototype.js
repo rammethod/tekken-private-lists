@@ -86,7 +86,6 @@
       byId('statusDot').classList.toggle('offline', snap.val() !== true);
       byId('statusText').textContent = snap.val() === true ? 'PRIVATE ONLINE' : 'OFFLINE';
     });
-    updateApiCallBadge(getLocalCallCount());
     updateLastUpdateLogBadge();
   }
 
@@ -366,6 +365,7 @@
     else if (originalSaveTitle) originalSaveTitle();
   };
 })();
+
 
 
 

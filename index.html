@@ -1947,10 +1947,7 @@
 
         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
           <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
-            <span id="apiQuotaText"
-              style="font-size: 0.72rem; color: #ffffff; opacity: 0.95; font-weight: 600; background: rgba(0,0,0,0.55); padding: 3px 10px; border-radius: 12px; border: 1px solid var(--gold-accent);">
-              🔑 ewgf API 本日使用: 約0回 (残り 100/100回目安・1hキャッシュ)
-            </span>
+
             <span id="lastUpdateLogText"
               style="font-size: 0.68rem; color: #edd9b4; opacity: 0.9; font-weight: 600; background: rgba(0,0,0,0.55); padding: 2px 9px; border-radius: 10px; border: 1px dashed var(--gold-accent);">
               🕒 最終データ更新: 記録読み込み中...
@@ -2183,19 +2180,9 @@
         });
 
         // 初期表示を LocalStorage カウント & 最終更新ログで即時描画
-        updateApiCallBadge(getLocalCallCount());
+
         updateLastUpdateLogBadge();
 
-        // Firebase リアルタイム全デバイス同期 API カウンターリスナー (settings ノード)
-        db.ref('settings/api_quota').on('value', (snap) => {
-          const val = snap.val();
-          const today = getTodayString();
-          if (val && val.lastDate === today) {
-            updateApiCallBadge(val.callCount || 0);
-          } else {
-            updateApiCallBadge(getLocalCallCount());
-          }
-        });
 
         // Firebase リアルタイム全デバイス同期 最終更新ログリスナー (settings ノード)
         db.ref('settings/last_update_log').on('value', (snap) => {
@@ -2455,57 +2442,6 @@
         return `<div class="last-seen-badge recent" title="最新対戦日時: ${exactStr}">${badgeContent('⚡')}</div>`;
       } else {
         return `<div class="last-seen-badge inactive" title="最新対戦日時: ${exactStr}">${badgeContent('💤')}</div>`;
-      }
-    }
-
-    function getTodayString() {
-      const d = new Date();
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    }
-
-    function getLocalCallCount() {
-      const today = getTodayString();
-      const savedDate = localStorage.getItem('t8_api_quota_date');
-      if (savedDate !== today) {
-        localStorage.setItem('t8_api_quota_date', today);
-        localStorage.setItem('t8_api_quota_count', '0');
-        return 0;
-      }
-      return parseInt(localStorage.getItem('t8_api_quota_count') || '0', 10);
-    }
-
-    function incrementApiCallCounter() {
-      const today = getTodayString();
-      let currentCount = getLocalCallCount();
-      currentCount++;
-      localStorage.setItem('t8_api_quota_date', today);
-      localStorage.setItem('t8_api_quota_count', String(currentCount));
-      updateApiCallBadge(currentCount);
-
-      if (db) {
-        try {
-          const quotaRef = db.ref('settings/api_quota');
-          quotaRef.transaction((currentData) => {
-            if (!currentData || currentData.lastDate !== today) {
-              return { callCount: currentCount, lastDate: today };
-            } else {
-              const newCount = Math.max(currentCount, (currentData.callCount || 0) + 1);
-              return { callCount: newCount, lastDate: today };
-            }
-          });
-        } catch (e) {
-          console.warn('Firebase transaction warning:', e);
-        }
-      }
-    }
-
-    function updateApiCallBadge(count) {
-      const badge = document.getElementById('apiQuotaText');
-      if (badge) {
-        const localCount = getLocalCallCount();
-        const savedCount = Math.max(count !== undefined ? count : 0, localCount);
-        const remaining = Math.max(0, 100 - savedCount);
-        badge.textContent = `🔑 ewgf API 本日全体使用: 約${savedCount}回 (残り ${remaining}/100回目安・1hキャッシュ)`;
       }
     }
 
@@ -2793,7 +2729,7 @@
       const apiKey = getEwgfApiKey();
 
       try {
-        incrementApiCallCounter(); // API呼び出しをカウント
+
         recordLastUpdateLog(isManual ? 'manual' : 'auto', targetName);
 
         let json = null;
@@ -3584,6 +3520,8 @@
 </body>
 
 </html>
+
+
 
 
 
