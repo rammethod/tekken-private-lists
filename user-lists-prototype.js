@@ -449,15 +449,22 @@
 
       const target = document.elementFromPoint(event.clientX, event.clientY)?.closest('.poster-card');
       if (!target || target.parentElement !== grid) return;
-      const children = [...grid.children];
-      const slotIndex = children.indexOf(slot);
-      const targetIndex = children.indexOf(target);
-      if (slotIndex === targetIndex || slotIndex === targetIndex + 1) return;
+      const targetRect = target.getBoundingClientRect();
+      const centerX = targetRect.left + targetRect.width / 2;
+      const centerY = targetRect.top + targetRect.height / 2;
+      const centerBand = targetRect.height * .2;
+      let insertBefore;
+      if (event.clientY < centerY - centerBand) insertBefore = true;
+      else if (event.clientY > centerY + centerBand) insertBefore = false;
+      else insertBefore = event.clientX < centerX;
+
+      if (insertBefore && slot.nextElementSibling === target) return;
+      if (!insertBefore && target.nextElementSibling === slot) return;
       const before = new Map(
         [...grid.querySelectorAll(':scope > .poster-card')].map(item => [item, item.getBoundingClientRect()])
       );
-      if (slotIndex < targetIndex) target.after(slot);
-      else target.before(slot);
+      if (insertBefore) target.before(slot);
+      else target.after(slot);
       animateGridShift(before);
       moved = true;
     });
@@ -610,6 +617,7 @@
     } else if (originalSaveTitle) originalSaveTitle();
   };
 })();
+
 
 
 
