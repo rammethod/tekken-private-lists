@@ -355,13 +355,57 @@
     const grid = card.parentElement;
     let pointerId = null;
     let moved = false;
+    let slot = null;
+    let originRect = null;
+    let grabOffsetX = 0;
+    let grabOffsetY = 0;
+    let dragX = 0;
+    let dragY = 0;
+
+    const animateGridShift = before => {
+      [...grid.querySelectorAll(':scope > .poster-card')].forEach(item => {
+        const first = before.get(item);
+        if (!first) return;
+        const last = item.getBoundingClientRect();
+        const dx = first.left - last.left;
+        const dy = first.top - last.top;
+        if (!dx && !dy) return;
+        item.animate(
+          [{ translate: `${dx}px ${dy}px` }, { translate: '0 0' }],
+          { duration: 260, easing: 'cubic-bezier(.2,.8,.2,1)' }
+        );
+      });
+    };
+
+    const clearFloatingStyles = () => {
+      for (const property of ['position','left','top','width','height','margin','zIndex','pointerEvents','transform','transition']) {
+        card.style[property] = '';
+      }
+      card.classList.remove('card-reordering');
+    };
 
     const finish = async event => {
       if (pointerId === null || (event.pointerId !== undefined && event.pointerId !== pointerId)) return;
       try { handle.releasePointerCapture(pointerId); } catch (e) {}
       pointerId = null;
-      card.classList.remove('card-reordering');
       grid.classList.remove('card-reorder-active');
+
+      if (slot && originRect) {
+        const destination = slot.getBoundingClientRect();
+        const targetX = destination.left - originRect.left;
+        const targetY = destination.top - originRect.top;
+        const animation = card.animate(
+          [
+            { transform: `translate3d(${dragX}px,${dragY}px,0) scale(1.035)` },
+            { transform: `translate3d(${targetX}px,${targetY}px,0) scale(1)` }
+          ],
+          { duration: 210, easing: 'cubic-bezier(.2,.85,.25,1)', fill: 'forwards' }
+        );
+        await animation.finished.catch(() => {});
+        slot.replaceWith(card);
+        slot = null;
+        clearFloatingStyles();
+      }
       if (moved) await persistCardOrder(grid);
       moved = false;
     };
@@ -372,20 +416,49 @@
       event.stopPropagation();
       pointerId = event.pointerId;
       moved = false;
+      originRect = card.getBoundingClientRect();
+      grabOffsetX = event.clientX - originRect.left;
+      grabOffsetY = event.clientY - originRect.top;
+      dragX = 0;
+      dragY = 0;
+
+      slot = document.createElement('div');
+      slot.className = 'card-drop-slot';
+      slot.style.height = `${originRect.height}px`;
+      card.before(slot);
+      Object.assign(card.style, {
+        position: 'fixed', left: `${originRect.left}px`, top: `${originRect.top}px`,
+        width: `${originRect.width}px`, height: `${originRect.height}px`, margin: '0',
+        zIndex: '20000', pointerEvents: 'none', transform: 'translate3d(0,0,0) scale(1.035)',
+        transition: 'none'
+      });
+      document.body.appendChild(card);
       handle.setPointerCapture(pointerId);
       card.classList.add('card-reordering');
       grid.classList.add('card-reorder-active');
     });
     handle.addEventListener('pointermove', event => {
-      if (event.pointerId !== pointerId) return;
+      if (event.pointerId !== pointerId || !slot) return;
       event.preventDefault();
+      dragX = event.clientX - originRect.left - grabOffsetX;
+      dragY = event.clientY - originRect.top - grabOffsetY;
+      card.style.transform = `translate3d(${dragX}px,${dragY}px,0) scale(1.035)`;
+
+      if (event.clientY < 72) window.scrollBy(0, -12);
+      else if (event.clientY > window.innerHeight - 72) window.scrollBy(0, 12);
+
       const target = document.elementFromPoint(event.clientX, event.clientY)?.closest('.poster-card');
-      if (!target || target === card || target.parentElement !== grid) return;
-      const cards = [...grid.querySelectorAll(':scope > .poster-card')];
-      const fromIndex = cards.indexOf(card);
-      const targetIndex = cards.indexOf(target);
-      if (fromIndex < targetIndex) target.after(card);
-      else target.before(card);
+      if (!target || target.parentElement !== grid) return;
+      const children = [...grid.children];
+      const slotIndex = children.indexOf(slot);
+      const targetIndex = children.indexOf(target);
+      if (slotIndex === targetIndex || slotIndex === targetIndex + 1) return;
+      const before = new Map(
+        [...grid.querySelectorAll(':scope > .poster-card')].map(item => [item, item.getBoundingClientRect()])
+      );
+      if (slotIndex < targetIndex) target.after(slot);
+      else target.before(slot);
+      animateGridShift(before);
       moved = true;
     });
     handle.addEventListener('pointerup', finish);
@@ -403,10 +476,8 @@
         return;
       }
       await persistCardOrder(grid);
-      handle.focus();
     });
   }
-
   function addPerCardListActions() {
     document.querySelectorAll('.poster-card').forEach(card => {
       const key = memberKeyFromCard(card);
@@ -539,6 +610,7 @@
     } else if (originalSaveTitle) originalSaveTitle();
   };
 })();
+
 
 
 
