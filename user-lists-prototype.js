@@ -1,4 +1,4 @@
-﻿(() => {
+(() => {
   let auth = null;
   let activeUser = null;
   let activeListId = null;
@@ -363,6 +363,8 @@
     let dragY = 0;
     let lastPointerX = 0;
     let lastPointerY = 0;
+    let committedPointerX = null;
+    let committedPointerY = null;
     let pendingGap = null;
     let pendingGapTimer = null;
     const shiftAnimations = new WeakMap();
@@ -431,6 +433,16 @@
       if (!force) {
         lastPointerX = clientX;
         lastPointerY = clientY;
+        if (committedPointerX !== null) {
+          const movedSinceCommit = Math.hypot(
+            clientX - committedPointerX,
+            clientY - committedPointerY
+          );
+          if (movedSinceCommit < 18) {
+            clearPendingGap();
+            return false;
+          }
+        }
         if (pendingGap !== desiredGap) {
           clearPendingGap();
           pendingGap = desiredGap;
@@ -447,6 +459,8 @@
       const before = new Map(measured.map(({ item, rect }) => [item, rect]));
       if (desiredGap >= cards.length) grid.appendChild(slot);
       else grid.insertBefore(slot, cards[desiredGap]);
+      committedPointerX = clientX;
+      committedPointerY = clientY;
       animateGridShift(before);
       moved = true;
       return true;
@@ -494,6 +508,8 @@
       dragY = 0;
       lastPointerX = event.clientX;
       lastPointerY = event.clientY;
+      committedPointerX = null;
+      committedPointerY = null;
       clearPendingGap();
 
       slot = document.createElement('div');
