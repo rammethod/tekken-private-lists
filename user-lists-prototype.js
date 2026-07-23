@@ -4,6 +4,7 @@
   let activeListId = null;
   let listsRef = null;
   let listListenerRef = null;
+  let settingsLogRef = null;
 
   const byId = id => document.getElementById(id);
   const safeName = value => String(value || '').trim().slice(0, 40);
@@ -118,13 +119,21 @@
     if (sameSubscription) return;
 
     if (listListenerRef) listListenerRef.off();
+    if (settingsLogRef) settingsLogRef.off();
     activeListId = listId;
     localStorage.setItem(`active_list_${activeUser.uid}`, listId);
     membersRef = nextMembersRef;
     settingsRef = listsRef.child(listId);
     listListenerRef = nextMembersRef;
+    settingsLogRef = settingsRef.child('last_update_log');
+    window.privateListStorageScope = `${activeUser.uid}_${listId}`;
 
     window.currentMembersData = null;
+    updateLastUpdateLogBadge();
+    settingsLogRef.on('value', snapshot => {
+      if (activeListId !== listId) return;
+      updateLastUpdateLogBadge(snapshot.val());
+    });
     renderPosters(null);
     byId('loadingState').style.display = '';
 
@@ -327,6 +336,12 @@
     auth.onAuthStateChanged(user => {
       if (!user) {
         activeUser = null;
+        activeListId = null;
+        window.privateListStorageScope = '';
+        if (listListenerRef) listListenerRef.off();
+        if (settingsLogRef) settingsLogRef.off();
+        listListenerRef = null;
+        settingsLogRef = null;
         gate('TEKKEN 8 PRIVATE LISTS', 'Googleログイン後、管理者に承認されたユーザーだけが利用できます。', 'login');
         return;
       }
@@ -351,6 +366,7 @@
     else if (originalSaveTitle) originalSaveTitle();
   };
 })();
+
 
 
 

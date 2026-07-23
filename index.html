@@ -2534,17 +2534,18 @@
         displayText: `🕒 最終データ更新: ${formattedTime} [${typeLabel}${targetStr}]`
       };
 
+      const scopedKey = window.privateListStorageScope
+        ? `t8_last_update_log_${window.privateListStorageScope}`
+        : '';
       try {
-        localStorage.setItem('t8_last_update_log', JSON.stringify(logData));
+        if (scopedKey) localStorage.setItem(scopedKey, JSON.stringify(logData));
         updateLastUpdateLogBadge(logData);
       } catch (e) {}
 
-      if (db) {
-        try {
-          db.ref('settings/last_update_log').set(logData);
-        } catch (e) {
+      if (settingsRef && window.privateListStorageScope) {
+        settingsRef.child('last_update_log').set(logData).catch((e) => {
           console.warn('Firebase last_update_log write error:', e);
-        }
+        });
       }
     }
 
@@ -2563,7 +2564,10 @@
         }
       } else {
         try {
-          const localRaw = localStorage.getItem('t8_last_update_log');
+          const scopedKey = window.privateListStorageScope
+            ? `t8_last_update_log_${window.privateListStorageScope}`
+            : '';
+          const localRaw = scopedKey ? localStorage.getItem(scopedKey) : null;
           if (localRaw) {
             const parsed = JSON.parse(localRaw);
             updateLastUpdateLogBadge(parsed);
