@@ -89,8 +89,8 @@
   fetchEwgfStats = async function(gameId, forceRefresh = false, memberKey = null, isManual = false, targetName = '') {
     const id = cleanTekkenId(gameId);
     const cached = getLocalStats(id);
-    // 同じ統合仕様(v11)の正常データは12時間再利用する。旧仕様のキャッシュはsource不一致で自動更新する。
-    if (!forceRefresh && cached && cached.statsSource === 'wavu-first-highest-qualified-mu+ewgf-profile-v11'
+    // 同じ統合仕様(v12)の正常データは12時間再利用する。旧仕様のキャッシュはsource不一致で自動更新する。
+    if (!forceRefresh && cached && cached.statsSource === 'wavu-first-highest-qualified-mu+ewgf-profile-v12'
       && Date.now() - (cached.cachedAt || 0) < CACHE_TTL_MS && !cached.isError) {
       return cached;
     }
@@ -108,6 +108,11 @@
       const selected = qualifiedSelection.selectionSource === 'wavu-qualified-highest-mu'
         ? qualifiedSelection
         : selectMainCharacter(wavu, profile);
+      const fallbackRatingMu = selected.selectionSource === 'ewgf-most-lifetime-games'
+        ? findMapValue(wavu && wavu.charRatingMap, selected.character)
+        : null;
+      const ratingIsHistorical = selected.ratingMu === null && fallbackRatingMu !== null;
+      const displayedRatingMu = ratingIsHistorical ? fallbackRatingMu : selected.ratingMu;
       const ewgfCharacter = findEwgfCharacter(profile, selected.character);
       if (!selected.character) throw new Error('Main character candidate not found');
       if (!ewgfCharacter) throw new Error('EWGF character row not found: ' + selected.character);
@@ -128,10 +133,10 @@
         danRank:rankIsAllTimeHighest ? allTimeHighestRank : (ewgfCharacter.currentRank || '-'),
         rankIcon:rankIsAllTimeHighest ? historicalRankIcon : currentRankIcon,
         rankIsAllTimeHighest,
-        ratingMu:selected.ratingMu, ratingCharacter:selected.character,
+        ratingMu:displayedRatingMu, ratingCharacter:selected.character, ratingIsHistorical,
         tekkenPower:Number(profile.tekkenProwess) || (cached ? cached.tekkenPower : 0) || 0,
         lastSeenTimestamp:ewgfTime || wavuTime || (cached ? cached.lastSeenTimestamp : null),
-        totalBattlesFetched:0, statsSource:'wavu-first-highest-qualified-mu+ewgf-profile-v11', isError:false, updatedAt:Date.now()
+        totalBattlesFetched:0, statsSource:'wavu-first-highest-qualified-mu+ewgf-profile-v12', isError:false, updatedAt:Date.now()
       };
       setLocalStats(id, stats, memberKey);
       queueEnhance();
@@ -151,7 +156,7 @@
     const id = cleanTekkenId(member.gameId);
     const stats = getLocalStats(id, member);
     if (!stats) return;
-    if (stats.statsSource !== 'wavu-first-highest-qualified-mu+ewgf-profile-v11' && !pendingIds.has(id)) {
+    if (stats.statsSource !== 'wavu-first-highest-qualified-mu+ewgf-profile-v12' && !pendingIds.has(id)) {
       pendingIds.add(id);
       fetchEwgfStats(id, false, key, false, member.name || '').finally(() => pendingIds.delete(id));
     }
@@ -189,6 +194,30 @@
       if (!name) { name = document.createElement('span'); name.className = 'stats-preview-rank-name val-rank'; rankValue.append(name); }
       for (const node of [...rankValue.childNodes]) if (node.nodeType === Node.TEXT_NODE) node.remove();
       if (name.textContent !== (stats.danRank || '-')) name.textContent = stats.danRank || '-';
+    }
+    const ratingValue = box.querySelector('.val-rating');
+    if (ratingValue) {
+      const ratingText = stats.ratingMu !== null ? 'μ ' + stats.ratingMu : '-';
+      if (ratingValue.textContent !== ratingText) ratingValue.textContent = ratingText;
+      ratingValue.classList.toggle('is-historical-rating', Boolean(stats.ratingIsHistorical));
+      ratingValue.title = stats.ratingIsHistorical
+        ? (stats.ratingCharacter || stats.mainChar || 'Main character') + '：Leaderboard資格外の過去参考レート'
+        : '';
+    }
+    const card = box.closest('.poster-card');
+    const avatarFrame = card && card.querySelector('.avatar-frame');
+    if (avatarFrame && !member.photoData && stats.mainCharImage) {
+      let fallbackImage = avatarFrame.querySelector('.avatar-main-character-fallback');
+      if (!fallbackImage) {
+        fallbackImage = document.createElement('img');
+        fallbackImage.className = 'avatar-main-character-fallback';
+        avatarFrame.prepend(fallbackImage);
+      }
+      fallbackImage.src = stats.mainCharImage;
+      fallbackImage.alt = (stats.mainChar || 'Main character') + ' image';
+      avatarFrame.classList.add('uses-main-character-fallback');
+      const initials = avatarFrame.querySelector('.avatar-initials');
+      if (initials) initials.hidden = true;
     }
   }
   let queued = false;

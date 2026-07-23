@@ -177,6 +177,7 @@ body.theme-japanese .list-order-items li.is-active { border-color: #4f46e5; back
   border: 1px solid #d4af37; border-radius: 14px; overflow: auto; background: #17100b; color: #fff2c9;
   box-shadow: 0 24px 80px rgba(0,0,0,.65);
 }
+.main-character-logic-dialog[open] { position: fixed; inset: 50% auto auto 50%; margin: 0; transform: translate(-50%, -50%); }
 .main-character-logic-dialog::backdrop { background: rgba(5,4,3,.76); backdrop-filter: blur(3px); }
 .main-character-logic-panel { padding: 18px; }
 .main-character-logic-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
