@@ -133,6 +133,28 @@
       return compared ? compared * direction : a.index - b.index;
     }).map(item => item.entry);
   };
+  const memberSortStorageKey = () => activeUser && activeListId
+    ? `t8_member_sort_${activeUser.uid}_${activeListId}`
+    : '';
+  function readLocalMemberSort() {
+    try {
+      const raw = localStorage.getItem(memberSortStorageKey());
+      return raw ? JSON.parse(raw) : null;
+    } catch (_) { return null; }
+  }
+  function writeLocalMemberSort(mode, direction) {
+    try { localStorage.setItem(memberSortStorageKey(), JSON.stringify({ mode, direction })); } catch (_) {}
+  }
+  async function persistMemberSortSetting(mode, direction) {
+    writeLocalMemberSort(mode, direction);
+    if (!settingsRef) return;
+    try {
+      await settingsRef.child('memberSort').set({ mode, direction });
+    } catch (error) {
+      console.warn('Firebase memberSort sync unavailable; using list-local setting:', error);
+    }
+  }
+
   function updateMemberSortControls() {
     const mode = byId('memberSortMode');
     const direction = byId('memberSortDirection');
@@ -148,15 +170,14 @@
     window.memberAutoSortActive = currentMemberSortMode !== 'manual';
     updateMemberSortControls();
     if (window.currentMembersData) { renderPosters(window.currentMembersData); setTimeout(addPerCardListActions, 0); }
-    if (settingsRef) await settingsRef.child('memberSort').set({ mode: currentMemberSortMode, direction: currentMemberSortDirection });
+    await persistMemberSortSetting(currentMemberSortMode, currentMemberSortDirection);
   }
   function disableAutoSortForManualReorder() {
     if (currentMemberSortMode === 'manual') return;
     currentMemberSortMode = 'manual';
     window.memberAutoSortActive = false;
     updateMemberSortControls();
-    if (settingsRef) settingsRef.child('memberSort').set({ mode: 'manual', direction: currentMemberSortDirection })
-      .catch(error => showToast(`手動順への切替に失敗しました: ${error.message}`));
+    persistMemberSortSetting('manual', currentMemberSortDirection);
     showToast('ドラッグ操作のため手動順へ切り替えました');
   }
 
@@ -501,9 +522,11 @@
     });
     memberSortRef.on('value', snapshot => {
       if (activeListId !== listId) return;
-      const setting = snapshot.val() || {};
+      const remoteSetting = snapshot.val();
+      const setting = remoteSetting || readLocalMemberSort() || {};
       currentMemberSortMode = ['manual','name','rank','games','rating','power'].includes(setting.mode) ? setting.mode : 'manual';
       currentMemberSortDirection = setting.direction === 'asc' ? 'asc' : 'desc';
+      if (remoteSetting) writeLocalMemberSort(currentMemberSortMode, currentMemberSortDirection);
       window.memberAutoSortActive = currentMemberSortMode !== 'manual';
       updateMemberSortControls();
       if (window.currentMembersData && !window.cardReorderInProgress) { renderPosters(window.currentMembersData); setTimeout(addPerCardListActions, 0); }
