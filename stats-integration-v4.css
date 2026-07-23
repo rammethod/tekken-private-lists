@@ -46,3 +46,5 @@ body.theme-japanese .id-box{background:rgba(23,20,72,.9)!important;border-color:
 @media(max-width:600px){.stats-preview-badge{display:none!important}.stats-preview-eyebrow{display:block;width:max-content;max-width:100%;padding-right:0!important;white-space:nowrap!important;word-break:keep-all!important;overflow-wrap:normal!important;letter-spacing:.11em;font-size:.56rem}}
 
 #apiQuotaText{display:none!important}
+
+.stats-preview-rank-icon.is-all-time-highest{filter:sepia(.82) saturate(.58) contrast(.94);opacity:.9}

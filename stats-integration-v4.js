@@ -24,8 +24,8 @@
   fetchEwgfStats = async function(gameId, forceRefresh = false, memberKey = null, isManual = false, targetName = '') {
     const id = cleanTekkenId(gameId);
     const cached = getLocalStats(id);
-    // 同じ統合仕様(v8)の正常データは1時間再利用する。旧仕様のキャッシュはsource不一致で自動更新する。
-    if (!forceRefresh && cached && cached.statsSource === 'wavu-leaderboard-main+ewgf-profile-v8'
+    // 同じ統合仕様(v9)の正常データは1時間再利用する。旧仕様のキャッシュはsource不一致で自動更新する。
+    if (!forceRefresh && cached && cached.statsSource === 'wavu-leaderboard-main+ewgf-profile-v9'
       && Date.now() - (cached.cachedAt || 0) < CACHE_TTL_MS && !cached.isError) {
       return cached;
     }
@@ -43,6 +43,11 @@
       if (!ewgfCharacter) throw new Error('EWGF character row not found: ' + selected.character);
       const ranked = findRankedCharacterStats(profile, selected.character);
       if (!ranked) throw new Error('EWGF ranked character stats not found: ' + selected.character);
+      const currentRankIcon = ewgfCharacter.rankIcon || '';
+      const allTimeHighestRank = ranked.allTimeHighestRank || profile.highestRank || '';
+      const profileHighestMatches = normalizeCharacter(profile.highestRank) === normalizeCharacter(allTimeHighestRank);
+      const historicalRankIcon = profileHighestMatches ? (profile.highestRankIcon || '') : '';
+      const rankIsAllTimeHighest = !currentRankIcon && Boolean(allTimeHighestRank && historicalRankIcon);
       const rawWavuTime = wavu.latestBattle && wavu.latestBattle.battle_at ? Number(wavu.latestBattle.battle_at) : Number(wavu.latestBattleAt || 0);
       const wavuTime = rawWavuTime ? (rawWavuTime < 1e11 ? rawWavuTime * 1000 : rawWavuTime) : null;
       const parsedEwgfTime = Date.parse(profile.latestBattleAt || '');
@@ -50,11 +55,13 @@
       const stats = {
         gameId:id, mainChar:selected.character, mainCharCode:ewgfCharacter.characterCode || '', mainCharImage:ewgfCharacter.characterImage || '',
         mainCharGames:Number(ranked.games) || 0, wins:Number(ranked.wins) || 0, losses:Number(ranked.losses) || 0, rankedWinRate:Number(ranked.winRate), rankedDataVerified:true, leaderboardGames:selected.leaderboardGames,
-        danRank:ewgfCharacter.currentRank || '-', rankIcon:ewgfCharacter.rankIcon || '',
+        danRank:rankIsAllTimeHighest ? allTimeHighestRank : (ewgfCharacter.currentRank || '-'),
+        rankIcon:rankIsAllTimeHighest ? historicalRankIcon : currentRankIcon,
+        rankIsAllTimeHighest,
         ratingMu:selected.ratingMu !== null ? selected.ratingMu : (cached ? cached.ratingMu : null), ratingCharacter:selected.character,
         tekkenPower:Number(profile.tekkenProwess) || (cached ? cached.tekkenPower : 0) || 0,
         lastSeenTimestamp:ewgfTime || wavuTime || (cached ? cached.lastSeenTimestamp : null),
-        totalBattlesFetched:0, statsSource:'wavu-leaderboard-main+ewgf-profile-v8', isError:false, updatedAt:Date.now()
+        totalBattlesFetched:0, statsSource:'wavu-leaderboard-main+ewgf-profile-v9', isError:false, updatedAt:Date.now()
       };
       setLocalStats(id, stats, memberKey);
       queueEnhance();
@@ -74,7 +81,7 @@
     const id = cleanTekkenId(member.gameId);
     const stats = getLocalStats(id, member);
     if (!stats) return;
-    if (stats.statsSource !== 'wavu-leaderboard-main+ewgf-profile-v8' && !pendingIds.has(id)) {
+    if (stats.statsSource !== 'wavu-leaderboard-main+ewgf-profile-v9' && !pendingIds.has(id)) {
       pendingIds.add(id);
       fetchEwgfStats(id, false, key, false, member.name || '').finally(() => pendingIds.delete(id));
     }
@@ -103,7 +110,11 @@
       rankValue.classList.add('stats-preview-rank');
       let image = rankValue.querySelector('.stats-preview-rank-icon');
       if (!image) { image = document.createElement('img'); image.className = 'stats-preview-rank-icon'; rankValue.prepend(image); }
-      image.src = stats.rankIcon || ''; image.alt = stats.danRank ? `${stats.danRank} rank icon` : ''; image.hidden = !stats.rankIcon;
+      image.src = stats.rankIcon || '';
+      image.alt = stats.danRank ? `${stats.danRank} rank icon` : '';
+      image.hidden = !stats.rankIcon;
+      image.classList.toggle('is-all-time-highest', Boolean(stats.rankIsAllTimeHighest));
+      image.title = stats.rankIsAllTimeHighest ? `All time highest rank: ${stats.danRank}` : '';
       let name = rankValue.querySelector('.val-rank');
       if (!name) { name = document.createElement('span'); name.className = 'stats-preview-rank-name val-rank'; rankValue.append(name); }
       for (const node of [...rankValue.childNodes]) if (node.nodeType === Node.TEXT_NODE) node.remove();
