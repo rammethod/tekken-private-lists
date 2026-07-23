@@ -106,10 +106,27 @@
   function applyGridColumns(value) {
     const grid = byId('posterGrid');
     if (!grid) return;
+    const app = grid.closest('.app-container');
     const normalized = /^[1-5]$/.test(String(value)) ? String(value) : GRID_COLUMNS_AUTO;
-    grid.style.gridTemplateColumns = normalized === GRID_COLUMNS_AUTO
-      ? ''
-      : `repeat(${normalized}, minmax(0, 1fr))`;
+    if (normalized === GRID_COLUMNS_AUTO) {
+      grid.style.gridTemplateColumns = '';
+      grid.style.justifyContent = '';
+      if (app) { app.style.width = ''; app.style.maxWidth = ''; }
+    } else {
+      const columns = Number(normalized);
+      const mobileLayout = window.matchMedia('(max-width: 640px)').matches;
+      const cardWidth = mobileLayout ? 165 : 300;
+      const gap = mobileLayout ? 8 : 28;
+      const boardChrome = mobileLayout ? 28 : 84;
+      const naturalWidth = columns * cardWidth + Math.max(0, columns - 1) * gap + boardChrome;
+      const viewportFloor = Math.min(1080, Math.max(280, window.innerWidth - (mobileLayout ? 12 : 40)));
+      grid.style.gridTemplateColumns = `repeat(${columns}, ${cardWidth}px)`;
+      grid.style.justifyContent = 'center';
+      if (app) {
+        app.style.width = `${Math.max(naturalWidth, viewportFloor)}px`;
+        app.style.maxWidth = 'none';
+      }
+    }
     const select = byId('gridColumnSelect');
     if (select && select.value !== normalized) select.value = normalized;
   }
@@ -198,7 +215,7 @@
               <option value="1">1列</option><option value="2">2列</option><option value="3">3列</option>
               <option value="4">4列</option><option value="5">5列</option>
             </select>
-            <small>この端末に保存されます</small>
+            <small>カード幅を保って枠を拡張</small>
           </div>
           <button id="mainCharacterLogicBtn" role="menuitem">？ メインキャラ判定について</button>
           <button id="adminPanelBtn" role="menuitem" hidden>ユーザー承認</button>

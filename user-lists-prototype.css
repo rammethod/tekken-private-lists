@@ -217,3 +217,7 @@ body.theme-japanese .main-character-logic-note { background: #eef2ff; }
   .main-character-logic-steps p, .main-character-logic-note p { font-size: .7rem; }
   .main-character-logic-footer { display: grid; }
 }
+/* Keep cards readable when the user expands the board to more columns. */
+body.workspace-ui-active { overflow-x: auto; }
+body.workspace-ui-active .app-container { transition: width .22s ease; }
+@media (prefers-reduced-motion: reduce) { body.workspace-ui-active .app-container { transition: none; } }
