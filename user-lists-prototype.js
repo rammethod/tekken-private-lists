@@ -37,47 +37,154 @@
     if (button) {
       button.classList.toggle('is-active', vsModeActive);
       button.textContent = vsModeActive
-        ? (vsSelectedKeys.length >= 2 ? '⚔ VSモード解除' : `⚔ 対戦相手を選択 ${vsSelectedKeys.length}/2`)
+        ? (vsSelectedKeys.length >= 2 ? '⚔ VS比較中' : `⚔ 対戦相手を選択 ${vsSelectedKeys.length}/2`)
         : '⚔ VSモード β';
       button.setAttribute('aria-pressed', String(vsModeActive));
     }
     document.body.classList.toggle('vs-mode-active', vsModeActive);
     document.body.classList.toggle('vs-pair-ready', vsModeActive && vsSelectedKeys.length === 2);
-    document.querySelectorAll('.poster-card').forEach(card => {
-      const selected = vsSelectedKeys.includes(memberKeyFromCard(card));
+    document.querySelectorAll('#posterGrid > .poster-card').forEach(card => {
+      const selectionIndex = vsSelectedKeys.indexOf(memberKeyFromCard(card));
+      const selected = selectionIndex >= 0;
       card.classList.toggle('vs-selected', vsModeActive && selected);
       card.classList.toggle('vs-dimmed', vsModeActive && vsSelectedKeys.length === 2 && !selected);
       card.setAttribute('aria-pressed', String(vsModeActive && selected));
+      let marker = card.querySelector(':scope > .vs-selection-marker');
+      if (!marker) {
+        marker = document.createElement('span');
+        marker.className = 'vs-selection-marker';
+        marker.setAttribute('aria-hidden', 'true');
+        card.appendChild(marker);
+      }
+      marker.textContent = selected ? `VS ${selectionIndex + 1}` : '';
+      marker.hidden = !(vsModeActive && selected);
     });
   }
 
+  function cleanVsClone(clone) {
+    clone.querySelectorAll('[id]').forEach(element => element.removeAttribute('id'));
+    clone.removeAttribute('id');
+    clone.querySelectorAll('button, a, input, select, textarea').forEach(element => {
+      element.tabIndex = -1;
+      element.setAttribute('aria-hidden', 'true');
+    });
+    clone.querySelectorAll('.card-reorder-handle, .card-admin-bar, .list-card-actions').forEach(element => element.remove());
+  }
+
+  async function closeVsComparison({ reset = true, animate = true } = {}) {
+    const stage = byId('vsComparisonStage');
+    if (stage) {
+      const clones = [...stage.querySelectorAll('.vs-comparison-card')];
+      if (animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        await Promise.all(clones.map(clone => {
+          const key = clone.dataset.memberKey;
+          const source = document.querySelector(`#posterGrid > .poster-card[data-member-key="${CSS.escape(key)}"]`);
+          if (!source) return Promise.resolve();
+          const from = clone.getBoundingClientRect();
+          const to = source.getBoundingClientRect();
+          return clone.animate([
+            { transform: 'translate3d(0,0,0) scale(1)', opacity: 1 },
+            { transform: `translate3d(${to.left - from.left}px,${to.top - from.top}px,0) scale(${to.width / Math.max(from.width, 1)})`, opacity: .25 }
+          ], { duration: 360, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' }).finished.catch(() => {});
+        }));
+      }
+      stage.remove();
+    }
+    document.querySelectorAll('#posterGrid > .poster-card.vs-source-hidden').forEach(card => card.classList.remove('vs-source-hidden'));
+    if (reset) {
+      vsModeActive = false;
+      vsSelectedKeys = [];
+      updateVsModeView();
+      showToast('VSモードを終了しました');
+      const button = byId('vsModeToggleBtn');
+      if (button) button.focus();
+    }
+  }
+
+  function openVsComparison() {
+    if (byId('vsComparisonStage') || vsSelectedKeys.length !== 2) return;
+    const sources = vsSelectedKeys.map(key => document.querySelector(`#posterGrid > .poster-card[data-member-key="${CSS.escape(key)}"]`));
+    if (sources.some(source => !source)) return;
+    const sourceRects = sources.map(source => source.getBoundingClientRect());
+    const stage = document.createElement('div');
+    stage.id = 'vsComparisonStage';
+    stage.className = 'vs-comparison-stage';
+    stage.setAttribute('role', 'dialog');
+    stage.setAttribute('aria-modal', 'true');
+    stage.setAttribute('aria-label', '選択した2人のプレイヤーカード比較');
+    stage.innerHTML = '<div class="vs-comparison-heading"><strong>⚔ VS COMPARISON <span>β</span></strong><button type="button" class="vs-comparison-close" aria-label="VS比較を終了">×</button></div><div class="vs-comparison-scroll"><div class="vs-comparison-cards"></div></div>';
+    const cardsHost = stage.querySelector('.vs-comparison-cards');
+    const clones = sources.map((source, index) => {
+      const clone = source.cloneNode(true);
+      cleanVsClone(clone);
+      clone.classList.remove('vs-dimmed', 'vs-source-hidden');
+      clone.classList.add('vs-comparison-card', 'vs-selected');
+      clone.dataset.memberKey = vsSelectedKeys[index];
+      clone.style.setProperty('--rand-deg', '0deg');
+      const marker = clone.querySelector('.vs-selection-marker');
+      if (marker) { marker.hidden = false; marker.textContent = `VS ${index + 1}`; }
+      cardsHost.appendChild(clone);
+      const sourceCanvases = source.querySelectorAll('canvas');
+      clone.querySelectorAll('canvas').forEach((canvas, canvasIndex) => {
+        const sourceCanvas = sourceCanvases[canvasIndex];
+        if (!sourceCanvas) return;
+        try {
+          canvas.width = sourceCanvas.width;
+          canvas.height = sourceCanvas.height;
+          canvas.getContext('2d').drawImage(sourceCanvas, 0, 0);
+        } catch (_) {}
+      });
+      return clone;
+    });
+    document.body.appendChild(stage);
+    sources.forEach(source => source.classList.add('vs-source-hidden'));
+    stage.querySelector('.vs-comparison-close').onclick = () => closeVsComparison();
+    stage.addEventListener('click', event => { if (event.target === stage) closeVsComparison(); });
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      clones.forEach((clone, index) => {
+        const to = clone.getBoundingClientRect();
+        const from = sourceRects[index];
+        clone.animate([
+          { transform: `translate3d(${from.left - to.left}px,${from.top - to.top}px,0) scale(${from.width / Math.max(to.width, 1)})`, opacity: .25 },
+          { transform: 'translate3d(0,0,0) scale(1)', opacity: 1 }
+        ], { duration: 480, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'both' });
+      });
+      stage.classList.add('is-visible');
+      stage.querySelector('.vs-comparison-close').focus();
+    }));
+  }
+
   function toggleVsMode() {
-    vsModeActive = !vsModeActive;
+    if (vsModeActive) {
+      closeVsComparison();
+      return;
+    }
+    vsModeActive = true;
     vsSelectedKeys = [];
     updateVsModeView();
-    showToast(vsModeActive ? '比較したいプレイヤーカードを2枚選んでください' : 'VSモードを終了しました');
+    showToast('比較したいプレイヤーカードを2枚選んでください');
   }
 
   function selectVsCard(key) {
-    if (!vsModeActive || !key) return;
+    if (!vsModeActive || !key || byId('vsComparisonStage')) return;
     const existingIndex = vsSelectedKeys.indexOf(key);
-    if (existingIndex >= 0) {
-      vsSelectedKeys.splice(existingIndex, 1);
-    } else if (vsSelectedKeys.length < 2) {
-      vsSelectedKeys.push(key);
-    } else {
-      vsSelectedKeys.shift();
-      vsSelectedKeys.push(key);
-    }
+    if (existingIndex >= 0) vsSelectedKeys.splice(existingIndex, 1);
+    else if (vsSelectedKeys.length < 2) vsSelectedKeys.push(key);
+    else { vsSelectedKeys.shift(); vsSelectedKeys.push(key); }
     updateVsModeView();
-    if (vsSelectedKeys.length === 2) showToast('VS比較する2枚を選択しました');
+    if (vsSelectedKeys.length === 2) {
+      showToast('選択した2枚を中央へ移動します');
+      setTimeout(openVsComparison, 120);
+    }
   }
 
   function resetVsMode() {
+    closeVsComparison({ reset: false, animate: false });
     vsModeActive = false;
     vsSelectedKeys = [];
     updateVsModeView();
   }
+
   function beginCardReorder() {
     window.cardReorderInProgress = true;
     window.hasDeferredPosterRender = false;
@@ -464,6 +571,21 @@
     byId('importListFile').onchange = importList;
     const vsButton = byId('vsModeToggleBtn');
     if (vsButton) vsButton.onclick = toggleVsMode;
+    const posterGrid = byId('posterGrid');
+    if (posterGrid && !posterGrid.dataset.vsDelegated) {
+      posterGrid.dataset.vsDelegated = 'true';
+      posterGrid.addEventListener('click', event => {
+        if (!vsModeActive || byId('vsComparisonStage') || event.target.closest('button, a, input, select, textarea, label, .id-box')) return;
+        const card = event.target.closest('.poster-card');
+        if (card && card.parentElement === posterGrid) selectVsCard(memberKeyFromCard(card));
+      });
+    }
+    if (!document.body.dataset.vsEscapeBound) {
+      document.body.dataset.vsEscapeBound = 'true';
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && (vsModeActive || byId('vsComparisonStage'))) closeVsComparison();
+      });
+    }
     byId('memberSortMode').onchange = event => saveMemberSort(event.target.value);
     byId('memberSortDirection').onclick = () => saveMemberSort(currentMemberSortMode, currentMemberSortDirection === 'asc' ? 'desc' : 'asc');
     byId('memberSortExcludeHistorical').onchange = event => { excludeHistoricalFromSkillSort = event.target.checked; saveMemberSort(currentMemberSortMode, currentMemberSortDirection); };
@@ -1057,13 +1179,7 @@
       const key = memberKeyFromCard(card);
       if (!key) return;
       card.dataset.memberKey = key;
-      if (!card.dataset.vsBound) {
-        card.dataset.vsBound = 'true';
-        card.addEventListener('click', event => {
-          if (!vsModeActive || event.target.closest('button, a, input, select, textarea, label, .id-box')) return;
-          selectVsCard(key);
-        });
-      }
+
       if (!card.querySelector('.card-reorder-handle')) {
         const handle = document.createElement('button');
         handle.type = 'button';
