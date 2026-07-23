@@ -28,8 +28,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <link rel="stylesheet" href="user-lists-prototype.css?v=20260723-2">
-  <link rel="stylesheet" href="admin-access-prototype.css?v=20260723-2">
+  <link rel="stylesheet" href="user-lists-prototype.css?v=20260723-3">
+  <link rel="stylesheet" href="admin-access-prototype.css?v=20260723-3">
 
   <!-- Cropper.js (画像トリミング・クロップ用) -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
@@ -2346,22 +2346,34 @@
     }
 
     function getLocalStats(gameId, memberData = null) {
-      // 1. Firebase から全端末リアルタイム同期されてきた m.fetchedStats があれば最優先使用
-      if (memberData && memberData.fetchedStats) {
-        try {
-          localStorage.setItem(`${LOCAL_STATS_CACHE_KEY}_${gameId}`, JSON.stringify(memberData.fetchedStats));
-        } catch (e) {}
-        return memberData.fetchedStats;
-      }
-
-      // 2. ローカルストレージを参照
+      // 同じTEKKEN IDはリストをまたいで1つのキャッシュとして扱う。
+      // 各リストのFirebaseに残った古いfetchedStatsで、新しい共通キャッシュを上書きしない。
+      let localStats = null;
       try {
         const raw = localStorage.getItem(`${LOCAL_STATS_CACHE_KEY}_${gameId}`);
-        if (!raw) return null;
-        return JSON.parse(raw);
-      } catch (e) {
-        return null;
+        if (raw) localStats = JSON.parse(raw);
+      } catch (e) {}
+
+      const memberStats = memberData && memberData.fetchedStats ? memberData.fetchedStats : null;
+      if (!localStats && !memberStats) return null;
+      if (!localStats) {
+        try {
+          localStorage.setItem(`${LOCAL_STATS_CACHE_KEY}_${gameId}`, JSON.stringify(memberStats));
+        } catch (e) {}
+        return memberStats;
       }
+      if (!memberStats) return localStats;
+
+      const localTime = Number(localStats.cachedAt || localStats.updatedAt || 0);
+      const memberTime = Number(memberStats.cachedAt || memberStats.updatedAt || 0);
+      const newer = localTime >= memberTime ? localStats : memberStats;
+      const older = newer === localStats ? memberStats : localStats;
+      const merged = { ...older, ...newer };
+      if (!newer.statPentagon && older.statPentagon) merged.statPentagon = older.statPentagon;
+      try {
+        localStorage.setItem(`${LOCAL_STATS_CACHE_KEY}_${gameId}`, JSON.stringify(merged));
+      } catch (e) {}
+      return merged;
     }
 
     function setLocalStats(gameId, stats, memberKey = null) {
@@ -3490,8 +3502,8 @@
     }
 
   </script>
-  <script src="user-lists-prototype.js?v=20260723-2"></script>
-  <script src="admin-access-prototype.js?v=20260723-2"></script>
+  <script src="user-lists-prototype.js?v=20260723-3"></script>
+  <script src="admin-access-prototype.js?v=20260723-3"></script>
   <script>
     (() => {
       const integrationScript = document.createElement('script');
@@ -3520,6 +3532,8 @@
 </body>
 
 </html>
+
+
 
 
 

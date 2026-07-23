@@ -1,8 +1,9 @@
-(() => {
+﻿(() => {
   const EWGF_PROFILE_WORKER = 'https://tight-bar-55c1.uracil123.workers.dev';
   const originalFetchEwgfStats = window.fetchEwgfStats;
   const pendingPentagonIds = new Set();
   const attemptedPentagonIds = new Set();
+  const inFlightStatsById = new Map();
   const axes = [
     { key:'attack', label:'攻撃', angle:-90 },
     { key:'technique', label:'技術', angle:-18 },
@@ -26,23 +27,35 @@
     return valid(profile.statPentagon) ? profile.statPentagon : null;
   }
 
-  window.fetchEwgfStats = async function(gameId, forceRefresh = false, memberKey = null, isManual = false, targetName = '') {
+  window.fetchEwgfStats = function(gameId, forceRefresh = false, memberKey = null, isManual = false, targetName = '') {
     const id = cleanTekkenId(gameId);
-    const cached = getLocalStats(id);
-    const basePromise = originalFetchEwgfStats(gameId, forceRefresh, memberKey, isManual, targetName);
-    const pentagonPromise = !forceRefresh && cached && valid(cached.statPentagon)
-      ? Promise.resolve(cached.statPentagon)
-      : fetchPentagon(id).catch(error => {
-          console.warn(`Stat Pentagon fetch failed for ${id}:`, error);
-          return cached && valid(cached.statPentagon) ? cached.statPentagon : null;
-        });
-    const [stats, statPentagon] = await Promise.all([basePromise, pentagonPromise]);
-    if (stats && statPentagon) {
-      stats.statPentagon = statPentagon;
-      setLocalStats(id, stats, memberKey);
+    if (!forceRefresh && inFlightStatsById.has(id)) return inFlightStatsById.get(id);
+
+    const request = (async () => {
+      const cached = getLocalStats(id);
+      const basePromise = originalFetchEwgfStats(gameId, forceRefresh, memberKey, isManual, targetName);
+      const pentagonPromise = !forceRefresh && cached && valid(cached.statPentagon)
+        ? Promise.resolve(cached.statPentagon)
+        : fetchPentagon(id).catch(error => {
+            console.warn(`Stat Pentagon fetch failed for ${id}:`, error);
+            return cached && valid(cached.statPentagon) ? cached.statPentagon : null;
+          });
+      const [stats, statPentagon] = await Promise.all([basePromise, pentagonPromise]);
+      if (stats && statPentagon) {
+        stats.statPentagon = statPentagon;
+        setLocalStats(id, stats, memberKey);
+      }
+      queueRender();
+      return stats;
+    })();
+
+    if (!forceRefresh) {
+      inFlightStatsById.set(id, request);
+      request.finally(() => {
+        if (inFlightStatsById.get(id) === request) inFlightStatsById.delete(id);
+      });
     }
-    queueRender();
-    return stats;
+    return request;
   };
 
   function draw(canvas, data) {
@@ -228,3 +241,4 @@
   window.addEventListener('resize', queueRender, { passive:true });
   window.addEventListener('load', queueRender);
 })();
+
