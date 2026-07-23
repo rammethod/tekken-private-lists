@@ -1,4 +1,4 @@
-﻿(() => {
+(() => {
   const EWGF_PROFILE_WORKER = 'https://tight-bar-55c1.uracil123.workers.dev';
   const originalFetchEwgfStats = window.fetchEwgfStats;
   const pendingPentagonIds = new Set();
@@ -166,6 +166,10 @@
           winRateLine.className = 'stats-preview-games-line stats-preview-win-rate';
           winRateLine.textContent = `・${winRate.toFixed(1)}% WR`;
           lines.push(winRateLine);
+          const winRateNote = document.createElement('span');
+          winRateNote.className = 'stats-preview-games-line stats-preview-win-rate-note';
+          winRateNote.textContent = '※ Player / Quick Matchを含む';
+          lines.push(winRateNote);
         }
         gamesElement.replaceChildren(...lines);
       }

@@ -13,3 +13,5 @@ body.theme-japanese .stat-pentagon-title{color:#1e1b4b}
 .stats-preview-main .stats-preview-games{display:flex!important;flex-direction:column;align-items:flex-start;width:100%;max-width:100%;margin:3px 0 0!important;overflow:visible!important;line-height:1.25;white-space:normal!important}
 .stats-preview-games-line{display:block;max-width:100%;overflow-wrap:anywhere}
 .stats-preview-win-rate{color:inherit}
+.stats-preview-win-rate-note{margin-top:1px;color:rgba(255,255,255,.62);font-size:.54rem;font-weight:600;line-height:1.2}
+body.theme-japanese .stats-preview-win-rate-note{color:rgba(30,27,75,.62)}
