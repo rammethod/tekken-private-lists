@@ -71,8 +71,31 @@
     clone.querySelectorAll('.card-reorder-handle, .card-admin-bar, .list-card-actions').forEach(element => element.remove());
   }
 
+  function syncVsComparisonLayout(stage = byId('vsComparisonStage')) {
+    if (!stage) return;
+    const cardsHost = stage.querySelector('.vs-comparison-cards');
+    const slots = [...stage.querySelectorAll('.vs-comparison-slot')];
+    if (!cardsHost || slots.length !== 2) return;
+    const mobile = window.matchMedia('(max-width: 700px)').matches
+      || (window.matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) <= 700);
+    slots.forEach(slot => {
+      const card = slot.querySelector('.vs-comparison-card');
+      if (!card) return;
+      if (!mobile) {
+        card.style.removeProperty('--vs-mobile-scale');
+        slot.style.removeProperty('--vs-slot-height');
+        return;
+      }
+      const baseWidth = 300;
+      const slotWidth = Math.max(1, slot.clientWidth);
+      const scale = Math.min(1, (slotWidth / baseWidth) * .96);
+      card.style.setProperty('--vs-mobile-scale', String(scale));
+      slot.style.setProperty('--vs-slot-height', `${Math.ceil(card.offsetHeight * scale + 8)}px`);
+    });
+  }
   async function closeVsComparison({ reset = true, animate = true } = {}) {
     const stage = byId('vsComparisonStage');
+    if (window.vsComparisonResizeObserver) window.vsComparisonResizeObserver.disconnect();
     if (stage) {
       const clones = [...stage.querySelectorAll('.vs-comparison-card')];
       if (animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -109,6 +132,7 @@
     const stage = document.createElement('div');
     stage.id = 'vsComparisonStage';
     stage.className = 'vs-comparison-stage';
+    stage.classList.toggle('is-mobile-fit', isMobileGridDevice());
     stage.setAttribute('role', 'dialog');
     stage.setAttribute('aria-modal', 'true');
     stage.setAttribute('aria-label', '選択した2人のプレイヤーカード比較');
@@ -123,7 +147,10 @@
       clone.style.setProperty('--rand-deg', '0deg');
       const marker = clone.querySelector('.vs-selection-marker');
       if (marker) { marker.hidden = false; marker.textContent = `VS ${index + 1}`; }
-      cardsHost.appendChild(clone);
+      const slot = document.createElement('div');
+      slot.className = 'vs-comparison-slot';
+      slot.appendChild(clone);
+      cardsHost.appendChild(slot);
       const sourceCanvases = source.querySelectorAll('canvas');
       clone.querySelectorAll('canvas').forEach((canvas, canvasIndex) => {
         const sourceCanvas = sourceCanvases[canvasIndex];
@@ -137,6 +164,12 @@
       return clone;
     });
     document.body.appendChild(stage);
+    syncVsComparisonLayout(stage);
+    if (typeof ResizeObserver === 'function') {
+      window.vsComparisonResizeObserver = new ResizeObserver(() => requestAnimationFrame(() => syncVsComparisonLayout(stage)));
+      window.vsComparisonResizeObserver.observe(cardsHost);
+      clones.forEach(clone => window.vsComparisonResizeObserver.observe(clone));
+    }
     sources.forEach(source => source.classList.add('vs-source-hidden'));
     stage.querySelector('.vs-comparison-close').onclick = () => closeVsComparison();
     stage.addEventListener('click', event => { if (event.target === stage) closeVsComparison(); });
