@@ -201,6 +201,11 @@
       const ratingText = stats.ratingMu !== null ? 'μ ' + stats.ratingMu : '-';
       if (ratingValue.textContent !== ratingText) ratingValue.textContent = ratingText;
       ratingValue.classList.toggle('is-historical-rating', Boolean(stats.ratingIsHistorical));
+      const numericRating = Number(stats.ratingMu);
+      const hasRating = Number.isFinite(numericRating);
+      ratingValue.classList.toggle('is-rating-low', hasRating && numericRating < 1500);
+      ratingValue.classList.toggle('is-rating-mid', hasRating && numericRating >= 1500 && numericRating < 2000);
+      ratingValue.classList.toggle('is-rating-elite', hasRating && numericRating >= 2000);
       ratingValue.title = stats.ratingIsHistorical
         ? (stats.ratingCharacter || stats.mainChar || 'Main character') + '：Leaderboard資格外の過去参考レート'
         : '';
