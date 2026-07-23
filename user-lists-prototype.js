@@ -8,7 +8,16 @@
 
   const byId = id => document.getElementById(id);
   const safeName = value => String(value || '').trim().slice(0, 40);
-  const gate = (title, text, mode = 'login') => {
+  const applyActiveListName = name => {
+    const safe = safeName(name) || 'マイリスト';
+    if (byId('titleText')) byId('titleText').textContent = safe;
+    document.title = `${safe} | TEKKEN 8`;
+    const select = byId('myListSelect');
+    if (select && activeListId) {
+      const option = [...select.options].find(item => item.value === activeListId);
+      if (option) option.textContent = safe;
+    }
+  };  const gate = (title, text, mode = 'login') => {
     let root = byId('accessGate');
     if (!root) {
       root = document.createElement('div');
@@ -148,6 +157,7 @@
         : (localStorage.getItem(`active_list_${activeUser.uid}`) || entries[0][0]);
       if (!lists[desiredListId]) desiredListId = entries[0][0];
       select.value = desiredListId;
+      if (activeListId === desiredListId) applyActiveListName(lists[desiredListId].name);
       activateList(desiredListId);
     });
   }
@@ -212,6 +222,7 @@
     const name = safeName(prompt('リスト名を変更', current));
     if (!name) return;
     await listsRef.child(activeListId).child('name').set(name);
+    applyActiveListName(name);
     showToast('リスト名を変更しました');
   }
 
@@ -409,13 +420,26 @@
   window.saveTitle = function saveActiveListTitle() {
     const input = byId('titleInput');
     const name = safeName(input.value);
+    const previousName = byId('titleText').textContent;
+    const editedListId = activeListId;
     input.onblur = null;
     input.style.display = 'none';
     byId('pageTitle').style.display = '';
-    if (name && settingsRef) settingsRef.child('name').set(name).then(() => showToast('リスト名を変更しました'));
-    else if (originalSaveTitle) originalSaveTitle();
+    if (name && settingsRef) {
+      applyActiveListName(name);
+      settingsRef.child('name').set(name)
+        .then(() => {
+          if (activeListId === editedListId) applyActiveListName(name);
+          showToast('リスト名を変更しました');
+        })
+        .catch(error => {
+          if (activeListId === editedListId) applyActiveListName(previousName);
+          showToast(`名前変更に失敗しました: ${error.message}`);
+        });
+    } else if (originalSaveTitle) originalSaveTitle();
   };
 })();
+
 
 
 
