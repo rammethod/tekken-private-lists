@@ -1392,7 +1392,7 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     db = firebase.database();
     auth = firebase.auth();
-    gate('拳トモくん（仮） / BBF-kun（β）', 'Googleログイン後、管理者に承認されたユーザーだけが利用できます。', 'login');
+    gate('拳トモくん（仮） / BFF-kun（β）', 'Googleログイン後、管理者に承認されたユーザーだけが利用できます。', 'login');
     auth.onAuthStateChanged(user => {
       if (!user) {
         if (listsRef) listsRef.off();
@@ -1424,7 +1424,7 @@
         window.privateListStorageScope = '';
         listListenerRef = null;
         settingsLogRef = null;
-        gate('拳トモくん（仮） / BBF-kun（β）', 'Googleログイン後、管理者に承認されたユーザーだけが利用できます。', 'login');
+        gate('拳トモくん（仮） / BFF-kun（β）', 'Googleログイン後、管理者に承認されたユーザーだけが利用できます。', 'login');
         return;
       }
       if (sessionStorage.getItem('t8_admin_mode') === '1') {
