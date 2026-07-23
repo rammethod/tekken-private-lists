@@ -142,6 +142,22 @@
           </div>
         </div>
       </dialog>
+      <dialog class="main-character-logic-dialog" id="mainCharacterLogicDialog" aria-labelledby="mainCharacterLogicTitle">
+        <div class="main-character-logic-panel">
+          <div class="main-character-logic-heading">
+            <div><strong id="mainCharacterLogicTitle">メインキャラはどう決まる？</strong><small>強さを優先し、信頼できるデータがない場合はやり込み量で判定します</small></div>
+            <button type="button" id="closeMainCharacterLogicBtn" aria-label="閉じる">×</button>
+          </div>
+          <ol class="main-character-logic-steps">
+            <li><span>1</span><div><strong>Wavuの信頼できる候補に絞る</strong><p>Leaderboardの <b>σ² &lt; 75</b> に入っているキャラを候補にします。σ²はレーティングの不確かさで、小さいほど判定材料が十分にある状態です。</p></div></li>
+            <li><span>2</span><div><strong>μが最も高いキャラを選ぶ</strong><p>候補の中で、Wavuの推定レーティング <b>μ</b> が一番高いキャラをメインと判定します。別キャラの試合数が多くても、μの高さを優先します。</p></div></li>
+            <li><span>3</span><div><strong>μが同じなら試合数で決める</strong><p>最高μが同率の場合だけ、Leaderboard内の試合数が多いキャラを優先します。</p></div></li>
+            <li><span>4</span><div><strong>候補がいなければ生涯データへ</strong><p>σ² &lt; 75 の候補がいない場合は、EWGFで生涯試合数が最も多いキャラをメインと判定します。</p></div></li>
+          </ol>
+          <div class="main-character-logic-note"><strong>表示データについて</strong><p>メインキャラ決定後、そのキャラの段位・All-time Ranked試合数・勝率・画像をEWGFから取得します。自動更新は12時間ごとで、必要なときは「全員のデータ更新」から手動更新できます。</p></div>
+          <div class="main-character-logic-footer"><button type="button" id="dismissMainCharacterLogicBtn" class="workspace-primary-action">閉じる</button></div>
+        </div>
+      </dialog>
       <details class="workspace-dropdown workspace-account" id="accountMenu">
         <summary><span class="user-chip" id="userChip"></span><span aria-hidden="true">▾</span></summary>
         <div class="workspace-menu" role="menu">
@@ -151,6 +167,7 @@
             <button type="button" data-theme-choice="modern" title="MODERN">ネオン</button>
             <button type="button" data-theme-choice="japanese" title="JAPANESE">和風</button>
           </div>
+          <button id="mainCharacterLogicBtn" role="menuitem">？ メインキャラ判定について</button>
           <button id="adminPanelBtn" role="menuitem" hidden>ユーザー承認</button>
           <button id="logoutBtn" role="menuitem">ログアウト</button>
         </div>
@@ -184,6 +201,16 @@
     byId('saveListOrderBtn').onclick = saveListOrder;
     byId('listOrderDialog').addEventListener('click', event => {
       if (event.target === byId('listOrderDialog')) closeListOrderDialog();
+    });
+    byId('mainCharacterLogicBtn').onclick = () => {
+      closeWorkspaceMenus();
+      byId('mainCharacterLogicDialog').showModal();
+    };
+    const closeMainCharacterLogic = () => byId('mainCharacterLogicDialog').close();
+    byId('closeMainCharacterLogicBtn').onclick = closeMainCharacterLogic;
+    byId('dismissMainCharacterLogicBtn').onclick = closeMainCharacterLogic;
+    byId('mainCharacterLogicDialog').addEventListener('click', event => {
+      if (event.target === byId('mainCharacterLogicDialog')) closeMainCharacterLogic();
     });
     byId('listOrderItems').addEventListener('click', event => {
       const button = event.target.closest('[data-list-move]');
