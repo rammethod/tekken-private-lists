@@ -694,6 +694,33 @@
     });
   };
 
+  const closeLastSeenScopeTips = except => {
+    document.querySelectorAll('.last-seen-badge.scope-open').forEach(badge => {
+      if (badge !== except) badge.classList.remove('scope-open');
+    });
+  };
+
+  document.addEventListener('pointerdown', event => {
+    if (event.target.closest('.last-seen-badge[data-last-seen-scope]')) event.stopPropagation();
+  });
+
+  document.addEventListener('click', event => {
+    const badge = event.target.closest('.last-seen-badge[data-last-seen-scope]');
+    const isTouchLayout = window.matchMedia('(hover: none), (pointer: coarse)').matches;
+    if (!badge || !isTouchLayout) {
+      closeLastSeenScopeTips();
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const shouldOpen = !badge.classList.contains('scope-open');
+    closeLastSeenScopeTips(badge);
+    badge.classList.toggle('scope-open', shouldOpen);
+  });
+
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') closeLastSeenScopeTips();
+  });
   const originalSaveTitle = window.saveTitle;
   window.saveTitle = function saveActiveListTitle() {
     const input = byId('titleInput');

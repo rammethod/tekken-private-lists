@@ -28,8 +28,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <link rel="stylesheet" href="user-lists-prototype.css?v=20260723-22">
-  <link rel="stylesheet" href="admin-access-prototype.css?v=20260723-22">
+  <link rel="stylesheet" href="user-lists-prototype.css?v=20260723-23">
+  <link rel="stylesheet" href="admin-access-prototype.css?v=20260723-23">
 
   <!-- Cropper.js (画像トリミング・クロップ用) -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
@@ -766,7 +766,61 @@
     }
 
     .last-seen-badge-wrapper {
+      position: relative;
       width: 100%;
+    }
+
+    .last-seen-badge[data-last-seen-scope] {
+      position: relative;
+      cursor: help;
+      outline: none;
+    }
+
+    .last-seen-badge[data-last-seen-scope]::after {
+      content: attr(data-last-seen-scope);
+      position: absolute;
+      z-index: 120;
+      left: 50%;
+      top: calc(100% + 7px);
+      width: max-content;
+      max-width: min(230px, calc(100vw - 32px));
+      padding: 7px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 8px;
+      background: rgba(15, 23, 42, 0.96);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32);
+      color: #f8fafc;
+      font-size: 0.66rem;
+      font-weight: 700;
+      line-height: 1.35;
+      letter-spacing: 0.02em;
+      text-align: center;
+      white-space: normal;
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, -4px);
+      transition: opacity 0.16s ease, transform 0.16s ease;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .last-seen-badge[data-last-seen-scope]:hover::after,
+      .last-seen-badge[data-last-seen-scope]:focus-visible::after {
+        opacity: 1;
+        transform: translate(-50%, 0);
+      }
+    }
+
+    @media (hover: none), (pointer: coarse) {
+      .last-seen-badge[data-last-seen-scope]::after {
+        width: calc(100% - 8px);
+        max-width: none;
+        box-sizing: border-box;
+      }
+
+      .last-seen-badge[data-last-seen-scope].scope-open::after {
+        opacity: 1;
+        transform: translate(-50%, 0);
+      }
     }
 
     .last-seen-label {
@@ -2441,8 +2495,10 @@
     }
 
     function getLastSeenBadgeHtml(ts) {
+      const scopeText = 'Ranked / Group / Player / Quick の全対戦を対象';
+      const scopeAttrs = `tabindex="0" role="button" data-last-seen-scope="${scopeText}" aria-label="最終対戦。${scopeText}"`;
       if (!ts) {
-        return `<div class="last-seen-badge inactive"><span class="last-seen-icon">❓</span><span class="last-seen-label">最終対戦</span><span class="last-seen-time">データ未取得</span></div>`;
+        return `<div class="last-seen-badge inactive" ${scopeAttrs}><span class="last-seen-icon">❓</span><span class="last-seen-label">最終対戦</span><span class="last-seen-time">データ未取得</span></div>`;
       }
       const diffHour = (Date.now() - ts) / (1000 * 3600);
       const timeStr = formatTimeAgo(ts);
@@ -2450,11 +2506,11 @@
       const badgeContent = (icon) => `<span class="last-seen-icon">${icon}</span><span class="last-seen-label">最終対戦</span><span class="last-seen-time">${timeStr}</span><span class="last-seen-exact">${exactStr}</span>`;
 
       if (diffHour <= 24) {
-        return `<div class="last-seen-badge active" title="最新対戦日時: ${exactStr}">${badgeContent('🔥')}</div>`;
+        return `<div class="last-seen-badge active" ${scopeAttrs}>${badgeContent('🔥')}</div>`;
       } else if (diffHour <= 168) {
-        return `<div class="last-seen-badge recent" title="最新対戦日時: ${exactStr}">${badgeContent('⚡')}</div>`;
+        return `<div class="last-seen-badge recent" ${scopeAttrs}>${badgeContent('⚡')}</div>`;
       } else {
-        return `<div class="last-seen-badge inactive" title="最新対戦日時: ${exactStr}">${badgeContent('💤')}</div>`;
+        return `<div class="last-seen-badge inactive" ${scopeAttrs}>${badgeContent('💤')}</div>`;
       }
     }
 
@@ -3546,8 +3602,8 @@
     }
 
   </script>
-  <script src="user-lists-prototype.js?v=20260723-22"></script>
-  <script src="admin-access-prototype.js?v=20260723-22"></script>
+  <script src="user-lists-prototype.js?v=20260723-23"></script>
+  <script src="admin-access-prototype.js?v=20260723-23"></script>
   <script>
     (() => {
       const integrationScript = document.createElement('script');
