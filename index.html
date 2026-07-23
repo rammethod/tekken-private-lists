@@ -1965,7 +1965,7 @@
 
   </style>
   <script>
-    // UI assets always bypass the browser HTTP cache; stats data keeps its separate 1h cache.
+    // UI assets always bypass the browser HTTP cache; stats data keeps its separate 12h cache.
     (() => {
       const assetVersion = Date.now();
       const stylesheet = document.createElement('link');
@@ -2180,7 +2180,7 @@
     let cropper = null;
     let currentTheme = 'wanted'; // 'wanted', 'modern', or 'japanese'
 
-    // === 1h自動更新の無限ループ防止フラグ ===
+    // === 12h自動更新の無限ループ防止フラグ ===
     // setLocalStats → Firebase書込み → membersRef.on('value')再発火 → renderPosters再呼出 → fetchEwgfStats → setLocalStats → ... の連鎖を断つ
     let isFetchingInBackground = false;  // バックグラウンドフェッチ中フラグ
     let isOwnFirebaseWrite = false;      // 自分自身のsetLocalStatsによるFirebase書込み中フラグ
@@ -2390,7 +2390,7 @@
     /* ===== Prototype Stats & Radar Chart Logic (ewgf.gg Official API) ===== */
     const DEFAULT_EWGF_API_KEY = 'ewgf_48599735d7a64a109401945131210139';
     const LOCAL_STATS_CACHE_KEY = 't8_wanted_ewgf_stats_v3';
-    const CACHE_TTL_MS = 60 * 60 * 1000; // 自動更新: 1時間キャッシュ
+    const CACHE_TTL_MS = 12 * 60 * 60 * 1000; // 自動更新: 12時間キャッシュ
 
     function getEwgfApiKey() {
       return localStorage.getItem('t8_ewgf_api_key') || DEFAULT_EWGF_API_KEY;
@@ -2528,7 +2528,7 @@
     function recordLastUpdateLog(updateType, targetName = '') {
       const ts = Date.now();
       const formattedTime = formatLogTime(ts);
-      const typeLabel = updateType === 'manual' ? '手動更新' : '1h自動更新';
+      const typeLabel = updateType === 'manual' ? '手動更新' : '12h自動更新';
       const targetStr = targetName ? ` (${targetName})` : '';
 
       const logData = {
@@ -2790,7 +2790,7 @@
       const cleanId = cleanTekkenId(gameId);
       const cached = getLocalStats(cleanId);
 
-      // 1時間以内のキャッシュがあり、強制的更新でなければそのまま返す (1日100回クォータの徹底節約)
+      // 12時間以内のキャッシュがあり、強制的更新でなければそのまま返す (1日100回クォータの徹底節約)
       if (!forceRefresh && cached && (Date.now() - (cached.cachedAt || 0) < CACHE_TTL_MS) && !cached.isError) {
         return cached;
       }
@@ -3251,7 +3251,7 @@
 
         grid.appendChild(card);
 
-        // バックグラウンドでのデータ非同期フェッチ（1時間キャッシュ切れ時の自動取得 & Firebase全端末同期）
+        // バックグラウンドでのデータ非同期フェッチ（12時間キャッシュ切れ時の自動取得 & Firebase全端末同期）
         // ※ isFetchingInBackground がtrueの場合はスキップ（on('value')再発火による二重フェッチ防止）
         if (!isFetchingInBackground) {
           const capturedKey = key;

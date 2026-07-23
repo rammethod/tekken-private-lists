@@ -89,14 +89,14 @@
   fetchEwgfStats = async function(gameId, forceRefresh = false, memberKey = null, isManual = false, targetName = '') {
     const id = cleanTekkenId(gameId);
     const cached = getLocalStats(id);
-    // 同じ統合仕様(v11)の正常データは1時間再利用する。旧仕様のキャッシュはsource不一致で自動更新する。
+    // 同じ統合仕様(v11)の正常データは12時間再利用する。旧仕様のキャッシュはsource不一致で自動更新する。
     if (!forceRefresh && cached && cached.statsSource === 'wavu-first-highest-qualified-mu+ewgf-profile-v11'
       && Date.now() - (cached.cachedAt || 0) < CACHE_TTL_MS && !cached.isError) {
       return cached;
     }
     recordLastUpdateLog(isManual ? 'manual' : 'auto', targetName);
     try {
-      const profileUrl = `${EWGF_PROFILE_WORKER}/?ewgfId=${encodeURIComponent(id)}`;
+      const profileUrl = `${EWGF_PROFILE_WORKER}/?ewgfId=${encodeURIComponent(id)}${forceRefresh ? '&force=1' : ''}`;
       const wavuUrl = `${WAVU_WORKER}/?gameId=${encodeURIComponent(id)}`;
       const wavu = await fetchJsonWithRetry(wavuUrl, { attempts: 2, label: 'Wavu' });
       const qualifiedSelection = selectMainCharacter(wavu, null);
