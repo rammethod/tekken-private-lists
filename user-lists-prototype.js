@@ -328,15 +328,101 @@
     }
   }
   function memberKeyFromCard(card) {
+    if (card.dataset.memberKey) return card.dataset.memberKey;
     const edit = card.querySelector('[onclick^="openEditModal"]');
     return edit?.getAttribute('onclick')?.match(/'([^']+)'/)?.[1] || '';
   }
 
+  async function persistCardOrder(grid) {
+    const updates = {};
+    [...grid.querySelectorAll(':scope > .poster-card')].forEach((card, index) => {
+      const key = memberKeyFromCard(card);
+      if (key) updates[`${key}/order`] = (index + 1) * 1000;
+    });
+    if (!Object.keys(updates).length) return;
+    try {
+      await membersRef.update(updates);
+      showToast('メンバーの並び順を保存しました');
+    } catch (error) {
+      showToast(`並び順の保存に失敗しました: ${error.message}`);
+      const snapshot = await membersRef.once('value');
+      renderPosters(snapshot.val());
+      setTimeout(addPerCardListActions, 0);
+    }
+  }
+
+  function bindCardReorder(handle, card) {
+    const grid = card.parentElement;
+    let pointerId = null;
+    let moved = false;
+
+    const finish = async event => {
+      if (pointerId === null || (event.pointerId !== undefined && event.pointerId !== pointerId)) return;
+      try { handle.releasePointerCapture(pointerId); } catch (e) {}
+      pointerId = null;
+      card.classList.remove('card-reordering');
+      grid.classList.remove('card-reorder-active');
+      if (moved) await persistCardOrder(grid);
+      moved = false;
+    };
+
+    handle.addEventListener('pointerdown', event => {
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      event.preventDefault();
+      event.stopPropagation();
+      pointerId = event.pointerId;
+      moved = false;
+      handle.setPointerCapture(pointerId);
+      card.classList.add('card-reordering');
+      grid.classList.add('card-reorder-active');
+    });
+    handle.addEventListener('pointermove', event => {
+      if (event.pointerId !== pointerId) return;
+      event.preventDefault();
+      const target = document.elementFromPoint(event.clientX, event.clientY)?.closest('.poster-card');
+      if (!target || target === card || target.parentElement !== grid) return;
+      const cards = [...grid.querySelectorAll(':scope > .poster-card')];
+      const fromIndex = cards.indexOf(card);
+      const targetIndex = cards.indexOf(target);
+      if (fromIndex < targetIndex) target.after(card);
+      else target.before(card);
+      moved = true;
+    });
+    handle.addEventListener('pointerup', finish);
+    handle.addEventListener('pointercancel', finish);
+    handle.addEventListener('keydown', async event => {
+      if (!['ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'].includes(event.key)) return;
+      event.preventDefault();
+      const previous = card.previousElementSibling;
+      const next = card.nextElementSibling;
+      if ((event.key === 'ArrowUp' || event.key === 'ArrowLeft') && previous?.classList.contains('poster-card')) {
+        previous.before(card);
+      } else if ((event.key === 'ArrowDown' || event.key === 'ArrowRight') && next?.classList.contains('poster-card')) {
+        next.after(card);
+      } else {
+        return;
+      }
+      await persistCardOrder(grid);
+      handle.focus();
+    });
+  }
+
   function addPerCardListActions() {
     document.querySelectorAll('.poster-card').forEach(card => {
-      if (card.querySelector('.list-card-actions')) return;
       const key = memberKeyFromCard(card);
       if (!key) return;
+      card.dataset.memberKey = key;
+      if (!card.querySelector('.card-reorder-handle')) {
+        const handle = document.createElement('button');
+        handle.type = 'button';
+        handle.className = 'card-reorder-handle';
+        handle.textContent = '⠿';
+        handle.title = 'ドラッグまたはスワイプして並べ替え';
+        handle.setAttribute('aria-label', 'メンバーの位置を並べ替え');
+        card.prepend(handle);
+        bindCardReorder(handle, card);
+      }
+      if (card.querySelector('.list-card-actions')) return;
       const actions = document.createElement('div');
       actions.className = 'list-card-actions';
       actions.innerHTML = '<button type="button">別リストへ移動</button><button type="button">別リストへ複製</button>';
@@ -453,6 +539,7 @@
     } else if (originalSaveTitle) originalSaveTitle();
   };
 })();
+
 
 
 
