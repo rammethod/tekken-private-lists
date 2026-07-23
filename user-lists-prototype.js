@@ -282,6 +282,7 @@
     return member.fetchedStats || {};
   }
   window.sortMemberEntries = entries => {
+    window.memberSkillRanks = {};
     if (currentMemberSortMode === 'manual') return entries;
     const direction = currentMemberSortDirection === 'asc' ? 1 : -1;
     const collator = new Intl.Collator('ja', { numeric: true, sensitivity: 'base' });
@@ -302,9 +303,17 @@
       }
       return null;
     };
-    return entries.map((entry, index) => ({ entry, index, value: metric(entry[1]) })).sort((a, b) => {
-      const aMissing = a.value === null || a.value === '' || (typeof a.value === 'number' && (!Number.isFinite(a.value) || a.value < 0));
-      const bMissing = b.value === null || b.value === '' || (typeof b.value === 'number' && (!Number.isFinite(b.value) || b.value < 0));
+    const decorated = entries.map((entry, index) => ({ entry, index, value: metric(entry[1]) }));
+    const isMissing = item => item.value === null || item.value === '' || (typeof item.value === 'number' && (!Number.isFinite(item.value) || item.value < 0));
+    const skillModes = ['rank','rating','winrate','power','pentagon_attack','pentagon_technique','pentagon_appeal','pentagon_spirit','pentagon_defense'];
+    if (skillModes.includes(currentMemberSortMode)) {
+      decorated.filter(item => !isMissing(item)).sort((a, b) => Number(b.value) - Number(a.value) || a.index - b.index).slice(0, 3).forEach((item, index) => {
+        window.memberSkillRanks[item.entry[0]] = index + 1;
+      });
+    }
+    return decorated.sort((a, b) => {
+      const aMissing = isMissing(a);
+      const bMissing = isMissing(b);
       if (aMissing !== bMissing) return aMissing ? 1 : -1;
       const compared = typeof a.value === 'string' ? collator.compare(a.value, b.value) : Number(a.value) - Number(b.value);
       return compared ? compared * direction : a.index - b.index;
@@ -1197,6 +1206,19 @@
         reorderHandle.disabled = !isManual;
         reorderHandle.setAttribute('aria-hidden', String(!isManual));
         reorderHandle.tabIndex = isManual ? 0 : -1;
+      }
+      let skillRankBadge = card.querySelector('.member-skill-rank-badge');
+      const skillRank = window.memberSkillRanks && window.memberSkillRanks[key];
+      if (skillRank && !skillRankBadge) {
+        skillRankBadge = document.createElement('span');
+        skillRankBadge.className = 'member-skill-rank-badge';
+        skillRankBadge.setAttribute('aria-label', '腕前指標 ' + skillRank + '位');
+        card.appendChild(skillRankBadge);
+      }
+      if (skillRankBadge) {
+        skillRankBadge.hidden = !skillRank;
+        skillRankBadge.dataset.rank = skillRank || '';
+        skillRankBadge.textContent = skillRank ? String(skillRank) : '';
       }
       updateVsModeView();
       if (card.querySelector('.list-card-actions')) return;

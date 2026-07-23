@@ -40,3 +40,7 @@ body.theme-wanted .stats-preview-badge{border-color:#c58a47;background:#2a160b;c
 
 /* Historical players: make activity-derived values visually match the sepia rank/rating treatment. */
 .card-stats-container.is-historical-player .stats-preview-game-count,.card-stats-container.is-historical-player .stats-preview-win-rate,.card-stats-container.is-historical-player .val-power{color:#bca77e!important;filter:sepia(.78) saturate(.58);opacity:.86;text-shadow:0 1px 1px rgba(0,0,0,.55)!important}
+
+.stats-preview-win-rate.is-elite-65{color:#f6d36f;text-shadow:0 1px 2px rgba(35,22,5,.92),0 0 3px rgba(246,211,111,.28)}
+body.theme-modern .stats-preview-win-rate.is-elite-65{color:#f6d36f;text-shadow:0 1px 2px rgba(0,0,0,.9),0 0 5px rgba(246,211,111,.28)}
+body.theme-japanese .stats-preview-win-rate.is-elite-65{color:#8a5700;text-shadow:none}
