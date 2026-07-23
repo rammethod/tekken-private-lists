@@ -1,4 +1,4 @@
-.access-gate {
+﻿.access-gate {
   position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center;
   padding: 24px; background: radial-gradient(circle at top, #38220f, #0b0806 64%);
   color: #fff8e7; font-family: system-ui, sans-serif;
@@ -75,6 +75,11 @@ body.workspace-ui-active .top-controls button[onclick*="refreshAllWavuStats"] { 
 .workspace-menu-label { padding: 4px 8px 0; color: #bda977; font-size: .64rem; font-weight: 800; letter-spacing: .08em; }
 .theme-menu-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 4px; }
 .list-workspace .theme-menu-row button { min-height: 34px; padding: 5px; text-align: center; font-size: .68rem; }
+body.theme-modern .list-workspace .workspace-primary-action {
+  border-color: #a5b4fc; background: linear-gradient(135deg,#6366f1,#a855f7);
+  color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.45); box-shadow: 0 0 14px rgba(129,140,248,.3);
+}
+body.theme-modern .list-workspace .workspace-primary-action:hover { background: linear-gradient(135deg,#818cf8,#c084fc); }
 body.theme-modern .workspace-dropdown > summary { border-color: #7c3aed; background: #211b42; }
 body.theme-modern .workspace-menu { border-color: #7c3aed; background: rgba(17,15,35,.98); }
 body.theme-japanese .workspace-dropdown > summary { color: #27215b; border-color: #4f46e5; background: #fff; }
@@ -95,3 +100,4 @@ body.theme-japanese .list-workspace .workspace-menu .menu-danger { color: #b4231
   .list-workspace .workspace-primary-action span { display: none; }
   .list-workspace .workspace-primary-action { width: 42px; padding-inline: 0; font-size: 1.1rem; }
 }
+
