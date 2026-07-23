@@ -187,11 +187,22 @@
     });
   }
 
+  const MEMBER_SORT_SHORT_LABELS = {
+    manual: '手動', name: '名前', rank: '段位', games: '試合数',
+    rating: 'レート', winrate: '勝率', power: '鉄拳力',
+    pentagon_attack: '攻撃', pentagon_technique: '技術', pentagon_appeal: '魅力',
+    pentagon_spirit: '精神', pentagon_defense: '防御'
+  };
+
   function updateMemberSortControls() {
     const mode = byId('memberSortMode');
     const direction = byId('memberSortDirection');
     const excludeHistorical = byId('memberSortExcludeHistorical');
     if (mode) mode.value = currentMemberSortMode;
+    const summaryLabel = byId('memberSortSummaryLabel');
+    if (summaryLabel) summaryLabel.textContent = MEMBER_SORT_SHORT_LABELS[currentMemberSortMode] || '手動';
+    const listSummary = byId('listActionsSummary');
+    if (listSummary) listSummary.setAttribute('aria-label', 'リスト操作メニュー。現在の並べ替え：' + (MEMBER_SORT_SHORT_LABELS[currentMemberSortMode] || '手動'));
     if (excludeHistorical) excludeHistorical.checked = excludeHistoricalFromSkillSort;
     if (direction) {
       direction.disabled = currentMemberSortMode === 'manual';
@@ -275,7 +286,7 @@
         </div>
       </div>
       <details class="workspace-dropdown" id="listActionsMenu">
-        <summary aria-label="リスト操作メニュー" title="リスト操作">•••</summary>
+        <summary id="listActionsSummary" aria-label="リスト操作メニュー。現在の並べ替え：手動" title="リスト操作"><span class="workspace-menu-dots">•••</span><span class="workspace-sort-separator">/</span><span id="memberSortSummaryLabel">手動</span></summary>
         <div class="workspace-menu" role="menu">
           <button id="newListBtn" role="menuitem">＋ 新しいリスト</button>
           <button id="renameListBtn" role="menuitem">リスト名を変更</button>

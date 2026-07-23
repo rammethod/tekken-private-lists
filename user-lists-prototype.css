@@ -230,3 +230,8 @@ body.workspace-ui-active .app-container { transition: width .22s ease; }
 .member-sort-option{display:flex;align-items:flex-start;gap:6px;padding:2px 8px 7px;color:#d8c795;font-size:.62rem;line-height:1.35;cursor:pointer}.member-sort-option input{flex:0 0 auto;margin-top:1px;accent-color:#d4af37}body.theme-japanese .member-sort-option{color:#514aa0}body.theme-modern .member-sort-option{color:#c4b5fd}
 
 .card-reorder-handle[hidden]{display:none!important}
+
+#listActionsSummary{max-width:min(210px,46vw);white-space:nowrap}
+#memberSortSummaryLabel{min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:.68rem}
+.workspace-sort-separator{opacity:.5}
+@media(max-width:430px){#listActionsSummary{max-width:44vw;padding-inline:8px;gap:4px}#memberSortSummaryLabel{font-size:.62rem}}
