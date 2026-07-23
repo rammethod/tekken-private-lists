@@ -28,8 +28,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <link rel="stylesheet" href="user-lists-prototype.css?v=20260723-6">
-  <link rel="stylesheet" href="admin-access-prototype.css?v=20260723-6">
+  <link rel="stylesheet" href="user-lists-prototype.css?v=20260723-7">
+  <link rel="stylesheet" href="admin-access-prototype.css?v=20260723-7">
 
   <!-- Cropper.js (画像トリミング・クロップ用) -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
@@ -2221,7 +2221,8 @@
     }
 
     function applyTheme(theme) {
-      document.body.className = `theme-${theme}`;
+      document.body.classList.remove('theme-wanted', 'theme-modern', 'theme-japanese');
+      document.body.classList.add(`theme-${theme}`);
       const statusText = document.getElementById('statusText');
       const btnAdd = document.getElementById('btnAddMember');
 
@@ -3509,8 +3510,8 @@
     }
 
   </script>
-  <script src="user-lists-prototype.js?v=20260723-6"></script>
-  <script src="admin-access-prototype.js?v=20260723-6"></script>
+  <script src="user-lists-prototype.js?v=20260723-7"></script>
+  <script src="admin-access-prototype.js?v=20260723-7"></script>
   <script>
     (() => {
       const integrationScript = document.createElement('script');
@@ -3539,6 +3540,7 @@
 </body>
 
 </html>
+
 
 
 
