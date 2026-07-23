@@ -67,7 +67,7 @@ body.theme-japanese .id-box{background:rgba(23,20,72,.9)!important;border-color:
 .stats-preview-rating.is-rating-mid:not(.is-historical-rating){color:#62e98b!important;text-shadow:0 1px 2px rgba(0,35,16,.9),0 0 7px rgba(34,197,94,.3)!important}
 .stats-preview-rating.is-rating-elite:not(.is-historical-rating){color:#f6d36f!important;background:none!important;-webkit-background-clip:initial;background-clip:initial;-webkit-text-stroke:0;font-weight:950!important;text-shadow:0 1px 2px rgba(35,22,5,.92),0 0 3px rgba(246,211,111,.28)!important;filter:none;animation:none}
 .stats-preview-rating.is-rating-elite:not(.is-historical-rating)::before{content:'◆ ';color:#f6d36f;-webkit-text-stroke:0;font-size:.62em;vertical-align:.12em;text-shadow:0 1px 2px rgba(35,22,5,.92)}
-body.theme-japanese .stats-preview-rating.is-rating-low:not(.is-historical-rating){color:#fff!important;-webkit-text-stroke:0;text-shadow:0 2px 2px rgba(20,17,62,.98),0 0 4px rgba(20,17,62,.9),0 3px 7px rgba(20,17,62,.72)!important}
-body.theme-japanese .stats-preview-rating.is-rating-mid:not(.is-historical-rating){color:#047857!important;text-shadow:0 0 5px rgba(4,120,87,.16)!important}
-body.theme-japanese .stats-preview-rating.is-rating-elite:not(.is-historical-rating){-webkit-text-stroke:0;text-shadow:0 2px 2px rgba(58,38,8,.9),0 3px 5px rgba(30,27,75,.38)!important}
-body.theme-japanese .stats-preview-rating.is-rating-elite:not(.is-historical-rating)::before{-webkit-text-stroke:0;text-shadow:0 1px 2px rgba(58,38,8,.92)}
+body.theme-japanese .stats-preview-rating.is-rating-low:not(.is-historical-rating){color:#24204f!important;-webkit-text-stroke:0;text-shadow:none!important}
+body.theme-japanese .stats-preview-rating.is-rating-mid:not(.is-historical-rating){color:#047857!important;text-shadow:none!important}
+body.theme-japanese .stats-preview-rating.is-rating-elite:not(.is-historical-rating){color:#8a5700!important;-webkit-text-stroke:0;text-shadow:none!important}
+body.theme-japanese .stats-preview-rating.is-rating-elite:not(.is-historical-rating)::before{color:#8a5700;-webkit-text-stroke:0;text-shadow:none}
