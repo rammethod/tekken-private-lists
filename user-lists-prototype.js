@@ -202,7 +202,7 @@
     const summaryLabel = byId('memberSortSummaryLabel');
     if (summaryLabel) summaryLabel.textContent = MEMBER_SORT_SHORT_LABELS[currentMemberSortMode] || '手動';
     const listSummary = byId('listActionsSummary');
-    if (listSummary) listSummary.setAttribute('aria-label', 'リスト操作メニュー。現在の並べ替え：' + (MEMBER_SORT_SHORT_LABELS[currentMemberSortMode] || '手動'));
+    if (listSummary) listSummary.setAttribute('aria-label', 'リスト設定メニュー。現在の並べ替え：' + (MEMBER_SORT_SHORT_LABELS[currentMemberSortMode] || '手動'));
     if (excludeHistorical) excludeHistorical.checked = excludeHistoricalFromSkillSort;
     if (direction) {
       direction.disabled = currentMemberSortMode === 'manual';
@@ -286,7 +286,7 @@
         </div>
       </div>
       <details class="workspace-dropdown" id="listActionsMenu">
-        <summary id="listActionsSummary" aria-label="リスト操作メニュー。現在の並べ替え：手動" title="リスト操作"><span class="workspace-menu-dots">•••</span><span class="workspace-sort-separator">/</span><span id="memberSortSummaryLabel">手動</span></summary>
+        <summary id="listActionsSummary" aria-label="リスト設定メニュー。現在の並べ替え：手動" title="リスト設定"><span class="workspace-menu-settings-icon" aria-hidden="true">⚙</span><span class="workspace-menu-title"><span class="workspace-menu-title-full">リスト設定</span><span class="workspace-menu-title-short">設定</span></span><span class="workspace-sort-separator">/</span><span id="memberSortSummaryLabel">手動</span></summary>
         <div class="workspace-menu" role="menu">
           <button id="newListBtn" role="menuitem">＋ 新しいリスト</button>
           <button id="renameListBtn" role="menuitem">リスト名を変更</button>

@@ -235,3 +235,7 @@ body.workspace-ui-active .app-container { transition: width .22s ease; }
 #memberSortSummaryLabel{min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:.68rem}
 .workspace-sort-separator{opacity:.5}
 @media(max-width:430px){#listActionsSummary{max-width:44vw;padding-inline:8px;gap:4px}#memberSortSummaryLabel{font-size:.62rem}}
+
+.workspace-menu-title-short{display:none}
+.workspace-menu-settings-icon{font-size:.9rem;line-height:1}
+@media(max-width:430px){.workspace-menu-title-full{display:none}.workspace-menu-title-short{display:inline}}
