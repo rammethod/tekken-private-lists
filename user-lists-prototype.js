@@ -305,7 +305,7 @@
     };
     const decorated = entries.map((entry, index) => ({ entry, index, value: metric(entry[1]) }));
     const isMissing = item => item.value === null || item.value === '' || (typeof item.value === 'number' && (!Number.isFinite(item.value) || item.value < 0));
-    const skillModes = ['rank','rating','winrate','power','pentagon_attack','pentagon_technique','pentagon_appeal','pentagon_spirit','pentagon_defense'];
+    const skillModes = ['rank','games','rating','winrate','power','pentagon_attack','pentagon_technique','pentagon_appeal','pentagon_spirit','pentagon_defense'];
     if (skillModes.includes(currentMemberSortMode)) {
       decorated.filter(item => !isMissing(item)).sort((a, b) => Number(b.value) - Number(a.value) || a.index - b.index).slice(0, 3).forEach((item, index) => {
         window.memberSkillRanks[item.entry[0]] = index + 1;
@@ -1212,13 +1212,15 @@
       if (skillRank && !skillRankBadge) {
         skillRankBadge = document.createElement('span');
         skillRankBadge.className = 'member-skill-rank-badge';
-        skillRankBadge.setAttribute('aria-label', '腕前指標 ' + skillRank + '位');
+        skillRankBadge.setAttribute('aria-label', 'ランキング ' + skillRank + '位');
         card.appendChild(skillRankBadge);
       }
       if (skillRankBadge) {
         skillRankBadge.hidden = !skillRank;
         skillRankBadge.dataset.rank = skillRank || '';
-        skillRankBadge.textContent = skillRank ? String(skillRank) : '';
+        const rankLabel = MEMBER_SORT_SHORT_LABELS[currentMemberSortMode] || '';
+        skillRankBadge.setAttribute('aria-label', rankLabel + ' ' + (skillRank || '') + '位');
+        skillRankBadge.innerHTML = skillRank ? '<strong>' + skillRank + '</strong><small>' + rankLabel + '</small>' : '';
       }
       updateVsModeView();
       if (card.querySelector('.list-card-actions')) return;

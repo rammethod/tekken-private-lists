@@ -275,12 +275,12 @@ body.theme-japanese.vs-mode-active #posterGrid>.poster-card.vs-selected{box-shad
 @media(max-width:700px){.vs-comparison-stage{padding:10px 4px}.vs-comparison-heading{margin-bottom:7px;padding-inline:48px}.vs-comparison-close{right:7px;width:38px;height:38px}.vs-comparison-scroll{padding-inline:4px}.vs-comparison-cards{justify-content:flex-start;gap:12px;min-width:max-content;padding-inline:9vw}.vs-comparison-card{flex-basis:min(78vw,310px);width:min(78vw,310px)!important}.vs-selection-marker{top:42px;left:7px;min-width:42px;height:27px;padding-inline:7px;font-size:.64rem}}
 @media(prefers-reduced-motion:reduce){.vs-comparison-stage{transition:none}}
 /* Top-three badges for skill-based sorts. */
-.member-skill-rank-badge{position:absolute;z-index:88;top:8px;right:8px;display:grid;place-items:center;width:34px;height:34px;border:2px solid rgba(255,255,255,.88);border-radius:50%;color:#2b1b04;font-family:Inter,sans-serif;font-size:.9rem;font-weight:950;font-variant-numeric:tabular-nums;line-height:1;pointer-events:none;text-shadow:0 1px 0 rgba(255,255,255,.5);box-shadow:0 4px 10px rgba(0,0,0,.38),inset 0 1px 1px rgba(255,255,255,.72)}
-.member-skill-rank-badge::after{content:'';position:absolute;z-index:-1;left:7px;right:7px;bottom:-8px;height:13px;background:inherit;clip-path:polygon(0 0,100% 0,82% 100%,50% 72%,18% 100%);filter:brightness(.78)}
-.member-skill-rank-badge[data-rank='1']{background:linear-gradient(145deg,#fff2a8,#f6c744 48%,#ad7005);border-color:#fff4bd;color:#493000}
+.member-skill-rank-badge{position:absolute;z-index:88;top:8px;right:8px;display:flex;align-items:center;justify-content:center;min-width:62px;height:38px;padding:0 8px;border:2px solid rgba(255,255,255,.88);border-radius:999px;color:#2b1b04;font-family:Inter,sans-serif;font-size:.9rem;font-weight:950;font-variant-numeric:tabular-nums;line-height:1;pointer-events:none;text-shadow:0 1px 0 rgba(255,255,255,.5);box-shadow:0 4px 10px rgba(0,0,0,.38),inset 0 1px 1px rgba(255,255,255,.72)}
+.member-skill-rank-badge::after{content:'';position:absolute;z-index:-1;left:16px;right:16px;bottom:-8px;height:13px;background:inherit;clip-path:polygon(0 0,100% 0,82% 100%,50% 72%,18% 100%);filter:brightness(.78)}
+.member-skill-rank-badge strong{font-size:.92rem;line-height:1}.member-skill-rank-badge small{margin-left:4px;font-size:.52rem;font-weight:900;line-height:1;letter-spacing:.02em;white-space:nowrap}.member-skill-rank-badge[data-rank='1']{background:linear-gradient(145deg,#fff2a8,#f6c744 48%,#ad7005);border-color:#fff4bd;color:#493000}
 .member-skill-rank-badge[data-rank='2']{background:linear-gradient(145deg,#fff,#cbd5e1 50%,#778394);border-color:#f8fafc;color:#26303c}
 .member-skill-rank-badge[data-rank='3']{background:linear-gradient(145deg,#ffd0a3,#c77a35 52%,#713814);border-color:#ffe1c2;color:#3e1c08}
 .member-skill-rank-badge[hidden]{display:none!important}
 body.theme-modern .member-skill-rank-badge{box-shadow:0 0 0 2px rgba(15,23,42,.72),0 0 13px rgba(255,255,255,.22)}
 body.theme-japanese .member-skill-rank-badge{box-shadow:0 3px 9px rgba(49,46,129,.28),inset 0 1px 1px rgba(255,255,255,.78)}
-@media(max-width:430px){.member-skill-rank-badge{top:6px;right:6px;width:31px;height:31px;font-size:.8rem}}
+@media(max-width:430px){.member-skill-rank-badge{top:6px;right:6px;min-width:56px;height:34px;padding-inline:6px;font-size:.8rem}}
