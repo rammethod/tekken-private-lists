@@ -39,11 +39,58 @@
   const findRankedCharacterStats = (profile, character) => Object.entries((profile && profile.rankedCharacterStats) || {})
     .find(([name]) => normalizeCharacter(name) === normalizeCharacter(character))?.[1] || null;
 
+  const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const fetchJsonWithRetry = async (url, { attempts = 1, requireOk = false, label = 'Request' } = {}) => {
+    let lastError = null;
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      try {
+        const separator = url.includes('?') ? '&' : '?';
+        const response = await fetch(`${url}${separator}attempt=${attempt + 1}&ts=${Date.now()}`, { cache: 'no-store' });
+        const text = await response.text();
+        let data = null;
+        try { data = text ? JSON.parse(text) : null; } catch {}
+        if (!response.ok || (requireOk && !data?.ok)) {
+          const error = new Error(data?.error || `${label} HTTP ${response.status}`);
+          error.retryable = [429, 500, 502, 503, 504, 522, 524].includes(response.status);
+          throw error;
+        }
+        if (!data) {
+          const error = new Error(`${label} returned invalid JSON`);
+          error.retryable = true;
+          throw error;
+        }
+        return data;
+      } catch (error) {
+        lastError = error;
+        if (attempt >= attempts - 1 || error.retryable === false) throw error;
+        await wait(700 * (attempt + 1) + Math.floor(Math.random() * 350));
+      }
+    }
+    throw lastError || new Error(`${label} failed`);
+  };
+
+  const EWGF_MAX_CONCURRENT = 3;
+  let activeEwgfRequests = 0;
+  const ewgfRequestQueue = [];
+  const drainEwgfQueue = () => {
+    while (activeEwgfRequests < EWGF_MAX_CONCURRENT && ewgfRequestQueue.length) {
+      const { task, resolve, reject } = ewgfRequestQueue.shift();
+      activeEwgfRequests += 1;
+      Promise.resolve().then(task).then(resolve, reject).finally(() => {
+        activeEwgfRequests -= 1;
+        drainEwgfQueue();
+      });
+    }
+  };
+  const withEwgfSlot = task => new Promise((resolve, reject) => {
+    ewgfRequestQueue.push({ task, resolve, reject });
+    drainEwgfQueue();
+  });
   fetchEwgfStats = async function(gameId, forceRefresh = false, memberKey = null, isManual = false, targetName = '') {
     const id = cleanTekkenId(gameId);
     const cached = getLocalStats(id);
-    // 同じ統合仕様(v10)の正常データは1時間再利用する。旧仕様のキャッシュはsource不一致で自動更新する。
-    if (!forceRefresh && cached && cached.statsSource === 'wavu-highest-qualified-mu+ewgf-profile-v10'
+    // 同じ統合仕様(v11)の正常データは1時間再利用する。旧仕様のキャッシュはsource不一致で自動更新する。
+    if (!forceRefresh && cached && cached.statsSource === 'wavu-first-highest-qualified-mu+ewgf-profile-v11'
       && Date.now() - (cached.cachedAt || 0) < CACHE_TTL_MS && !cached.isError) {
       return cached;
     }
@@ -51,11 +98,16 @@
     try {
       const profileUrl = `${EWGF_PROFILE_WORKER}/?ewgfId=${encodeURIComponent(id)}`;
       const wavuUrl = `${WAVU_WORKER}/?gameId=${encodeURIComponent(id)}`;
-      const [profile, wavu] = await Promise.all([
-        fetch(profileUrl, { cache: 'no-store' }).then(async r => { const d = await r.json(); if (!r.ok || !d.ok) throw new Error(d.error || `EWGF HTTP ${r.status}`); return d; }),
-        fetch(wavuUrl, { cache: 'no-store' }).then(async r => { const d = await r.json(); if (!r.ok) throw new Error(d.error || `Wavu HTTP ${r.status}`); return d; })
-      ]);
-      const selected = selectMainCharacter(wavu, profile);
+      const wavu = await fetchJsonWithRetry(wavuUrl, { attempts: 2, label: 'Wavu' });
+      const qualifiedSelection = selectMainCharacter(wavu, null);
+      const profile = await withEwgfSlot(() => fetchJsonWithRetry(profileUrl, {
+        attempts: 3,
+        requireOk: true,
+        label: 'EWGF'
+      }));
+      const selected = qualifiedSelection.selectionSource === 'wavu-qualified-highest-mu'
+        ? qualifiedSelection
+        : selectMainCharacter(wavu, profile);
       const ewgfCharacter = findEwgfCharacter(profile, selected.character);
       if (!selected.character) throw new Error('Main character candidate not found');
       if (!ewgfCharacter) throw new Error('EWGF character row not found: ' + selected.character);
@@ -79,7 +131,7 @@
         ratingMu:selected.ratingMu, ratingCharacter:selected.character,
         tekkenPower:Number(profile.tekkenProwess) || (cached ? cached.tekkenPower : 0) || 0,
         lastSeenTimestamp:ewgfTime || wavuTime || (cached ? cached.lastSeenTimestamp : null),
-        totalBattlesFetched:0, statsSource:'wavu-highest-qualified-mu+ewgf-profile-v10', isError:false, updatedAt:Date.now()
+        totalBattlesFetched:0, statsSource:'wavu-first-highest-qualified-mu+ewgf-profile-v11', isError:false, updatedAt:Date.now()
       };
       setLocalStats(id, stats, memberKey);
       queueEnhance();
@@ -99,7 +151,7 @@
     const id = cleanTekkenId(member.gameId);
     const stats = getLocalStats(id, member);
     if (!stats) return;
-    if (stats.statsSource !== 'wavu-highest-qualified-mu+ewgf-profile-v10' && !pendingIds.has(id)) {
+    if (stats.statsSource !== 'wavu-first-highest-qualified-mu+ewgf-profile-v11' && !pendingIds.has(id)) {
       pendingIds.add(id);
       fetchEwgfStats(id, false, key, false, member.name || '').finally(() => pendingIds.delete(id));
     }
