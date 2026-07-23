@@ -1,4 +1,4 @@
-﻿(() => {
+(() => {
   const EWGF_PROFILE_WORKER = 'https://tight-bar-55c1.uracil123.workers.dev';
   const WAVU_WORKER = 'https://cold-cherry-2333.uracil123.workers.dev';
 
@@ -18,12 +18,14 @@
   };
   const findEwgfCharacter = (profile, character) => ((profile && profile.characters) || [])
     .find(item => normalizeCharacter(item.character) === normalizeCharacter(character)) || null;
+  const findRankedCharacterStats = (profile, character) => Object.entries((profile && profile.rankedCharacterStats) || {})
+    .find(([name]) => normalizeCharacter(name) === normalizeCharacter(character))?.[1] || null;
 
   fetchEwgfStats = async function(gameId, forceRefresh = false, memberKey = null, isManual = false, targetName = '') {
     const id = cleanTekkenId(gameId);
     const cached = getLocalStats(id);
-    // 同じ統合仕様(v7)の正常データは1時間再利用する。旧仕様のキャッシュはsource不一致で自動更新する。
-    if (!forceRefresh && cached && cached.statsSource === 'wavu-leaderboard-main+ewgf-profile-v7'
+    // 同じ統合仕様(v8)の正常データは1時間再利用する。旧仕様のキャッシュはsource不一致で自動更新する。
+    if (!forceRefresh && cached && cached.statsSource === 'wavu-leaderboard-main+ewgf-profile-v8'
       && Date.now() - (cached.cachedAt || 0) < CACHE_TTL_MS && !cached.isError) {
       return cached;
     }
@@ -39,16 +41,20 @@
       const ewgfCharacter = findEwgfCharacter(profile, selected.character);
       if (!selected.character) throw new Error('Wavu Leaderboard main character not found');
       if (!ewgfCharacter) throw new Error('EWGF character row not found: ' + selected.character);
+      const ranked = findRankedCharacterStats(profile, selected.character);
+      if (!ranked) throw new Error('EWGF ranked character stats not found: ' + selected.character);
       const rawWavuTime = wavu.latestBattle && wavu.latestBattle.battle_at ? Number(wavu.latestBattle.battle_at) : Number(wavu.latestBattleAt || 0);
       const wavuTime = rawWavuTime ? (rawWavuTime < 1e11 ? rawWavuTime * 1000 : rawWavuTime) : null;
+      const parsedEwgfTime = Date.parse(profile.latestBattleAt || '');
+      const ewgfTime = Number.isFinite(parsedEwgfTime) ? parsedEwgfTime : null;
       const stats = {
         gameId:id, mainChar:selected.character, mainCharCode:ewgfCharacter.characterCode || '', mainCharImage:ewgfCharacter.characterImage || '',
-        mainCharGames:Number(ewgfCharacter.games) || 0, wins:Number(ewgfCharacter.wins) || 0, losses:Number(ewgfCharacter.losses) || 0, leaderboardGames:selected.leaderboardGames,
+        mainCharGames:Number(ranked.games) || 0, wins:Number(ranked.wins) || 0, losses:Number(ranked.losses) || 0, rankedWinRate:Number(ranked.winRate), rankedDataVerified:true, leaderboardGames:selected.leaderboardGames,
         danRank:ewgfCharacter.currentRank || '-', rankIcon:ewgfCharacter.rankIcon || '',
         ratingMu:selected.ratingMu !== null ? selected.ratingMu : (cached ? cached.ratingMu : null), ratingCharacter:selected.character,
         tekkenPower:Number(profile.tekkenProwess) || (cached ? cached.tekkenPower : 0) || 0,
-        lastSeenTimestamp:wavuTime || (cached ? cached.lastSeenTimestamp : null),
-        totalBattlesFetched:0, statsSource:'wavu-leaderboard-main+ewgf-profile-v7', isError:false, updatedAt:Date.now()
+        lastSeenTimestamp:ewgfTime || wavuTime || (cached ? cached.lastSeenTimestamp : null),
+        totalBattlesFetched:0, statsSource:'wavu-leaderboard-main+ewgf-profile-v8', isError:false, updatedAt:Date.now()
       };
       setLocalStats(id, stats, memberKey);
       queueEnhance();
@@ -68,7 +74,7 @@
     const id = cleanTekkenId(member.gameId);
     const stats = getLocalStats(id, member);
     if (!stats) return;
-    if (stats.statsSource !== 'wavu-leaderboard-main+ewgf-profile-v7' && !pendingIds.has(id)) {
+    if (stats.statsSource !== 'wavu-leaderboard-main+ewgf-profile-v8' && !pendingIds.has(id)) {
       pendingIds.add(id);
       fetchEwgfStats(id, false, key, false, member.name || '').finally(() => pendingIds.delete(id));
     }

@@ -154,9 +154,10 @@
         : Number(stats.mainCharGames);
       const gamesElement = box.querySelector('.stats-preview-games');
       if (gamesElement && Number.isFinite(games) && games > 0) {
-        const winRate = Number.isFinite(wins) && Number.isFinite(losses)
-          ? wins / games * 100
-          : null;
+        const rankedWinRate = Number(stats.rankedWinRate);
+        const winRate = stats.rankedDataVerified && Number.isFinite(rankedWinRate)
+          ? rankedWinRate
+          : (Number.isFinite(wins) && Number.isFinite(losses) ? wins / games * 100 : null);
         const gamesLine = document.createElement('span');
         gamesLine.className = 'stats-preview-games-line';
         gamesLine.textContent = `・${games.toLocaleString()} games`;
@@ -168,7 +169,7 @@
           lines.push(winRateLine);
           const winRateNote = document.createElement('span');
           winRateNote.className = 'stats-preview-games-line stats-preview-win-rate-note';
-          winRateNote.textContent = '※ Player / Quick Matchを含む';
+          winRateNote.textContent = '※ All-time Ranked';
           lines.push(winRateNote);
         }
         gamesElement.replaceChildren(...lines);
