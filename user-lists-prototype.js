@@ -447,24 +447,36 @@
       if (event.clientY < 72) window.scrollBy(0, -12);
       else if (event.clientY > window.innerHeight - 72) window.scrollBy(0, 12);
 
-      const target = document.elementFromPoint(event.clientX, event.clientY)?.closest('.poster-card');
-      if (!target || target.parentElement !== grid) return;
-      const targetRect = target.getBoundingClientRect();
-      const centerX = targetRect.left + targetRect.width / 2;
-      const centerY = targetRect.top + targetRect.height / 2;
-      const centerBand = targetRect.height * .2;
+      const cards = [...grid.querySelectorAll(':scope > .poster-card')];
+      if (!cards.length) return;
+      const measured = cards.map(item => ({ item, rect: item.getBoundingClientRect() }));
+      const nearest = measured.reduce((best, candidate) => {
+        const centerX = candidate.rect.left + candidate.rect.width / 2;
+        const centerY = candidate.rect.top + candidate.rect.height / 2;
+        const dx = (event.clientX - centerX) / Math.max(candidate.rect.width, 1);
+        const dy = (event.clientY - centerY) / Math.max(candidate.rect.height, 1);
+        const distance = dx * dx + dy * dy;
+        return !best || distance < best.distance ? { ...candidate, distance } : best;
+      }, null);
+      const targetIndex = cards.indexOf(nearest.item);
+      const centerX = nearest.rect.left + nearest.rect.width / 2;
+      const centerY = nearest.rect.top + nearest.rect.height / 2;
+      const centerBand = nearest.rect.height * .2;
       let insertBefore;
       if (event.clientY < centerY - centerBand) insertBefore = true;
       else if (event.clientY > centerY + centerBand) insertBefore = false;
       else insertBefore = event.clientX < centerX;
 
-      if (insertBefore && slot.nextElementSibling === target) return;
-      if (!insertBefore && target.nextElementSibling === slot) return;
-      const before = new Map(
-        [...grid.querySelectorAll(':scope > .poster-card')].map(item => [item, item.getBoundingClientRect()])
-      );
-      if (insertBefore) target.before(slot);
-      else target.after(slot);
+      const desiredGap = targetIndex + (insertBefore ? 0 : 1);
+      const children = [...grid.children];
+      const slotPosition = children.indexOf(slot);
+      const currentGap = children.slice(0, slotPosition)
+        .filter(item => item.classList.contains('poster-card')).length;
+      if (desiredGap === currentGap) return;
+
+      const before = new Map(measured.map(({ item, rect }) => [item, rect]));
+      if (desiredGap >= cards.length) grid.appendChild(slot);
+      else grid.insertBefore(slot, cards[desiredGap]);
       animateGridShift(before);
       moved = true;
     });
@@ -617,6 +629,7 @@
     } else if (originalSaveTitle) originalSaveTitle();
   };
 })();
+
 
 
 
