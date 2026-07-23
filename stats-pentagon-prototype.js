@@ -159,7 +159,7 @@
           ? rankedWinRate
           : (Number.isFinite(wins) && Number.isFinite(losses) ? wins / games * 100 : null);
         const gamesLine = document.createElement('span');
-        gamesLine.className = 'stats-preview-games-line';
+        gamesLine.className = 'stats-preview-games-line stats-preview-game-count';
         gamesLine.textContent = `・${games.toLocaleString()} games`;
         const lines = [gamesLine];
         if (winRate !== null) {
