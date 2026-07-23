@@ -554,7 +554,7 @@
               <option value="1">1列</option><option value="2">2列</option><option value="3">3列</option>
               <option value="4">4列</option><option value="5">5列</option>
             </select>
-            <small>カード幅を保って枠を拡張</small>
+            <small>PCは幅を維持／スマホは画面内へ縮小</small>
           </div>
           <button id="mainCharacterLogicBtn" role="menuitem">？ メインキャラ判定について</button>
           <button id="adminPanelBtn" role="menuitem" hidden>ユーザー承認</button>
@@ -581,7 +581,11 @@
     };
     const repositionOpenWorkspaceMenus = () => bar.querySelectorAll('.workspace-dropdown[open]').forEach(positionWorkspaceMenu);
     bar.querySelectorAll('.workspace-dropdown').forEach(details => details.addEventListener('toggle', () => {
-      if (details.open) requestAnimationFrame(() => positionWorkspaceMenu(details));
+      if (!details.open) return;
+      bar.querySelectorAll('.workspace-dropdown[open]').forEach(other => {
+        if (other !== details) other.removeAttribute('open');
+      });
+      requestAnimationFrame(() => positionWorkspaceMenu(details));
     }));
     if (window.workspaceMenuPositionHandler) {
       window.removeEventListener('resize', window.workspaceMenuPositionHandler);
