@@ -50,7 +50,7 @@ body.theme-japanese .id-box{background:rgba(23,20,72,.9)!important;border-color:
 .stats-preview-rank-icon.is-all-time-highest{filter:sepia(.82) saturate(.58) contrast(.94);opacity:.9}
 
 .stats-preview-rating.is-historical-rating{color:#bca77e!important;filter:sepia(.72) saturate(.62);opacity:.88;text-decoration:underline dotted rgba(188,167,126,.8);text-underline-offset:3px;text-shadow:0 1px 1px rgba(0,0,0,.55)}
-.stats-preview-rating.is-historical-rating::after{content:' OLD';margin-left:2px;font-size:.42rem;font-weight:900;letter-spacing:.04em;vertical-align:top}
+.stats-preview-rating.is-historical-rating::after{content:'※';margin-left:2px;font-size:.42rem;font-weight:900;letter-spacing:.04em;vertical-align:top}
 .avatar-frame.uses-main-character-fallback{isolation:isolate}
 .avatar-frame .avatar-main-character-fallback{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;filter:brightness(.64) saturate(.82) contrast(1.05)!important;transform:scale(1.04)}
 .avatar-frame.uses-main-character-fallback::after{content:'MAIN CHARACTER';position:absolute;z-index:2;right:7px;bottom:7px;padding:3px 6px;border:1px solid rgba(255,255,255,.32);border-radius:999px;background:rgba(0,0,0,.58);color:#fff;font-size:.48rem;font-weight:900;letter-spacing:.08em;text-shadow:0 1px 2px #000}

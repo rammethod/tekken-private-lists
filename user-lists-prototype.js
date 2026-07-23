@@ -99,6 +99,30 @@
     }
   }
 
+  const GRID_COLUMNS_AUTO = 'auto';
+  const gridStorageKey = () => window.matchMedia('(max-width: 700px)').matches
+    ? 't8_grid_columns_mobile'
+    : 't8_grid_columns_desktop';
+  function applyGridColumns(value) {
+    const grid = byId('posterGrid');
+    if (!grid) return;
+    const normalized = /^[1-5]$/.test(String(value)) ? String(value) : GRID_COLUMNS_AUTO;
+    grid.style.gridTemplateColumns = normalized === GRID_COLUMNS_AUTO
+      ? ''
+      : `repeat(${normalized}, minmax(0, 1fr))`;
+    const select = byId('gridColumnSelect');
+    if (select && select.value !== normalized) select.value = normalized;
+  }
+  function restoreGridColumns() {
+    let saved = GRID_COLUMNS_AUTO;
+    try { saved = localStorage.getItem(gridStorageKey()) || GRID_COLUMNS_AUTO; } catch (_) {}
+    applyGridColumns(saved);
+  }
+  function saveGridColumns(value) {
+    try { localStorage.setItem(gridStorageKey(), value); } catch (_) {}
+    applyGridColumns(value);
+  }
+
   function injectWorkspace() {
     if (byId('listWorkspace')) return;
     const bar = document.createElement('nav');
@@ -154,7 +178,7 @@
             <li><span>3</span><div><strong>μが同じなら試合数で決める</strong><p>最高μが同率の場合だけ、Leaderboard内の試合数が多いキャラを優先します。</p></div></li>
             <li><span>4</span><div><strong>候補がいなければ生涯データへ</strong><p>σ² &lt; 75 の候補がいない場合は、EWGFで生涯試合数が最も多いキャラをメインと判定します。</p></div></li>
           </ol>
-          <div class="main-character-logic-note"><strong>表示データについて</strong><p>メインキャラ決定後、そのキャラの段位・All-time Ranked試合数・勝率・画像をEWGFから取得します。自動更新は12時間ごとで、必要なときは「全員のデータ更新」から手動更新できます。</p></div>
+          <div class="main-character-logic-note"><strong>表示データについて</strong><p>メインキャラ決定後、そのキャラの段位・All-time Ranked試合数・勝率・画像をEWGFから取得します。Leaderboard資格外のμは「※」付きの過去参考値として表示します。自動更新は12時間ごとで、必要なときは「全員のデータ更新」から手動更新できます。</p></div>
           <div class="main-character-logic-footer"><button type="button" id="dismissMainCharacterLogicBtn" class="workspace-primary-action">閉じる</button></div>
         </div>
       </dialog>
@@ -167,6 +191,15 @@
             <button type="button" data-theme-choice="modern" title="MODERN">ネオン</button>
             <button type="button" data-theme-choice="japanese" title="JAPANESE">和風</button>
           </div>
+          <span class="workspace-menu-label">カード列数</span>
+          <div class="grid-column-setting">
+            <select id="gridColumnSelect" aria-label="カードの表示列数">
+              <option value="auto">自動（おすすめ）</option>
+              <option value="1">1列</option><option value="2">2列</option><option value="3">3列</option>
+              <option value="4">4列</option><option value="5">5列</option>
+            </select>
+            <small>この端末に保存されます</small>
+          </div>
           <button id="mainCharacterLogicBtn" role="menuitem">？ メインキャラ判定について</button>
           <button id="adminPanelBtn" role="menuitem" hidden>ユーザー承認</button>
           <button id="logoutBtn" role="menuitem">ログアウト</button>
@@ -177,6 +210,9 @@
     byId('userChip').textContent = activeUser.displayName || activeUser.email || 'Google User';
     const closeWorkspaceMenus = () => bar.querySelectorAll('details[open]').forEach(menu => menu.removeAttribute('open'));
     byId('myListSelect').onchange = event => activateList(event.target.value);
+    byId('gridColumnSelect').onchange = event => saveGridColumns(event.target.value);
+    restoreGridColumns();
+    window.addEventListener('resize', restoreGridColumns, { passive: true });
     byId('workspaceAddMemberBtn').onclick = () => openAddModal();
     byId('workspaceRefreshBtn').onclick = async event => {
       const button = event.currentTarget;

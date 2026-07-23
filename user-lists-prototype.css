@@ -82,6 +82,11 @@ body.theme-japanese .workspace-refresh-control small { color: #514aa0; }
 .list-workspace .workspace-account .user-chip { margin: 0; max-width: 165px; }
 .workspace-menu-label { padding: 4px 8px 0; color: #bda977; font-size: .64rem; font-weight: 800; letter-spacing: .08em; }
 .theme-menu-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 4px; }
+.grid-column-setting { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 7px; align-items: center; padding: 0 5px 5px; }
+.list-workspace .grid-column-setting select { min-width: 0; width: 100%; padding: 6px 7px; font-size: .7rem; }
+.grid-column-setting small { color: #bda977; font-size: .52rem; white-space: nowrap; }
+body.theme-modern .grid-column-setting small { color: #c4b5fd; }
+body.theme-japanese .grid-column-setting small { color: #514aa0; }
 .list-workspace .theme-menu-row button { min-height: 34px; padding: 5px; text-align: center; font-size: .68rem; }
 body.theme-modern .list-workspace .workspace-primary-action {
   border-color: #a5b4fc; background: linear-gradient(135deg,#6366f1,#a855f7);
