@@ -3,18 +3,36 @@
   const WAVU_WORKER = 'https://cold-cherry-2333.uracil123.workers.dev';
 
   const normalizeCharacter = value => String(value || '').normalize('NFKD').toLowerCase().replace(/[^a-z0-9]/g, '');
-  const selectWavuLeaderboardMain = data => {
-    const gamesMap = (data && data.qualifiedCharGamesMap) || {};
-    const entries = Object.entries(gamesMap).filter(([, games]) => Number.isFinite(Number(games)));
-    const selected = entries.sort((a, b) => Number(b[1]) - Number(a[1]))[0];
-    const character = selected ? selected[0] : (data && data.mainChar ? data.mainChar : null);
-    const ratingMaps = [(data && data.qualifiedCharRatingMap) || {}, (data && data.charRatingMap) || {}];
-    let ratingMu = null;
-    for (const map of ratingMaps) {
-      const match = Object.entries(map).find(([name]) => normalizeCharacter(name) === normalizeCharacter(character));
-      if (match && Number.isFinite(Number(match[1]))) { ratingMu = Number(match[1]); break; }
+  const findMapValue = (map, character) => {
+    const match = Object.entries(map || {}).find(([name]) => normalizeCharacter(name) === normalizeCharacter(character));
+    return match && Number.isFinite(Number(match[1])) ? Number(match[1]) : null;
+  };
+  const selectMainCharacter = (wavu, profile) => {
+    const qualifiedRatings = (wavu && wavu.qualifiedCharRatingMap) || {};
+    const qualifiedGames = (wavu && wavu.qualifiedCharGamesMap) || {};
+    const ratedCandidates = Object.entries(qualifiedRatings)
+      .filter(([, rating]) => Number.isFinite(Number(rating)))
+      .map(([character, rating]) => ({
+        character,
+        ratingMu: Number(rating),
+        leaderboardGames: findMapValue(qualifiedGames, character)
+      }))
+      .sort((a, b) => b.ratingMu - a.ratingMu
+        || Number(b.leaderboardGames || 0) - Number(a.leaderboardGames || 0)
+        || a.character.localeCompare(b.character));
+    if (ratedCandidates.length) {
+      return { ...ratedCandidates[0], selectionSource: 'wavu-qualified-highest-mu' };
     }
-    return { character, ratingMu, leaderboardGames: selected ? Number(selected[1]) : null };
+
+    const lifetimeMain = [...((profile && profile.characters) || [])]
+      .filter(character => character && Number.isFinite(Number(character.games)))
+      .sort((a, b) => Number(b.games) - Number(a.games))[0] || null;
+    return {
+      character: lifetimeMain ? lifetimeMain.character : null,
+      ratingMu: null,
+      leaderboardGames: null,
+      selectionSource: lifetimeMain ? 'ewgf-most-lifetime-games' : 'unavailable'
+    };
   };
   const findEwgfCharacter = (profile, character) => ((profile && profile.characters) || [])
     .find(item => normalizeCharacter(item.character) === normalizeCharacter(character)) || null;
@@ -24,8 +42,8 @@
   fetchEwgfStats = async function(gameId, forceRefresh = false, memberKey = null, isManual = false, targetName = '') {
     const id = cleanTekkenId(gameId);
     const cached = getLocalStats(id);
-    // 同じ統合仕様(v9)の正常データは1時間再利用する。旧仕様のキャッシュはsource不一致で自動更新する。
-    if (!forceRefresh && cached && cached.statsSource === 'wavu-leaderboard-main+ewgf-profile-v9'
+    // 同じ統合仕様(v10)の正常データは1時間再利用する。旧仕様のキャッシュはsource不一致で自動更新する。
+    if (!forceRefresh && cached && cached.statsSource === 'wavu-highest-qualified-mu+ewgf-profile-v10'
       && Date.now() - (cached.cachedAt || 0) < CACHE_TTL_MS && !cached.isError) {
       return cached;
     }
@@ -37,9 +55,9 @@
         fetch(profileUrl, { cache: 'no-store' }).then(async r => { const d = await r.json(); if (!r.ok || !d.ok) throw new Error(d.error || `EWGF HTTP ${r.status}`); return d; }),
         fetch(wavuUrl, { cache: 'no-store' }).then(async r => { const d = await r.json(); if (!r.ok) throw new Error(d.error || `Wavu HTTP ${r.status}`); return d; })
       ]);
-      const selected = selectWavuLeaderboardMain(wavu);
+      const selected = selectMainCharacter(wavu, profile);
       const ewgfCharacter = findEwgfCharacter(profile, selected.character);
-      if (!selected.character) throw new Error('Wavu Leaderboard main character not found');
+      if (!selected.character) throw new Error('Main character candidate not found');
       if (!ewgfCharacter) throw new Error('EWGF character row not found: ' + selected.character);
       const ranked = findRankedCharacterStats(profile, selected.character);
       if (!ranked) throw new Error('EWGF ranked character stats not found: ' + selected.character);
@@ -54,14 +72,14 @@
       const ewgfTime = Number.isFinite(parsedEwgfTime) ? parsedEwgfTime : null;
       const stats = {
         gameId:id, mainChar:selected.character, mainCharCode:ewgfCharacter.characterCode || '', mainCharImage:ewgfCharacter.characterImage || '',
-        mainCharGames:Number(ranked.games) || 0, wins:Number(ranked.wins) || 0, losses:Number(ranked.losses) || 0, rankedWinRate:Number(ranked.winRate), rankedDataVerified:true, leaderboardGames:selected.leaderboardGames,
+        mainCharGames:Number(ranked.games) || 0, wins:Number(ranked.wins) || 0, losses:Number(ranked.losses) || 0, rankedWinRate:Number(ranked.winRate), rankedDataVerified:true, leaderboardGames:selected.leaderboardGames, mainSelectionSource:selected.selectionSource,
         danRank:rankIsAllTimeHighest ? allTimeHighestRank : (ewgfCharacter.currentRank || '-'),
         rankIcon:rankIsAllTimeHighest ? historicalRankIcon : currentRankIcon,
         rankIsAllTimeHighest,
-        ratingMu:selected.ratingMu !== null ? selected.ratingMu : (cached ? cached.ratingMu : null), ratingCharacter:selected.character,
+        ratingMu:selected.ratingMu, ratingCharacter:selected.character,
         tekkenPower:Number(profile.tekkenProwess) || (cached ? cached.tekkenPower : 0) || 0,
         lastSeenTimestamp:ewgfTime || wavuTime || (cached ? cached.lastSeenTimestamp : null),
-        totalBattlesFetched:0, statsSource:'wavu-leaderboard-main+ewgf-profile-v9', isError:false, updatedAt:Date.now()
+        totalBattlesFetched:0, statsSource:'wavu-highest-qualified-mu+ewgf-profile-v10', isError:false, updatedAt:Date.now()
       };
       setLocalStats(id, stats, memberKey);
       queueEnhance();
@@ -81,7 +99,7 @@
     const id = cleanTekkenId(member.gameId);
     const stats = getLocalStats(id, member);
     if (!stats) return;
-    if (stats.statsSource !== 'wavu-leaderboard-main+ewgf-profile-v9' && !pendingIds.has(id)) {
+    if (stats.statsSource !== 'wavu-highest-qualified-mu+ewgf-profile-v10' && !pendingIds.has(id)) {
       pendingIds.add(id);
       fetchEwgfStats(id, false, key, false, member.name || '').finally(() => pendingIds.delete(id));
     }
