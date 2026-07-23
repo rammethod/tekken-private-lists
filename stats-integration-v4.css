@@ -63,10 +63,10 @@ body.theme-japanese .id-box{background:rgba(23,20,72,.9)!important;border-color:
 @media(max-width:640px){.stats-preview-rating{font-size:clamp(.52rem,2.7vw,.64rem)!important;letter-spacing:-.055em}}
 
 /* μ rating tiers. Historical ratings intentionally keep the sepia treatment above. */
-.stats-preview-rating.is-rating-low:not(.is-historical-rating){color:#ff625f!important;text-shadow:0 1px 2px rgba(40,0,0,.9),0 0 7px rgba(239,68,68,.28)!important}
+.stats-preview-rating.is-rating-low:not(.is-historical-rating){color:#fff!important;text-shadow:0 1px 2px rgba(0,0,0,.95),0 0 6px rgba(255,255,255,.22)!important}
 .stats-preview-rating.is-rating-mid:not(.is-historical-rating){color:#62e98b!important;text-shadow:0 1px 2px rgba(0,35,16,.9),0 0 7px rgba(34,197,94,.3)!important}
 .stats-preview-rating.is-rating-elite:not(.is-historical-rating){color:transparent!important;background:linear-gradient(100deg,#fff7b2 0%,#facc15 18%,#5eead4 38%,#60a5fa 56%,#c084fc 74%,#fb7185 88%,#fff7b2 100%);background-size:260% 100%;-webkit-background-clip:text;background-clip:text;font-weight:950!important;filter:drop-shadow(0 0 2px rgba(255,255,255,.95)) drop-shadow(0 0 5px rgba(96,165,250,.82)) drop-shadow(0 0 9px rgba(192,132,252,.62));animation:t8-elite-rating-shine 2.8s linear infinite}
 @keyframes t8-elite-rating-shine{to{background-position:260% 0}}
-body.theme-japanese .stats-preview-rating.is-rating-low:not(.is-historical-rating){color:#b91c1c!important;text-shadow:0 0 5px rgba(185,28,28,.18)!important}
+body.theme-japanese .stats-preview-rating.is-rating-low:not(.is-historical-rating){color:#fff!important;-webkit-text-stroke:.45px #24204f;text-shadow:-1px -1px 0 #24204f,1px -1px 0 #24204f,-1px 1px 0 #24204f,1px 1px 0 #24204f,0 2px 4px rgba(30,27,75,.55)!important}
 body.theme-japanese .stats-preview-rating.is-rating-mid:not(.is-historical-rating){color:#047857!important;text-shadow:0 0 5px rgba(4,120,87,.16)!important}
 @media(prefers-reduced-motion:reduce){.stats-preview-rating.is-rating-elite:not(.is-historical-rating){animation:none;background-position:45% 0}}
