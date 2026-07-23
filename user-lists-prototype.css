@@ -111,7 +111,7 @@ body.theme-japanese .list-workspace .workspace-menu .menu-danger { color: #b4231
   .workspace-account { justify-self: end; margin-left: 0; }
   .workspace-account > summary { max-width: 155px; }
   .list-workspace .workspace-account .user-chip { max-width: 112px; }
-  .workspace-menu { position: fixed; top: auto; right: 10px; bottom: 10px; left: 10px; width: auto; max-height: 70vh; overflow-y: auto; }
+  .workspace-menu { position: fixed; top: 8px; right: 10px; bottom: auto; left: 10px; width: auto; max-height: calc(100dvh - 16px); overflow-y: auto; overscroll-behavior: contain; }
 }
 @media (max-width: 430px) {
   .list-workspace .workspace-primary-action span { display: none; }

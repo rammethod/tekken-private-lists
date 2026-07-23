@@ -28,7 +28,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <link rel="stylesheet" href="user-lists-prototype.css?v=20260724-35">
+  <link rel="stylesheet" href="user-lists-prototype.css?v=20260724-36">
   <link rel="stylesheet" href="admin-access-prototype.css?v=20260723-26">
 
   <!-- Cropper.js (画像トリミング・クロップ用) -->
@@ -3479,6 +3479,16 @@
         showToast('TEKKEN 8 IDを入力してください');
         return;
       }
+      const normalizedGameId = gameId.toUpperCase();
+      const duplicateEntry = Object.entries(window.currentMembersData || {}).find(([memberKey, member]) =>
+        memberKey !== key && cleanTekkenId(member && member.gameId).toUpperCase() === normalizedGameId
+      );
+      if (duplicateEntry) {
+        const duplicateName = duplicateEntry[1] && duplicateEntry[1].name ? duplicateEntry[1].name : '登録済みプレイヤー';
+        alert(`TEKKEN 8 ID「${gameId}」は、このリストに「${duplicateName}」として既に登録されています。\n同じIDを同じリストへ複数登録することはできません。`);
+        showToast('同じTEKKEN 8 IDはこのリストに重複登録できません');
+        return;
+      }
       if (!key && !(await confirmNewPlayerId(gameId))) return;
 
       const submit = document.getElementById('btnSaveSubmit');
@@ -3606,7 +3616,7 @@
     }
 
   </script>
-  <script src="user-lists-prototype.js?v=20260724-35"></script>
+  <script src="user-lists-prototype.js?v=20260724-36"></script>
   <script src="admin-access-prototype.js?v=20260723-26"></script>
   <script>
     (() => {

@@ -330,6 +330,31 @@
     document.body.classList.add('workspace-ui-active');
     byId('userChip').textContent = activeUser.displayName || activeUser.email || 'Google User';
     const closeWorkspaceMenus = () => bar.querySelectorAll('details[open]').forEach(menu => menu.removeAttribute('open'));
+    const positionWorkspaceMenu = details => {
+      const menu = details && details.querySelector('.workspace-menu');
+      if (!menu) return;
+      if (!window.matchMedia('(max-width: 700px)').matches) {
+        menu.style.top = ''; menu.style.bottom = ''; menu.style.maxHeight = '';
+        return;
+      }
+      const trigger = details.querySelector('summary');
+      const rect = trigger.getBoundingClientRect();
+      const top = Math.min(rect.bottom + 7, window.innerHeight - 56);
+      menu.style.top = `${Math.max(8, top)}px`;
+      menu.style.bottom = 'auto';
+      menu.style.maxHeight = `${Math.max(48, window.innerHeight - Math.max(8, top) - 8)}px`;
+    };
+    const repositionOpenWorkspaceMenus = () => bar.querySelectorAll('.workspace-dropdown[open]').forEach(positionWorkspaceMenu);
+    bar.querySelectorAll('.workspace-dropdown').forEach(details => details.addEventListener('toggle', () => {
+      if (details.open) requestAnimationFrame(() => positionWorkspaceMenu(details));
+    }));
+    if (window.workspaceMenuPositionHandler) {
+      window.removeEventListener('resize', window.workspaceMenuPositionHandler);
+      window.removeEventListener('scroll', window.workspaceMenuPositionHandler);
+    }
+    window.workspaceMenuPositionHandler = repositionOpenWorkspaceMenus;
+    window.addEventListener('resize', repositionOpenWorkspaceMenus, { passive: true });
+    window.addEventListener('scroll', repositionOpenWorkspaceMenus, { passive: true });
     byId('myListSelect').onchange = event => activateList(event.target.value);
     byId('gridColumnSelect').onchange = event => saveGridColumns(event.target.value);
     restoreGridColumns();
@@ -1023,6 +1048,11 @@
         if (listListenerRef) listListenerRef.off();
         if (settingsLogRef) settingsLogRef.off();
         if (memberSortRef) memberSortRef.off();
+        if (window.workspaceMenuPositionHandler) {
+          window.removeEventListener('resize', window.workspaceMenuPositionHandler);
+          window.removeEventListener('scroll', window.workspaceMenuPositionHandler);
+          window.workspaceMenuPositionHandler = null;
+        }
         if (window.workspaceOutsideClickHandler) {
           document.removeEventListener('click', window.workspaceOutsideClickHandler);
           window.workspaceOutsideClickHandler = null;
