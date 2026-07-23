@@ -237,7 +237,10 @@
   const safeName = value => String(value || '').trim().slice(0, 40);
   const applyActiveListName = name => {
     const safe = safeName(name) || 'マイリスト';
-    if (byId('titleText')) byId('titleText').textContent = safe;
+    if (byId('titleText')) {
+      byId('titleText').textContent = safe;
+      byId('titleText').style.visibility = 'visible';
+    }
     document.title = `${safe} | TEKKEN 8`;
     const select = byId('myListSelect');
     if (select && activeListId) {
@@ -921,8 +924,8 @@
     settingsRef.child('name').once('value').then(snapshot => {
       if (activeListId !== subscribedListId) return;
       const name = snapshot.val() || 'マイリスト';
-      byId('titleText').textContent = name;
-      document.title = `${name} | TEKKEN 8`;
+      applyActiveListName(name);
+
     });
     nextMembersRef.on('value', snapshot => {
       if (activeListId !== subscribedListId || listListenerRef !== nextMembersRef) return;

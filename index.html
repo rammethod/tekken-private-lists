@@ -28,7 +28,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <link rel="stylesheet" href="user-lists-prototype.css?v=20260724-54">
+  <link rel="stylesheet" href="user-lists-prototype.css?v=20260724-55">
   <link rel="stylesheet" href="admin-access-prototype.css?v=20260723-26">
 
   <!-- Cropper.js (画像トリミング・クロップ用) -->
@@ -2038,7 +2038,7 @@
       <header class="saloon-header">
         <div class="saloon-title-wrap">
           <h1 class="saloon-title" id="pageTitle" onclick="startEditTitle()" title="クリックしてタイトルを変更">
-            <span id="titleText">TEKKEN 8 WANTED</span>
+            <span id="titleText" style="visibility:hidden"></span>
             <span class="title-edit-hint">✏️</span>
           </h1>
           <input class="title-input" type="text" id="titleInput" maxlength="40" style="display:none;"
@@ -2245,14 +2245,6 @@
           } else {
             dot.classList.add('offline');
             text.textContent = 'OFFLINE';
-          }
-        });
-
-        settingsRef.child('title').on('value', (snap) => {
-          const title = snap.val();
-          if (title) {
-            document.getElementById('titleText').textContent = title;
-            document.title = title;
           }
         });
 
@@ -3638,7 +3630,7 @@
     }
 
   </script>
-  <script src="user-lists-prototype.js?v=20260724-54"></script>
+  <script src="user-lists-prototype.js?v=20260724-55"></script>
   <script src="admin-access-prototype.js?v=20260723-26"></script>
   <script>
     (() => {
