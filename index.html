@@ -28,8 +28,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <link rel="stylesheet" href="user-lists-prototype.css?v=20260723-19">
-  <link rel="stylesheet" href="admin-access-prototype.css?v=20260723-19">
+  <link rel="stylesheet" href="user-lists-prototype.css?v=20260723-20">
+  <link rel="stylesheet" href="admin-access-prototype.css?v=20260723-20">
 
   <!-- Cropper.js (画像トリミング・クロップ用) -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
@@ -1969,7 +1969,7 @@
           </h1>
           <input class="title-input" type="text" id="titleInput" maxlength="40" style="display:none;"
             aria-label="タイトル編集">
-          <div class="saloon-subtitle" id="subTitleText">鉄拳8 プレイヤー手配書掲示板 (WANTED LIST)</div>
+          <div class="saloon-subtitle" id="subTitleText">鉄拳8 プレイヤーリスト管理</div>
         </div>
         <br>
         <button class="btn-add-bounty" onclick="openAddModal()" id="btnAddMember">
@@ -2234,7 +2234,7 @@
         btnAdd.innerHTML = '➕ メンバーを追加';
       } else {
         if (statusText.textContent.includes('ONLINE')) statusText.textContent = '涼風 ONLINE';
-        btnAdd.innerHTML = '➕ 手配札（メンバー）を追加';
+        btnAdd.innerHTML = '➕ 名鑑にメンバーを追加';
       }
 
       if (membersRef) {
@@ -3120,13 +3120,13 @@
         let headerText = 'WANTED';
         let subHeaderText = 'DEAD OR ALIVE';
         if (currentTheme === 'japanese') {
-          headerText = '御触書';
-          subHeaderText = '指名手配札';
+          headerText = '武芸者名鑑';
+          subHeaderText = '鉄拳八・対戦録';
         }
 
         let defaultSubtitle = '手配中';
         if (currentTheme === 'modern') defaultSubtitle = 'Member';
-        if (currentTheme === 'japanese') defaultSubtitle = '手配者';
+        if (currentTheme === 'japanese') defaultSubtitle = '好敵手';
 
         const cachedStats = getLocalStats(cleanGameId, m);
 
@@ -3304,7 +3304,7 @@
       document.getElementById('modalTitle').textContent = 'メンバーを作成';
       let btnLabel = '保存する';
       if (currentTheme === 'wanted') btnLabel = '手配書を貼り付ける';
-      if (currentTheme === 'japanese') btnLabel = '手配カードを作成';
+      if (currentTheme === 'japanese') btnLabel = '名鑑に追加';
       document.getElementById('btnSaveSubmit').textContent = btnLabel;
 
       document.getElementById('editKey').value = '';
@@ -3325,7 +3325,7 @@
         document.getElementById('modalTitle').textContent = 'メンバーを編集';
         let btnLabel = '保存する';
         if (currentTheme === 'wanted') btnLabel = '手配書を更新する';
-        if (currentTheme === 'japanese') btnLabel = '手配カードを更新';
+        if (currentTheme === 'japanese') btnLabel = '名鑑を更新';
         document.getElementById('btnSaveSubmit').textContent = btnLabel;
 
         const cleanId = cleanTekkenId(m.gameId);
@@ -3546,8 +3546,8 @@
     }
 
   </script>
-  <script src="user-lists-prototype.js?v=20260723-19"></script>
-  <script src="admin-access-prototype.js?v=20260723-19"></script>
+  <script src="user-lists-prototype.js?v=20260723-20"></script>
+  <script src="admin-access-prototype.js?v=20260723-20"></script>
   <script>
     (() => {
       const integrationScript = document.createElement('script');
