@@ -28,8 +28,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <link rel="stylesheet" href="user-lists-prototype.css?v=20260723-16">
-  <link rel="stylesheet" href="admin-access-prototype.css?v=20260723-16">
+  <link rel="stylesheet" href="user-lists-prototype.css?v=20260723-17">
+  <link rel="stylesheet" href="admin-access-prototype.css?v=20260723-17">
 
   <!-- Cropper.js (画像トリミング・クロップ用) -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
@@ -3375,6 +3375,35 @@
       return playerName.slice(0, 50);
     }
 
+    async function confirmNewPlayerId(gameId) {
+      if (!/^[A-Za-z0-9]{12}$/.test(gameId)) {
+        return confirm(
+          `TEKKEN 8 ID「${gameId}」は12文字ではありません。\n` +
+          'コピー漏れや入力ミスの可能性がありますが、このまま追加しますか？'
+        );
+      }
+      try {
+        const response = await fetch(
+          `https://tight-bar-55c1.uracil123.workers.dev/?ewgfId=${encodeURIComponent(gameId)}`,
+          { cache: 'no-store' }
+        );
+        const data = await response.json().catch(() => null);
+        if (response.ok && data && data.ok) return true;
+        if ([400, 404, 422].includes(response.status) || (data && data.ok === false)) {
+          return confirm(
+            `TEKKEN 8 ID「${gameId}」はEWGF上で存在を確認できませんでした。\n` +
+            '入力ミスの可能性がありますが、このまま追加しますか？'
+          );
+        }
+        throw new Error(`EWGF HTTP ${response.status}`);
+      } catch (error) {
+        console.warn('Player ID verification failed', error);
+        return confirm(
+          'EWGFへ接続できなかったため、IDの存在を確認できませんでした。\n' +
+          `TEKKEN 8 ID「${gameId}」をこのまま追加しますか？`
+        );
+      }
+    }
     async function saveMember(e) {
       e.preventDefault();
       const key = document.getElementById('editKey').value;
@@ -3384,6 +3413,7 @@
         showToast('TEKKEN 8 IDを入力してください');
         return;
       }
+      if (!key && !(await confirmNewPlayerId(gameId))) return;
 
       const submit = document.getElementById('btnSaveSubmit');
       const originalLabel = submit.textContent;
@@ -3510,8 +3540,8 @@
     }
 
   </script>
-  <script src="user-lists-prototype.js?v=20260723-16"></script>
-  <script src="admin-access-prototype.js?v=20260723-16"></script>
+  <script src="user-lists-prototype.js?v=20260723-17"></script>
+  <script src="admin-access-prototype.js?v=20260723-17"></script>
   <script>
     (() => {
       const integrationScript = document.createElement('script');
