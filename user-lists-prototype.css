@@ -291,6 +291,14 @@ body.theme-japanese .member-skill-rank-badge{box-shadow:0 3px 9px rgba(49,46,129
 /* Stable mobile multi-column fit: scale each card inside a viewport-sized grid track. */
 @media(max-width:640px){
   body.workspace-ui-active{overflow-x:hidden}
-  #posterGrid[data-mobile-fit-columns]:not([data-mobile-fit-columns='']){max-width:calc(100vw - 28px);overflow:visible}
-  #posterGrid[data-mobile-fit-columns]:not([data-mobile-fit-columns=''])>.poster-card{width:var(--mobile-card-base-width)!important;max-width:none!important;zoom:var(--mobile-card-scale);transform-origin:top left}
+  #posterGrid[data-mobile-fit-columns]:not([data-mobile-fit-columns='']){width:calc(100vw - 28px)!important;max-width:calc(100vw - 28px);overflow:visible}
+  #posterGrid[data-mobile-fit-columns]:not([data-mobile-fit-columns=''])>.poster-card{
+    width:var(--mobile-card-base-width)!important;
+    max-width:none!important;
+    align-self:start;
+    justify-self:center;
+    margin-bottom:var(--mobile-card-height-offset,0px);
+    scale:var(--mobile-card-scale);
+    transform-origin:top center;
+  }
 }
