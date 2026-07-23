@@ -405,6 +405,14 @@
 
     const updateDropSlot = (clientX, clientY, force = false) => {
       if (!slot) return false;
+      const slotRect = slot.getBoundingClientRect();
+      const pointerInsideSlot =
+        clientX >= slotRect.left && clientX <= slotRect.right &&
+        clientY >= slotRect.top && clientY <= slotRect.bottom;
+      if (pointerInsideSlot) {
+        clearPendingGap();
+        return false;
+      }
       const cards = [...grid.querySelectorAll(':scope > .poster-card')];
       if (!cards.length) return false;
       const measured = cards.map(item => ({ item, rect: item.getBoundingClientRect() }));
