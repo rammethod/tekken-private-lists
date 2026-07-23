@@ -43,3 +43,55 @@ body.theme-japanese .list-workspace select, body.theme-japanese .list-workspace 
   .list-workspace select { min-width: 100%; }
   .list-workspace .user-chip { margin-left: 0; max-width: 130px; }
 }
+
+/* Compact workspace navigation */
+body.workspace-ui-active .theme-select-box,
+body.workspace-ui-active #btnAddMember,
+body.workspace-ui-active .top-controls button[onclick*="refreshAllWavuStats"] { display: none !important; }
+.list-workspace { flex-wrap: nowrap; }
+.workspace-primary { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1 1 auto; }
+.list-workspace .workspace-primary select { min-width: 160px; max-width: 360px; }
+.list-workspace .workspace-primary-action { background: linear-gradient(#f2d86f,#b98b20); color: #241505; border-color: #e3c451; }
+.list-workspace #workspaceRefreshBtn { width: 40px; padding-inline: 0; font-size: 1.25rem; line-height: 1; }
+.workspace-dropdown { position: relative; flex: 0 0 auto; }
+.workspace-dropdown > summary {
+  display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 38px;
+  box-sizing: border-box; border: 1px solid #8e6c2d; border-radius: 8px; padding: 7px 11px;
+  background: #25170e; color: #fff2c9; font-weight: 800; cursor: pointer; list-style: none;
+}
+.workspace-dropdown > summary::-webkit-details-marker { display: none; }
+.workspace-dropdown[open] > summary { border-color: #e3c451; box-shadow: 0 0 0 2px rgba(227,196,81,.14); }
+.workspace-menu {
+  position: absolute; z-index: 300; top: calc(100% + 7px); right: 0; display: grid; gap: 4px;
+  width: max-content; min-width: 210px; padding: 8px; border: 1px solid rgba(212,175,55,.55);
+  border-radius: 10px; background: rgba(20,13,9,.98); box-shadow: 0 14px 36px rgba(0,0,0,.45);
+}
+.list-workspace .workspace-menu button { width: 100%; border-color: transparent; text-align: left; background: transparent; }
+.list-workspace .workspace-menu button:hover { border-color: rgba(212,175,55,.4); background: rgba(212,175,55,.1); }
+.list-workspace .workspace-menu .menu-danger { color: #ffaaa0; border-top: 1px solid rgba(255,120,105,.22); border-radius: 0 0 7px 7px; }
+.workspace-account { margin-left: auto; }
+.workspace-account > summary { max-width: 210px; }
+.list-workspace .workspace-account .user-chip { margin: 0; max-width: 165px; }
+.workspace-menu-label { padding: 4px 8px 0; color: #bda977; font-size: .64rem; font-weight: 800; letter-spacing: .08em; }
+.theme-menu-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 4px; }
+.list-workspace .theme-menu-row button { min-height: 34px; padding: 5px; text-align: center; font-size: .68rem; }
+body.theme-modern .workspace-dropdown > summary { border-color: #7c3aed; background: #211b42; }
+body.theme-modern .workspace-menu { border-color: #7c3aed; background: rgba(17,15,35,.98); }
+body.theme-japanese .workspace-dropdown > summary { color: #27215b; border-color: #4f46e5; background: #fff; }
+body.theme-japanese .workspace-menu { border-color: #4f46e5; background: rgba(250,250,255,.99); }
+body.theme-japanese .workspace-menu-label { color: #514aa0; }
+body.theme-japanese .list-workspace .workspace-menu .menu-danger { color: #b42318; }
+@media (max-width: 700px) {
+  .list-workspace { display: grid; grid-template-columns: minmax(0,1fr) auto auto; gap: 7px; }
+  .workspace-primary { display: grid; grid-template-columns: minmax(0,1fr) auto auto; grid-column: 1 / -1; width: 100%; }
+  .list-workspace .workspace-primary select { min-width: 0; max-width: none; width: 100%; }
+  .workspace-dropdown { justify-self: start; }
+  .workspace-account { justify-self: end; margin-left: 0; }
+  .workspace-account > summary { max-width: 155px; }
+  .list-workspace .workspace-account .user-chip { max-width: 112px; }
+  .workspace-menu { position: fixed; top: auto; right: 10px; bottom: 10px; left: 10px; width: auto; max-height: 70vh; overflow-y: auto; }
+}
+@media (max-width: 430px) {
+  .list-workspace .workspace-primary-action span { display: none; }
+  .list-workspace .workspace-primary-action { width: 42px; padding-inline: 0; font-size: 1.1rem; }
+}

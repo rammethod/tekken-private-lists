@@ -62,23 +62,66 @@
     bar.className = 'list-workspace';
     bar.setAttribute('aria-label', 'マイリスト管理');
     bar.innerHTML = `
-      <select id="myListSelect" aria-label="表示するマイリスト"></select>
-      <button id="newListBtn">＋ 新規</button><button id="renameListBtn">名前変更</button>
-      <button id="deleteListBtn">削除</button><button id="shareListBtn">このリストを共有</button>
-      <button id="exportListBtn">全バックアップ</button>
-      <button id="importListBtn">共有・バックアップ取込</button><input id="importListFile" type="file" accept="application/json" hidden>
-      <span class="user-chip" id="userChip"></span><button id="adminPanelBtn" hidden>ユーザー承認</button><button id="logoutBtn">ログアウト</button>`;
+      <div class="workspace-primary">
+        <select id="myListSelect" aria-label="表示するマイリスト"></select>
+        <button id="workspaceAddMemberBtn" class="workspace-primary-action" title="メンバーを追加">＋ <span>メンバー追加</span></button>
+        <button id="workspaceRefreshBtn" title="全ステータス一括更新" aria-label="全ステータス一括更新">↻</button>
+      </div>
+      <details class="workspace-dropdown" id="listActionsMenu">
+        <summary aria-label="リスト操作メニュー" title="リスト操作">•••</summary>
+        <div class="workspace-menu" role="menu">
+          <button id="newListBtn" role="menuitem">＋ 新しいリスト</button>
+          <button id="renameListBtn" role="menuitem">リスト名を変更</button>
+          <button id="shareListBtn" role="menuitem">このリストを共有</button>
+          <button id="importListBtn" role="menuitem">共有・バックアップ取込</button>
+          <button id="exportListBtn" role="menuitem">全バックアップ</button>
+          <button id="deleteListBtn" class="menu-danger" role="menuitem">リストを削除</button>
+        </div>
+      </details>
+      <input id="importListFile" type="file" accept="application/json" hidden>
+      <details class="workspace-dropdown workspace-account" id="accountMenu">
+        <summary><span class="user-chip" id="userChip"></span><span aria-hidden="true">▾</span></summary>
+        <div class="workspace-menu" role="menu">
+          <span class="workspace-menu-label">表示テーマ</span>
+          <div class="theme-menu-row">
+            <button type="button" data-theme-choice="wanted" title="WANTED">酒場</button>
+            <button type="button" data-theme-choice="modern" title="MODERN">ネオン</button>
+            <button type="button" data-theme-choice="japanese" title="JAPANESE">和風</button>
+          </div>
+          <button id="adminPanelBtn" role="menuitem" hidden>ユーザー承認</button>
+          <button id="logoutBtn" role="menuitem">ログアウト</button>
+        </div>
+      </details>`;
     document.querySelector('.board-container').prepend(bar);
+    document.body.classList.add('workspace-ui-active');
     byId('userChip').textContent = activeUser.displayName || activeUser.email || 'Google User';
+    const closeWorkspaceMenus = () => bar.querySelectorAll('details[open]').forEach(menu => menu.removeAttribute('open'));
     byId('myListSelect').onchange = event => activateList(event.target.value);
-    byId('newListBtn').onclick = createList;
-    byId('renameListBtn').onclick = renameList;
-    byId('deleteListBtn').onclick = deleteList;
-    byId('shareListBtn').onclick = exportSharedList;
-    byId('exportListBtn').onclick = exportList;
-    byId('importListBtn').onclick = () => byId('importListFile').click();
+    byId('workspaceAddMemberBtn').onclick = () => openAddModal();
+    byId('workspaceRefreshBtn').onclick = () => refreshAllWavuStats();
+    byId('newListBtn').onclick = () => { closeWorkspaceMenus(); createList(); };
+    byId('renameListBtn').onclick = () => { closeWorkspaceMenus(); renameList(); };
+    byId('deleteListBtn').onclick = () => { closeWorkspaceMenus(); deleteList(); };
+    byId('shareListBtn').onclick = () => { closeWorkspaceMenus(); exportSharedList(); };
+    byId('exportListBtn').onclick = () => { closeWorkspaceMenus(); exportList(); };
+    byId('importListBtn').onclick = () => { closeWorkspaceMenus(); byId('importListFile').click(); };
     byId('importListFile').onchange = importList;
-    byId('logoutBtn').onclick = () => auth.signOut();
+    bar.querySelectorAll('[data-theme-choice]').forEach(button => {
+      button.onclick = () => {
+        const theme = button.dataset.themeChoice;
+        byId('themeSelectDropdown').value = theme;
+        selectTheme(theme);
+        closeWorkspaceMenus();
+      };
+    });
+    byId('logoutBtn').onclick = () => { closeWorkspaceMenus(); auth.signOut(); };
+    if (window.workspaceOutsideClickHandler) {
+      document.removeEventListener('click', window.workspaceOutsideClickHandler);
+    }
+    window.workspaceOutsideClickHandler = event => {
+      if (!bar.contains(event.target)) closeWorkspaceMenus();
+    };
+    document.addEventListener('click', window.workspaceOutsideClickHandler);
   }
 
   function bindSharedStatus() {
@@ -334,11 +377,19 @@
     gate('TEKKEN 8 PRIVATE LISTS', 'Googleログイン後、管理者に承認されたユーザーだけが利用できます。', 'login');
     auth.onAuthStateChanged(user => {
       if (!user) {
-        activeUser = null;
-        activeListId = null;
-        window.privateListStorageScope = '';
+        if (listsRef) listsRef.off();
         if (listListenerRef) listListenerRef.off();
         if (settingsLogRef) settingsLogRef.off();
+        if (window.workspaceOutsideClickHandler) {
+          document.removeEventListener('click', window.workspaceOutsideClickHandler);
+          window.workspaceOutsideClickHandler = null;
+        }
+        byId('listWorkspace')?.remove();
+        document.body.classList.remove('workspace-ui-active');
+        activeUser = null;
+        activeListId = null;
+        listsRef = null;
+        window.privateListStorageScope = '';
         listListenerRef = null;
         settingsLogRef = null;
         gate('TEKKEN 8 PRIVATE LISTS', 'Googleログイン後、管理者に承認されたユーザーだけが利用できます。', 'login');
@@ -365,6 +416,8 @@
     else if (originalSaveTitle) originalSaveTitle();
   };
 })();
+
+
 
 
 
