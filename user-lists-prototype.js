@@ -405,7 +405,9 @@
   }
 
   const GRID_COLUMNS_AUTO = 'auto';
-  const gridStorageKey = () => window.matchMedia('(max-width: 700px)').matches
+  const isMobileGridDevice = () => window.matchMedia('(max-width: 700px)').matches
+    || (window.matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) <= 700);
+  const gridStorageKey = () => isMobileGridDevice()
     ? 't8_grid_columns_mobile'
     : 't8_grid_columns_desktop';
   function syncMobileCardScale() {
@@ -444,30 +446,34 @@
     grid.style.removeProperty('--mobile-card-scale');
     grid.style.removeProperty('--mobile-card-base-width');
     grid.dataset.mobileFitColumns = '';
+    if (app) app.classList.remove('mobile-grid-fit');
     if (normalized === GRID_COLUMNS_AUTO) {
       grid.style.gridTemplateColumns = '';
       grid.style.justifyContent = '';
       if (app) { app.style.width = ''; app.style.maxWidth = ''; }
     } else {
       const columns = Number(normalized);
-      const mobileLayout = window.matchMedia('(max-width: 640px)').matches;
+      const mobileLayout = isMobileGridDevice();
       if (mobileLayout) {
         const gap = 8;
-        const availableWidth = Math.max(260, window.innerWidth - 28);
-        const trackWidth = (availableWidth - Math.max(0, columns - 1) * gap) / columns;
+        if (app) { app.style.width = ''; app.style.maxWidth = ''; }
+        const board = grid.parentElement;
+        const boardStyle = board ? getComputedStyle(board) : null;
+        const boardContentWidth = board
+          ? board.clientWidth - parseFloat(boardStyle.paddingLeft || 0) - parseFloat(boardStyle.paddingRight || 0)
+          : document.documentElement.clientWidth - 28;
+        const availableWidth = Math.max(1, Math.floor(boardContentWidth));
+        const trackWidth = Math.max(1, (availableWidth - Math.max(0, columns - 1) * gap) / columns);
         const cardWidth = columns === 1 ? Math.min(300, trackWidth) : 165;
-        const cardScale = Math.min(1, (trackWidth / cardWidth) * (columns >= 3 ? 0.94 : 0.98));
-        grid.style.gridTemplateColumns = `repeat(${columns}, ${trackWidth}px)`;
+        const cardScale = Math.min(1, (trackWidth / cardWidth) * (columns >= 3 ? 0.92 : 0.97));
+        grid.style.gridTemplateColumns = `repeat(${columns}, minmax(0, ${trackWidth}px))`;
         grid.style.justifyContent = 'start';
-        grid.style.width = `${availableWidth}px`;
-        grid.style.marginInline = 'auto';
+        grid.style.width = '100%';
+        grid.style.marginInline = '0';
         grid.style.setProperty('--mobile-card-scale', String(cardScale));
         grid.style.setProperty('--mobile-card-base-width', `${cardWidth}px`);
         grid.dataset.mobileFitColumns = normalized;
-        if (app) {
-          app.style.width = `${Math.max(280, window.innerWidth - 12)}px`;
-          app.style.maxWidth = 'calc(100vw - 12px)';
-        }
+        if (app) app.classList.add('mobile-grid-fit');
       } else {
         const cardWidth = 300;
         const gap = 28;
@@ -627,14 +633,24 @@
     byId('gridColumnSelect').onchange = event => saveGridColumns(event.target.value);
     restoreGridColumns();
     if (window.workspaceGridResizeHandler) window.removeEventListener('resize', window.workspaceGridResizeHandler);
-    let lastGridViewportWidth = window.innerWidth;
+    let gridResizeFrame = 0;
     window.workspaceGridResizeHandler = () => {
-      const nextWidth = window.innerWidth;
-      if (Math.abs(nextWidth - lastGridViewportWidth) < 2) return;
-      lastGridViewportWidth = nextWidth;
-      restoreGridColumns();
+      cancelAnimationFrame(gridResizeFrame);
+      gridResizeFrame = requestAnimationFrame(restoreGridColumns);
     };
     window.addEventListener('resize', window.workspaceGridResizeHandler, { passive: true });
+    if (window.workspaceBoardResizeObserver) window.workspaceBoardResizeObserver.disconnect();
+    const workspaceBoard = byId('posterGrid')?.parentElement;
+    if (workspaceBoard && typeof ResizeObserver === 'function') {
+      let lastBoardWidth = workspaceBoard.clientWidth;
+      window.workspaceBoardResizeObserver = new ResizeObserver(entries => {
+        const nextBoardWidth = entries[0]?.contentRect?.width || workspaceBoard.clientWidth;
+        if (Math.abs(nextBoardWidth - lastBoardWidth) < 1) return;
+        lastBoardWidth = nextBoardWidth;
+        window.workspaceGridResizeHandler();
+      });
+      window.workspaceBoardResizeObserver.observe(workspaceBoard);
+    }
     byId('workspaceAddMemberBtn').onclick = () => openAddModal();
     byId('workspaceRefreshBtn').onclick = async event => {
       const button = event.currentTarget;
