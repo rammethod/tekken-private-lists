@@ -164,7 +164,7 @@
         const lines = [gamesLine];
         if (winRate !== null) {
           const winRateLine = document.createElement('span');
-          const winRateTone = winRate < 50 ? 'is-below-50' : (winRate > 50 ? 'is-above-50' : 'is-even-50');
+          const winRateTone = winRate < 55 ? 'is-below-50' : 'is-above-50';
           winRateLine.className = 'stats-preview-games-line stats-preview-win-rate ' + winRateTone;
           winRateLine.textContent = `・${winRate.toFixed(1)}% WR`;
           lines.push(winRateLine);
