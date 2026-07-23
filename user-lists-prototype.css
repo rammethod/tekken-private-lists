@@ -83,6 +83,9 @@ body.theme-japanese .workspace-refresh-control small { color: #514aa0; }
 .workspace-menu-label { padding: 4px 8px 0; color: #bda977; font-size: .64rem; font-weight: 800; letter-spacing: .08em; }
 .theme-menu-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 4px; }
 .grid-column-setting { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 7px; align-items: center; padding: 0 5px 5px; }
+.member-sort-setting { display: grid; grid-template-columns: minmax(0,1fr) 68px; gap: 5px; padding: 0 5px 5px; }
+.list-workspace .member-sort-setting select { min-width: 0; width: 100%; padding: 6px; font-size: .67rem; }
+.list-workspace .member-sort-setting button { min-height: 34px; padding: 5px; text-align: center; font-size: .64rem; }
 .list-workspace .grid-column-setting select { min-width: 0; width: 100%; padding: 6px 7px; font-size: .7rem; }
 .grid-column-setting small { color: #bda977; font-size: .52rem; white-space: nowrap; }
 body.theme-modern .grid-column-setting small { color: #c4b5fd; }

@@ -5,6 +5,9 @@
   let listsRef = null;
   let listListenerRef = null;
   let settingsLogRef = null;
+  let memberSortRef = null;
+  let currentMemberSortMode = 'manual';
+  let currentMemberSortDirection = 'desc';
   let currentListEntries = [];
   let listOrderDraft = [];
   let listMenuSignature = '';
@@ -99,6 +102,64 @@
     }
   }
 
+  const MEMBER_SORT_RANKS = ['Beginner','1st Dan','2nd Dan','Fighter','Strategist','Combatant','Brawler','Ranger','Cavalry','Warrior','Assailant','Dominator','Vanquisher','Destroyer','Eliminator','Garyu','Shinryu','Tenryu','Mighty Ruler','Flame Ruler','Battle Ruler','Fujin','Raijin','Kishin','Bushin','Tekken King','Tekken Emperor','Tekken God','Tekken God Supreme','God of Destruction'];
+  const normalizedRankIndex = value => {
+    const normalized = String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    return MEMBER_SORT_RANKS.findIndex(rank => rank.toLowerCase().replace(/[^a-z0-9]/g, '') === normalized);
+  };
+  function memberStats(member) {
+    const id = typeof cleanTekkenId === 'function' ? cleanTekkenId(member && member.gameId) : String(member && member.gameId || '');
+    if (typeof getLocalStats === 'function') return getLocalStats(id, member) || member.fetchedStats || {};
+    return member.fetchedStats || {};
+  }
+  window.sortMemberEntries = entries => {
+    if (currentMemberSortMode === 'manual') return entries;
+    const direction = currentMemberSortDirection === 'asc' ? 1 : -1;
+    const collator = new Intl.Collator('ja', { numeric: true, sensitivity: 'base' });
+    const metric = member => {
+      const stats = memberStats(member || {});
+      if (currentMemberSortMode === 'name') return String(member && member.name || '');
+      if (currentMemberSortMode === 'rank') return normalizedRankIndex(stats.danRank);
+      if (currentMemberSortMode === 'games') return stats.mainCharGames === null || stats.mainCharGames === undefined ? null : Number(stats.mainCharGames);
+      if (currentMemberSortMode === 'rating') return stats.ratingMu === null || stats.ratingMu === undefined ? null : Number(stats.ratingMu);
+      if (currentMemberSortMode === 'power') return stats.tekkenPower === null || stats.tekkenPower === undefined ? null : Number(stats.tekkenPower);
+      return null;
+    };
+    return entries.map((entry, index) => ({ entry, index, value: metric(entry[1]) })).sort((a, b) => {
+      const aMissing = a.value === null || a.value === '' || (typeof a.value === 'number' && (!Number.isFinite(a.value) || a.value < 0));
+      const bMissing = b.value === null || b.value === '' || (typeof b.value === 'number' && (!Number.isFinite(b.value) || b.value < 0));
+      if (aMissing !== bMissing) return aMissing ? 1 : -1;
+      const compared = typeof a.value === 'string' ? collator.compare(a.value, b.value) : Number(a.value) - Number(b.value);
+      return compared ? compared * direction : a.index - b.index;
+    }).map(item => item.entry);
+  };
+  function updateMemberSortControls() {
+    const mode = byId('memberSortMode');
+    const direction = byId('memberSortDirection');
+    if (mode) mode.value = currentMemberSortMode;
+    if (direction) {
+      direction.disabled = currentMemberSortMode === 'manual';
+      direction.textContent = currentMemberSortDirection === 'asc' ? '昇順 ↑' : '降順 ↓';
+    }
+  }
+  async function saveMemberSort(mode, direction = currentMemberSortDirection) {
+    currentMemberSortMode = mode || 'manual';
+    currentMemberSortDirection = direction === 'asc' ? 'asc' : 'desc';
+    window.memberAutoSortActive = currentMemberSortMode !== 'manual';
+    updateMemberSortControls();
+    if (window.currentMembersData) { renderPosters(window.currentMembersData); setTimeout(addPerCardListActions, 0); }
+    if (settingsRef) await settingsRef.child('memberSort').set({ mode: currentMemberSortMode, direction: currentMemberSortDirection });
+  }
+  function disableAutoSortForManualReorder() {
+    if (currentMemberSortMode === 'manual') return;
+    currentMemberSortMode = 'manual';
+    window.memberAutoSortActive = false;
+    updateMemberSortControls();
+    if (settingsRef) settingsRef.child('memberSort').set({ mode: 'manual', direction: currentMemberSortDirection })
+      .catch(error => showToast(`手動順への切替に失敗しました: ${error.message}`));
+    showToast('ドラッグ操作のため手動順へ切り替えました');
+  }
+
   const GRID_COLUMNS_AUTO = 'auto';
   const gridStorageKey = () => window.matchMedia('(max-width: 700px)').matches
     ? 't8_grid_columns_mobile'
@@ -166,6 +227,15 @@
           <button id="shareListBtn" role="menuitem">このリストを共有</button>
           <button id="importListBtn" role="menuitem">共有・バックアップ取込</button>
           <button id="exportListBtn" role="menuitem">全バックアップ</button>
+          <span class="workspace-menu-label">メンバー自動並べ替え</span>
+          <div class="member-sort-setting">
+            <select id="memberSortMode" aria-label="メンバーの並べ替え基準">
+              <option value="manual">手動順</option><option value="name">あいうえお順</option>
+              <option value="rank">段位順</option><option value="games">メインキャラ試合数順</option>
+              <option value="rating">レート順</option><option value="power">鉄拳力順</option>
+            </select>
+            <button type="button" id="memberSortDirection">降順 ↓</button>
+          </div>
           <button id="deleteListBtn" class="menu-danger" role="menuitem">リストを削除</button>
         </div>
       </details>
@@ -249,6 +319,9 @@
     byId('exportListBtn').onclick = () => { closeWorkspaceMenus(); exportList(); };
     byId('importListBtn').onclick = () => { closeWorkspaceMenus(); byId('importListFile').click(); };
     byId('importListFile').onchange = importList;
+    byId('memberSortMode').onchange = event => saveMemberSort(event.target.value);
+    byId('memberSortDirection').onclick = () => saveMemberSort(currentMemberSortMode, currentMemberSortDirection === 'asc' ? 'desc' : 'asc');
+    updateMemberSortControls();
     byId('closeListOrderBtn').onclick = closeListOrderDialog;
     byId('cancelListOrderBtn').onclick = closeListOrderDialog;
     byId('saveListOrderBtn').onclick = saveListOrder;
@@ -409,12 +482,14 @@
 
     if (listListenerRef) listListenerRef.off();
     if (settingsLogRef) settingsLogRef.off();
+    if (memberSortRef) memberSortRef.off();
     activeListId = listId;
     localStorage.setItem(`active_list_${activeUser.uid}`, listId);
     membersRef = nextMembersRef;
     settingsRef = listsRef.child(listId);
     listListenerRef = nextMembersRef;
     settingsLogRef = settingsRef.child('last_update_log');
+    memberSortRef = settingsRef.child('memberSort');
     window.privateListStorageScope = `${activeUser.uid}_${listId}`;
 
     window.currentMembersData = null;
@@ -423,6 +498,15 @@
     settingsLogRef.on('value', snapshot => {
       if (activeListId !== listId) return;
       updateLastUpdateLogBadge(snapshot.val());
+    });
+    memberSortRef.on('value', snapshot => {
+      if (activeListId !== listId) return;
+      const setting = snapshot.val() || {};
+      currentMemberSortMode = ['manual','name','rank','games','rating','power'].includes(setting.mode) ? setting.mode : 'manual';
+      currentMemberSortDirection = setting.direction === 'asc' ? 'asc' : 'desc';
+      window.memberAutoSortActive = currentMemberSortMode !== 'manual';
+      updateMemberSortControls();
+      if (window.currentMembersData && !window.cardReorderInProgress) { renderPosters(window.currentMembersData); setTimeout(addPerCardListActions, 0); }
     });
     renderPosters(null);
     byId('loadingState').style.display = '';
@@ -439,7 +523,8 @@
       const members = snapshot.val();
       const nextMemberRenderSignature = createMemberRenderSignature(members);
       const isStatsOnlyUpdate = Boolean(memberRenderSignature)
-        && nextMemberRenderSignature === memberRenderSignature;
+        && nextMemberRenderSignature === memberRenderSignature
+        && !window.memberAutoSortActive;
       byId('loadingState').style.display = 'none';
       window.currentMembersData = members;
       if (isStatsOnlyUpdate) {
@@ -637,10 +722,12 @@
 
     const updateDropSlot = (clientX, clientY, force = false) => {
       if (!slot) return false;
+      const probeX = clientX - grabOffsetX + originRect.width / 2;
+      const probeY = clientY - grabOffsetY + originRect.height / 2;
       const slotRect = slot.getBoundingClientRect();
       const pointerInsideSlot =
-        clientX >= slotRect.left && clientX <= slotRect.right &&
-        clientY >= slotRect.top && clientY <= slotRect.bottom;
+        probeX >= slotRect.left && probeX <= slotRect.right &&
+        probeY >= slotRect.top && probeY <= slotRect.bottom;
       if (pointerInsideSlot) {
         clearPendingGap();
         return false;
@@ -651,8 +738,8 @@
       const nearest = measured.reduce((best, candidate) => {
         const centerX = candidate.rect.left + candidate.rect.width / 2;
         const centerY = candidate.rect.top + candidate.rect.height / 2;
-        const dx = (clientX - centerX) / Math.max(candidate.rect.width, 1);
-        const dy = (clientY - centerY) / Math.max(candidate.rect.height, 1);
+        const dx = (probeX - centerX) / Math.max(candidate.rect.width, 1);
+        const dy = (probeY - centerY) / Math.max(candidate.rect.height, 1);
         const distance = dx * dx + dy * dy;
         return !best || distance < best.distance ? { ...candidate, distance } : best;
       }, null);
@@ -662,8 +749,19 @@
       const columnCount = getComputedStyle(grid).gridTemplateColumns
         .split(/\s+/)
         .filter(Boolean).length;
-      const insertBefore = columnCount > 1 ? clientX < centerX : clientY < centerY;
-      const desiredGap = targetIndex + (insertBefore ? 0 : 1);
+      const insertBefore = columnCount > 1 ? probeX < centerX : probeY < centerY;
+      const firstRect = measured[0].rect;
+      const lastRect = measured[measured.length - 1].rect;
+      const beforeFirstZone = probeY <= firstRect.bottom && probeX <= firstRect.left + firstRect.width * 0.35;
+      const afterLastZone =
+        probeY > lastRect.bottom + lastRect.height * 0.2 ||
+        (probeY >= lastRect.top - lastRect.height * 0.35 && probeX >= lastRect.left + lastRect.width * 0.35);
+      const desiredGap = beforeFirstZone
+        ? 0
+        : afterLastZone
+          ? cards.length
+          : targetIndex + (insertBefore ? 0 : 1);
+      const isWideBoundaryZone = beforeFirstZone || afterLastZone;
       const children = [...grid.children];
       const slotPosition = children.indexOf(slot);
       const currentGap = children.slice(0, slotPosition)
@@ -672,7 +770,7 @@
         clearPendingGap();
         return false;
       }
-      if (!force) {
+      if (!force && !isWideBoundaryZone) {
         lastPointerX = clientX;
         lastPointerY = clientY;
         if (committedPointerX !== null) {
@@ -755,6 +853,7 @@
       committedPointerY = null;
       clearPendingGap();
       beginCardReorder();
+      disableAutoSortForManualReorder();
 
       slot = document.createElement('div');
       slot.className = 'card-drop-slot';
@@ -789,6 +888,7 @@
     handle.addEventListener('pointercancel', finish);
     handle.addEventListener('keydown', async event => {
       if (!['ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'].includes(event.key)) return;
+      disableAutoSortForManualReorder();
       event.preventDefault();
       const previous = card.previousElementSibling;
       const next = card.nextElementSibling;
@@ -886,6 +986,7 @@
         if (listsRef) listsRef.off();
         if (listListenerRef) listListenerRef.off();
         if (settingsLogRef) settingsLogRef.off();
+        if (memberSortRef) memberSortRef.off();
         if (window.workspaceOutsideClickHandler) {
           document.removeEventListener('click', window.workspaceOutsideClickHandler);
           window.workspaceOutsideClickHandler = null;

@@ -28,7 +28,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <link rel="stylesheet" href="user-lists-prototype.css?v=20260724-32">
+  <link rel="stylesheet" href="user-lists-prototype.css?v=20260724-33">
   <link rel="stylesheet" href="admin-access-prototype.css?v=20260723-26">
 
   <!-- Cropper.js (画像トリミング・クロップ用) -->
@@ -3142,7 +3142,10 @@
       }
       empty.style.display = 'none';
 
-      const entries = Object.entries(data).sort((a, b) => (a[1].order || 0) - (b[1].order || 0));
+      const manualEntries = Object.entries(data).sort((a, b) => (a[1].order || 0) - (b[1].order || 0));
+      const entries = typeof window.sortMemberEntries === 'function'
+        ? window.sortMemberEntries(manualEntries)
+        : manualEntries;
 
       entries.forEach(([key, m], idx) => {
         const card = document.createElement('div');
@@ -3603,7 +3606,7 @@
     }
 
   </script>
-  <script src="user-lists-prototype.js?v=20260724-32"></script>
+  <script src="user-lists-prototype.js?v=20260724-33"></script>
   <script src="admin-access-prototype.js?v=20260723-26"></script>
   <script>
     (() => {
