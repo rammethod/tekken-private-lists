@@ -361,6 +361,17 @@
     let grabOffsetY = 0;
     let dragX = 0;
     let dragY = 0;
+    let lastPointerX = 0;
+    let lastPointerY = 0;
+    let pendingGap = null;
+    let pendingGapTimer = null;
+    const shiftAnimations = new WeakMap();
+
+    const clearPendingGap = () => {
+      if (pendingGapTimer) clearTimeout(pendingGapTimer);
+      pendingGapTimer = null;
+      pendingGap = null;
+    };
 
     const animateGridShift = before => {
       [...grid.querySelectorAll(':scope > .poster-card')].forEach(item => {
@@ -370,10 +381,16 @@
         const dx = first.left - last.left;
         const dy = first.top - last.top;
         if (!dx && !dy) return;
-        item.animate(
+        const previous = shiftAnimations.get(item);
+        if (previous) previous.cancel();
+        const animation = item.animate(
           [{ translate: `${dx}px ${dy}px` }, { translate: '0 0' }],
-          { duration: 260, easing: 'cubic-bezier(.2,.8,.2,1)' }
+          { duration: 340, easing: 'cubic-bezier(.16,.82,.22,1)' }
         );
+        shiftAnimations.set(item, animation);
+        animation.finished.finally(() => {
+          if (shiftAnimations.get(item) === animation) shiftAnimations.delete(item);
+        }).catch(() => {});
       });
     };
 
@@ -384,7 +401,7 @@
       card.classList.remove('card-reordering');
     };
 
-    const updateDropSlot = (clientX, clientY) => {
+    const updateDropSlot = (clientX, clientY, force = false) => {
       if (!slot) return false;
       const cards = [...grid.querySelectorAll(':scope > .poster-card')];
       if (!cards.length) return false;
@@ -407,7 +424,25 @@
       const slotPosition = children.indexOf(slot);
       const currentGap = children.slice(0, slotPosition)
         .filter(item => item.classList.contains('poster-card')).length;
-      if (desiredGap === currentGap) return false;
+      if (desiredGap === currentGap) {
+        clearPendingGap();
+        return false;
+      }
+      if (!force) {
+        lastPointerX = clientX;
+        lastPointerY = clientY;
+        if (pendingGap !== desiredGap) {
+          clearPendingGap();
+          pendingGap = desiredGap;
+          pendingGapTimer = setTimeout(() => {
+            if (pointerId !== null && pendingGap === desiredGap) {
+              updateDropSlot(lastPointerX, lastPointerY, true);
+            }
+          }, 100);
+        }
+        return false;
+      }
+      clearPendingGap();
 
       const before = new Map(measured.map(({ item, rect }) => [item, rect]));
       if (desiredGap >= cards.length) grid.appendChild(slot);
@@ -419,7 +454,7 @@
     const finish = async event => {
       if (pointerId === null || (event.pointerId !== undefined && event.pointerId !== pointerId)) return;
       const finalPlacementChanged = event.type === 'pointerup'
-        ? updateDropSlot(event.clientX, event.clientY)
+        ? updateDropSlot(event.clientX, event.clientY, true)
         : false;
       try { handle.releasePointerCapture(pointerId); } catch (e) {}
       pointerId = null;
@@ -457,6 +492,9 @@
       grabOffsetY = event.clientY - originRect.top;
       dragX = 0;
       dragY = 0;
+      lastPointerX = event.clientX;
+      lastPointerY = event.clientY;
+      clearPendingGap();
 
       slot = document.createElement('div');
       slot.className = 'card-drop-slot';
@@ -483,7 +521,9 @@
       if (event.clientY < 72) window.scrollBy(0, -12);
       else if (event.clientY > window.innerHeight - 72) window.scrollBy(0, 12);
 
-      updateDropSlot(event.clientX, event.clientY);
+      lastPointerX = event.clientX;
+      lastPointerY = event.clientY;
+      updateDropSlot(lastPointerX, lastPointerY);
     });
     handle.addEventListener('pointerup', finish);
     handle.addEventListener('pointercancel', finish);
@@ -634,6 +674,7 @@
     } else if (originalSaveTitle) originalSaveTitle();
   };
 })();
+
 
 
 
