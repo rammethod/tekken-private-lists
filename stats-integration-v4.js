@@ -748,6 +748,21 @@
     document.body.classList.add('character-matchup-open');
     modal.querySelector('.character-matchup-close').focus();
   }
+  function showMatchupRetry(modal, member, stats, options = {}) {
+    const lead = modal.querySelector('.character-matchup-lead');
+    lead.replaceChildren('相性データを読み込めませんでした。');
+    const retry = document.createElement('button');
+    retry.type = 'button';
+    retry.className = 'character-matchup-retry';
+    retry.textContent = 'もう一度試す';
+    retry.addEventListener('click', () => {
+      retry.disabled = true;
+      openMatchupModal(member, stats, options);
+    }, { once: true });
+    lead.append(' ', retry);
+    modal.querySelector('.is-best').innerHTML = '<p class="character-matchup-empty">一時的な通信失敗の可能性があります。</p>';
+    modal.querySelector('.is-worst').innerHTML = '<p class="character-matchup-empty">再試行しても続く場合は、少し時間を置いてください。</p>';
+  }
   async function openMatchupModal(member, stats, options = {}) {
     const modal = ensureMatchupModal();
     matchupReturnHandler = typeof options.onClose === 'function' ? options.onClose : null;
@@ -761,7 +776,7 @@
       matchupData = await fetchLazyCharacterMatchups(member.gameId);
     } catch (error) {
       console.warn('Character matchup fetch failed:', error);
-      modal.querySelector('.character-matchup-lead').textContent = '相性データを読み込めませんでした。少し時間を置いてから、カードの「再取得」をお試しください。';
+      showMatchupRetry(modal, member, stats, options);
       return;
     }
     if (modal.hidden) return;
