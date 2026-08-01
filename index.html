@@ -1317,16 +1317,22 @@
 
     /* Keep lifetime totals outside Recent main: the integration turns that area
        into an icon + copy flex row, so a third child would overlap on phones. */
-    .stats-preview-lifetime-row { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:-4px 0 9px; padding:6px 8px; border:1px solid rgba(125,211,252,.28); border-radius:7px; background:rgba(14,116,144,.12); color:#d7efff; font-size:.58rem; font-weight:850; letter-spacing:.045em; font-variant-numeric:tabular-nums; }
+    .stats-preview-lifetime-row { display:flex; width:100%; align-items:center; justify-content:space-between; gap:8px; margin:-4px 0 9px; padding:6px 8px; border:1px solid rgba(125,211,252,.28); border-radius:7px; background:rgba(14,116,144,.12); color:#d7efff; font:inherit; font-size:.58rem; font-weight:850; letter-spacing:.045em; font-variant-numeric:tabular-nums; text-align:left; cursor:pointer; }
     .stats-preview-lifetime-row span { opacity:.82; }
     .stats-preview-lifetime-row strong { flex:none; color:#f0f9ff; font-size:.72rem; letter-spacing:.02em; white-space:nowrap; }
     .stats-preview-lifetime-row[hidden] { display:none; }
+    .stats-preview-lifetime-row:hover { filter:brightness(1.16); }
+    .stats-preview-lifetime-row:focus-visible { outline:2px solid #7dd3fc; outline-offset:2px; }
     /* 酒場では羊皮紙寄りの半透明茶色ではなく、上下の成績パネルと
        同系統の濃い木目にして「生涯・全マッチング」を読み取れるようにする。 */
     body.theme-wanted .stats-preview-lifetime-row { border-color:#7e5a2f; background:#2a180d; color:#f0cf80; box-shadow:inset 0 1px 0 rgba(255,239,195,.05); }
     body.theme-wanted .stats-preview-lifetime-row strong { color:#fff5df; text-shadow:0 1px 1px rgba(0,0,0,.6); }
     body.theme-japanese .stats-preview-lifetime-row { border-color:rgba(67,56,202,.25); background:rgba(238,242,255,.82); color:#4338ca; }
     body.theme-japanese .stats-preview-lifetime-row strong { color:#312e81; }
+    .lifetime-breakdown-dialog { width:min(390px,calc(100vw - 30px)); padding:0; border:1px solid rgba(125,211,252,.4); border-radius:16px; background:linear-gradient(145deg,#132238,#080f1c); color:#eaf6ff; box-shadow:0 22px 70px rgba(0,0,0,.62); }
+    .lifetime-breakdown-dialog::backdrop { background:rgba(3,7,18,.72); backdrop-filter:blur(5px); }
+    .lifetime-breakdown-inner { padding:20px; }.lifetime-breakdown-inner h2 { margin:0; font-size:1rem; }.lifetime-breakdown-inner p { margin:5px 0 14px; color:#8fa9c7; font-size:.68rem; line-height:1.5; }
+    .lifetime-breakdown-list { display:grid; gap:7px; margin:0; }.lifetime-breakdown-list div { display:grid; grid-template-columns:1fr auto auto; align-items:baseline; gap:10px; padding:8px 9px; border:1px solid rgba(148,163,184,.16); border-radius:9px; background:rgba(15,23,42,.72); }.lifetime-breakdown-list dt { color:#cbdcf0; font-size:.76rem; font-weight:800; }.lifetime-breakdown-list dd { margin:0; font-size:.8rem; font-weight:900; font-variant-numeric:tabular-nums; }.lifetime-breakdown-list small { color:#8fa9c7; font-size:.65rem; font-variant-numeric:tabular-nums; }.lifetime-breakdown-list .lifetime-breakdown-total { border-color:rgba(125,211,252,.34); background:rgba(14,116,144,.15); }.lifetime-breakdown-close { float:right; margin:-4px -4px 0 10px; padding:4px 8px; border:0; background:transparent; color:#b9cce2; font:inherit; cursor:pointer; }
 
     .stats-preview-badge {
       flex: 0 0 auto;
@@ -3890,6 +3896,11 @@
           const hasLifetimeGames = stats.totalRecordedGames !== null && stats.totalRecordedGames !== undefined && Number.isFinite(Number(stats.totalRecordedGames));
           lifetimeGamesEl.hidden = !hasLifetimeGames;
           lifetimeGamesValueEl.textContent = hasLifetimeGames ? `${Math.max(0, Number(stats.totalRecordedGames)).toLocaleString()}戦` : '';
+          lifetimeGamesEl.dataset.rankedGames = Number.isFinite(Number(stats.totalRankedGames)) ? Math.max(0, Number(stats.totalRankedGames)) : '';
+          lifetimeGamesEl.dataset.playerGames = Number.isFinite(Number(stats.totalPlayerMatchGames)) ? Math.max(0, Number(stats.totalPlayerMatchGames)) : '';
+          lifetimeGamesEl.dataset.quickGames = Number.isFinite(Number(stats.totalQuickMatchGames)) ? Math.max(0, Number(stats.totalQuickMatchGames)) : '';
+          lifetimeGamesEl.dataset.groupGames = Number.isFinite(Number(stats.totalGroupMatchGames)) ? Math.max(0, Number(stats.totalGroupMatchGames)) : '';
+          lifetimeGamesEl.dataset.totalGames = hasLifetimeGames ? Math.max(0, Number(stats.totalRecordedGames)) : '';
         }
         const rankEl = container.querySelector('.val-rank');
         if (rankEl) rankEl.textContent = stats.danRank || '-';
@@ -4277,6 +4288,7 @@
         if (currentTheme === 'japanese') defaultSubtitle = '好敵手';
 
         const cachedStats = getLocalStats(cleanGameId, m);
+        const lifetimeDataValue = field => Number.isFinite(Number(cachedStats?.[field])) ? Math.max(0, Number(cachedStats[field])) : '';
         const primaryDisplayName = m.nameMode === 'auto'
           && cleanTekkenId(m.name).toUpperCase() === cleanGameId.toUpperCase()
           ? '名前取得中…'
@@ -4359,7 +4371,7 @@
               </div>
               <span class="stats-preview-badge">ewgf + wavu</span>
             </div>
-            <div class="stats-preview-lifetime-row" title="ランクマ・プレマ・クイック・グループの全キャラ合計"${!initialFetchPending && cachedStats && cachedStats.totalRecordedGames !== null && cachedStats.totalRecordedGames !== undefined && Number.isFinite(Number(cachedStats.totalRecordedGames)) ? '' : ' hidden'}><span>生涯・全マッチング</span><strong class="stats-preview-lifetime-value">${!initialFetchPending && cachedStats && cachedStats.totalRecordedGames !== null && cachedStats.totalRecordedGames !== undefined && Number.isFinite(Number(cachedStats.totalRecordedGames)) ? `${Math.max(0, Number(cachedStats.totalRecordedGames)).toLocaleString()}戦` : ''}</strong></div>
+            <button type="button" class="stats-preview-lifetime-row" title="ランクマ・プレマ・クイック・グループの内訳を表示" onclick="event.stopPropagation();window.openLifetimeBreakdown(this)" data-ranked-games="${lifetimeDataValue('totalRankedGames')}" data-player-games="${lifetimeDataValue('totalPlayerMatchGames')}" data-quick-games="${lifetimeDataValue('totalQuickMatchGames')}" data-group-games="${lifetimeDataValue('totalGroupMatchGames')}" data-total-games="${lifetimeDataValue('totalRecordedGames')}"${!initialFetchPending && cachedStats && cachedStats.totalRecordedGames !== null && cachedStats.totalRecordedGames !== undefined && Number.isFinite(Number(cachedStats.totalRecordedGames)) ? '' : ' hidden'}><span>生涯・全マッチング</span><strong class="stats-preview-lifetime-value">${!initialFetchPending && cachedStats && cachedStats.totalRecordedGames !== null && cachedStats.totalRecordedGames !== undefined && Number.isFinite(Number(cachedStats.totalRecordedGames)) ? `${Math.max(0, Number(cachedStats.totalRecordedGames)).toLocaleString()}戦` : ''}</strong></button>
 
             <div class="stats-preview-metrics">
               <div class="stats-preview-metric stats-preview-metric-rank">
@@ -5433,6 +5445,50 @@
       };
       integrationScript.onerror = () => { console.warn('Integration script failed to load'); init(); };
       document.body.appendChild(integrationScript);
+    })();
+  </script>
+  <script>
+    (() => {
+      const entries = [
+        ['rankedGames', 'ランクマッチ'], ['quickGames', 'クイックバトル'],
+        ['playerGames', 'プレイヤーマッチ'], ['groupGames', 'グループバトル']
+      ];
+      const numberOrNull = value => Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : null;
+      const formatGames = value => value === null ? '—' : `${value.toLocaleString()}戦`;
+      function ensureLifetimeBreakdownDialog() {
+        let dialog = document.getElementById('lifetimeBreakdownDialog');
+        if (dialog) return dialog;
+        dialog = document.createElement('dialog');
+        dialog.id = 'lifetimeBreakdownDialog';
+        dialog.className = 'lifetime-breakdown-dialog';
+        dialog.innerHTML = '<div class="lifetime-breakdown-inner"><button class="lifetime-breakdown-close" type="button">閉じる</button><h2>生涯・全マッチングの内訳</h2><p>全キャラ合算。EWGFに記録されている対戦が対象です。</p><dl class="lifetime-breakdown-list"></dl></div>';
+        dialog.querySelector('.lifetime-breakdown-close').addEventListener('click', () => dialog.close());
+        dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
+        document.body.appendChild(dialog);
+        return dialog;
+      }
+      window.openLifetimeBreakdown = row => {
+        const dialog = ensureLifetimeBreakdownDialog();
+        const total = numberOrNull(row?.dataset?.totalGames);
+        const list = dialog.querySelector('.lifetime-breakdown-list');
+        list.replaceChildren();
+        entries.forEach(([field, label]) => {
+          const value = numberOrNull(row?.dataset?.[field]);
+          const item = document.createElement('div');
+          const percent = total !== null && total > 0 && value !== null ? `${(value / total * 100).toFixed(1)}%` : '—';
+          item.innerHTML = `<dt></dt><dd></dd><small></small>`;
+          item.querySelector('dt').textContent = label;
+          item.querySelector('dd').textContent = formatGames(value);
+          item.querySelector('small').textContent = percent;
+          list.appendChild(item);
+        });
+        const totalItem = document.createElement('div');
+        totalItem.className = 'lifetime-breakdown-total';
+        totalItem.innerHTML = '<dt>合計</dt><dd></dd><small>100.0%</small>';
+        totalItem.querySelector('dd').textContent = formatGames(total);
+        list.appendChild(totalItem);
+        if (!dialog.open) dialog.showModal();
+      };
     })();
   </script>
 </body>
