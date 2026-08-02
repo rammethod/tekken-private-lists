@@ -8,7 +8,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <meta name="robots" content="noindex, nofollow">
-  <meta name="description" content="拳トモくん（仮） / BFF-kun（β）― 鉄拳8の仲間を管理・比較するプライベートリスト">
+  <meta name="description" content="拳トモくん�E�仮�E�E/ BFF-kun�E�β�E� E鉁E��8の仲間を管琁E�E比輁E��る�Eライベ�EトリスチE>
   <meta name="color-scheme" content="light">
   <meta name="supported-color-schemes" content="light">
   <meta name="theme-color" content="#1b120c">
@@ -20,7 +20,7 @@
   <link rel="icon" href="assets/favicon-16.png" type="image/png" sizes="16x16">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" sizes="180x180">
   <link rel="manifest" href="manifest.webmanifest?v=20260728-4">
-  <title>拳トモくん（仮） / BFF-kun（β）</title>
+  <title>拳トモくん�E�仮�E�E/ BFF-kun�E�β�E�E/title>
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -33,15 +33,15 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <link rel="stylesheet" href="user-lists-prototype.css?v=20260802-matchup-inline-retry">
+  <link rel="stylesheet" href="user-lists-prototype.css?v=20260802-pentagon-mobile-gap-modal-center">
   <link rel="stylesheet" href="admin-access-prototype.css?v=20260801-community-entry">
 
-  <!-- Cropper.js (画像トリミング・クロップ用) -->
+  <!-- Cropper.js (画像トリミング・クロチE�E用) -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
 
   <style>
-    /* ========== Reset & Base & Dark Mode Complete Block (OSダークモード勝手変更完全阻止) ========== */
+    /* ========== Reset & Base & Dark Mode Complete Block (OSダークモード勝手変更完�E阻止) ========== */
     :root, html, body {
       color-scheme: light !important;
       supported-color-schemes: light !important;
@@ -49,7 +49,7 @@
       -webkit-text-size-adjust: 100% !important;
     }
 
-    /* OSのダークモードメディアクエリによる自動暗色化を完全相殺 */
+    /* OSのダークモードメチE��アクエリによる自動暗色化を完�E相殺 */
     @media (prefers-color-scheme: dark) {
       :root, html, body {
         color-scheme: light !important;
@@ -66,13 +66,13 @@
       forced-color-adjust: none !important;
     }
 
-    /* 入力フォームのOSダークモード化け・文字色消滅を100%防ぐ強制ルール */
+    /* 入力フォームのOSダークモード化け�E斁E��色消滁E��100%防ぐ強制ルール */
     input, select, textarea, button, form {
       color-scheme: light !important;
       forced-color-adjust: none !important;
     }
 
-    /* ========== THEME 1: WANTED (酒場の賞金首) ========== */
+    /* ========== THEME 1: WANTED (酒場の賞��馁E ========== */
     body.theme-wanted {
       --wood-dark: #1b120c;
       --wood-mid: #2d1e14;
@@ -101,7 +101,7 @@
       padding: 40px 20px 80px;
     }
 
-    /* ========== THEME 2: MODERN (ネオンリッチグラデーション) ========== */
+    /* ========== THEME 2: MODERN (ネオンリチE��グラチE�Eション) ========== */
     body.theme-modern {
       --bg-primary: #0a0a0f;
       --bg-secondary: #12121a;
@@ -124,7 +124,7 @@
       padding: 40px 20px 80px;
     }
 
-    /* ========== THEME 3: JAPANESE (爽やか涼感和風・藤紫雲海) ========== */
+    /* ========== THEME 3: JAPANESE (爽めE��涼感和風・藤紫雲海) ========== */
     body.theme-japanese {
       --wafu-sky: #dbeafe;
       --wafu-purple: #4338ca;
@@ -178,7 +178,7 @@
       box-shadow: 0 6px 20px rgba(244, 63, 94, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.4);
     }
 
-    /* Japanese (爽やか涼感) Theme Buttons Override */
+    /* Japanese (爽めE��涼愁E Theme Buttons Override */
     body.theme-japanese .link-btn.x-btn {
       background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
       border: 1px solid rgba(255, 255, 255, 0.2);
@@ -298,7 +298,7 @@
       box-shadow: 0 0 8px #ef4444;
     }
 
-    /* 画面右上固定 UI Theme Select Box */
+    /* 画面右上固宁EUI Theme Select Box */
     .theme-select-box {
       position: fixed;
       top: 16px;
@@ -507,7 +507,7 @@
       flex-direction: column;
     }
 
-    /* 横型は「詳細を開く一覧」用の細いプレイヤー行。通常カードの圧縮版にはしない。 */
+    /* 横型�E「詳細を開く一覧」用の細ぁE�Eレイヤー行。通常カード�E圧縮版にはしなぁE��E*/
     .poster-grid.card-layout-landscape { gap: 8px; }
     .poster-grid.card-layout-landscape .poster-card {
       min-height: 44px;
@@ -553,7 +553,7 @@
     .landscape-pentagon-shortcut:disabled { opacity:.5; cursor:wait; }
     .landscape-pentagon-shortcut svg { width:14px; height:14px; fill:rgba(196,181,253,.25); stroke:currentColor; stroke-width:1.7; }
     .landscape-card-summary:focus-visible { outline:3px solid #c084fc; outline-offset:-3px; }
-    /* PC横型はカード側も行高を固定する。テーマや外部CSSの最小高に引き延ばされない。 */
+    /* PC横型�Eカード�Eも行高を固定する。テーマや外部CSSの最小高に引き延ばされなぁE��E*/
     @media (min-width:701px) {
       .poster-grid.card-layout-landscape { grid-auto-rows:44px; }
       .poster-grid.card-layout-landscape .poster-card { height:44px !important; min-height:0 !important; max-height:44px; box-sizing:border-box; }
@@ -684,7 +684,7 @@
       box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
     }
 
-    /* Theme 3: Japanese Card (爽やか涼感・藤紫ヘキサゴン手配札) */
+    /* Theme 3: Japanese Card (爽めE��涼感�E藤紫ヘキサゴン手�E札) */
     body.theme-japanese .poster-card {
       background: linear-gradient(180deg, #4338ca 0%, #312e81 100%);
       border: 1.5px solid rgba(199, 210, 254, 0.5);
@@ -1002,8 +1002,8 @@
       -webkit-line-clamp: 2;
     }
 
-    .player-message::before { content: '“'; opacity: 0.62; }
-    .player-message::after { content: '”'; opacity: 0.62; }
+    .player-message::before { content: ' E; opacity: 0.62; }
+    .player-message::after { content: ' E; opacity: 0.62; }
     .player-message.is-empty {
       visibility: hidden;
     }
@@ -1323,13 +1323,13 @@
     .stats-preview-lifetime-row[hidden] { display:none; }
     .stats-preview-lifetime-row:hover { filter:brightness(1.16); }
     .stats-preview-lifetime-row:focus-visible { outline:2px solid #7dd3fc; outline-offset:2px; }
-    /* 酒場では羊皮紙寄りの半透明茶色ではなく、上下の成績パネルと
-       同系統の濃い木目にして「生涯・全マッチング」を読み取れるようにする。 */
+    /* 酒場では羊皮紙寁E��の半透�E茶色ではなく、上下�E成績パネルと
+       同系統の濁E��木目にして「生涯・全マッチング」を読み取れるよぁE��する、E*/
     body.theme-wanted .stats-preview-lifetime-row { border-color:#7e5a2f; background:#2a180d; color:#f0cf80; box-shadow:inset 0 1px 0 rgba(255,239,195,.05); }
     body.theme-wanted .stats-preview-lifetime-row strong { color:#fff5df; text-shadow:0 1px 1px rgba(0,0,0,.6); }
     body.theme-japanese .stats-preview-lifetime-row { border-color:rgba(67,56,202,.25); background:rgba(238,242,255,.82); color:#4338ca; }
     body.theme-japanese .stats-preview-lifetime-row strong { color:#312e81; }
-    .lifetime-breakdown-dialog { width:min(390px,calc(100vw - 30px)); padding:0; border:1px solid rgba(125,211,252,.4); border-radius:16px; background:linear-gradient(145deg,#132238,#080f1c); color:#eaf6ff; box-shadow:0 22px 70px rgba(0,0,0,.62); }
+    .lifetime-breakdown-dialog { position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); margin:0; width:min(390px,calc(100vw - 30px)); max-width:calc(100vw - 30px); max-height:calc(100vh - 30px); padding:0; border:1px solid rgba(125,211,252,.4); border-radius:16px; background:linear-gradient(145deg,#132238,#080f1c); color:#eaf6ff; box-shadow:0 22px 70px rgba(0,0,0,.62); }
     .lifetime-breakdown-dialog::backdrop { background:rgba(3,7,18,.72); backdrop-filter:blur(5px); }
     .lifetime-breakdown-inner { padding:20px; }.lifetime-breakdown-inner h2 { margin:0; font-size:1rem; }.lifetime-breakdown-inner p { margin:5px 0 14px; color:#8fa9c7; font-size:.68rem; line-height:1.5; }
     .lifetime-breakdown-list { display:grid; gap:7px; margin:0; }.lifetime-breakdown-list div { display:grid; grid-template-columns:1fr auto auto; align-items:baseline; gap:10px; padding:8px 9px; border:1px solid rgba(148,163,184,.16); border-radius:9px; background:rgba(15,23,42,.72); }.lifetime-breakdown-list dt { color:#cbdcf0; font-size:.76rem; font-weight:800; }.lifetime-breakdown-list dd { margin:0; font-size:.8rem; font-weight:900; font-variant-numeric:tabular-nums; }.lifetime-breakdown-list small { color:#8fa9c7; font-size:.65rem; font-variant-numeric:tabular-nums; }.lifetime-breakdown-list .lifetime-breakdown-total { border-color:rgba(125,211,252,.34); background:rgba(14,116,144,.15); }.lifetime-breakdown-close { float:right; margin:-4px -4px 0 10px; padding:4px 8px; border:0; background:transparent; color:#b9cce2; font:inherit; cursor:pointer; }
@@ -1353,7 +1353,7 @@
       border-radius: 5px;
     }
 
-    /* Wantedでは羊皮紙の上に金文字を置かず、濃い木目パネルで十分なコントラストを確保する。 */
+    /* Wantedでは羊皮紙�E上に金文字を置かず、濁E��木目パネルで十�Eなコントラストを確保する、E*/
     body.theme-wanted .stats-preview-metrics {
       background: #2a180d;
       border-color: #7e5a2f;
@@ -1512,7 +1512,7 @@
       width: 100%;
     }
 
-    /* ★文字位置・アイコン中央揃え完全強制 (display: flex; align-items: center; justify-content: center; text-align: center)★ */
+    /* ☁E��字位置・アイコン中央揁E��完�E強制 (display: flex; align-items: center; justify-content: center; text-align: center)☁E*/
     .link-btn {
       display: flex;
       flex-direction: column;
@@ -1569,7 +1569,7 @@
       background: var(--wavu-color);
     }
 
-    /* スマートな最下部管理バー */
+    /* スマ�Eトな最下部管琁E��ー */
     .card-admin-bar {
       display: flex;
       align-items: center;
@@ -1656,7 +1656,7 @@
       height: 11px;
     }
 
-    /* Modals & Inputs OSダークモード勝手変更防止 (モーダル内フォームのみ限定) */
+    /* Modals & Inputs OSダークモード勝手変更防止 (モーダル冁E��ォームのみ限宁E */
     .modal-wood input[type="text"],
     .modal-wood input[type="url"],
     .modal-wood select,
@@ -2186,7 +2186,7 @@
         margin-bottom: 6px;
       }
 
-      /* モバイルでのカード内ステータスボックス最適化 */
+      /* モバイルでのカード�EスチE�Eタスボックス最適匁E*/
       .card-stats-container {
         padding: 6px 4px;
         margin: 4px 0 8px;
@@ -2208,7 +2208,7 @@
 
       .last-seen-badge span {
         display: inline-block !important;
-        /* スマホでも詳細日時(YYYY/MM/DD HH:mm)を表示 */
+        /* スマ�Eでも詳細日晁EYYYY/MM/DD HH:mm)を表示 */
         font-size: 0.52rem !important;
         opacity: 0.85;
       }
@@ -2232,7 +2232,7 @@
         justify-content: center;
       }
 
-      /* 2列表示では統計を2段にして、長いランク名や数値がカード外へ出ないようにする。 */
+      /* 2列表示では統計を2段にして、E��ぁE��ンク名や数値がカード外へ出なぁE��ぁE��する、E*/
       .stats-preview-head {
         display: block;
         margin: 3px 0 7px;
@@ -2271,7 +2271,7 @@
         padding: 6px 4px;
       }
 
-      /* Rating は桁数が長くなりやすいため、モバイルでは1行分の幅を確保する。 */
+      /* Rating は桁数が長くなりやすいため、モバイルでは1行�Eの幁E��確保する、E*/
       .stats-preview-metric:nth-child(2),
       .stats-preview-metric:nth-child(3) {
         grid-column: span 2;
@@ -2381,7 +2381,7 @@
   <script>
     // Change this fixed feature version only when integration UI assets change.
     (() => {
-      const assetVersion = '20260802-matchup-inline-retry';
+      const assetVersion = '20260802-pentagon-mobile-gap-modal-center';
       const stylesheet = document.createElement('link');
       stylesheet.rel = 'stylesheet';
       stylesheet.href = `stats-integration-v4.css?v=${assetVersion}`;
@@ -2394,14 +2394,14 @@
   <div class="boot-splash" id="bootSplash" role="status" aria-live="polite">
     <img src="assets/icon-192.png" alt="バニラ">
     <strong>拳トモくん</strong>
-    <span>マイリストを準備しています…</span>
+    <span>マイリストを準備してぁE��す…</span>
   </div>
 
-  <!-- 画面右上固定のUI切り替えボックス -->
+  <!-- 画面右上固定�EUI刁E��替え�EチE��ス -->
   <div class="theme-select-box">
     <span>🎨</span>
     <select id="themeSelectDropdown" class="theme-select-dropdown" onchange="selectTheme(this.value)"
-      aria-label="UIテーマ選択">
+      aria-label="UIチE�Eマ選抁E>
       <option value="wanted">WANTED (酒場)</option>
       <option value="modern">MODERN (ネオン)</option>
       <option value="japanese">JAPANESE (涼風和風)</option>
@@ -2429,40 +2429,40 @@
           <button class="btn-wood"
             style="padding: 5px 12px; font-size: 0.75rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;"
             onclick="refreshAllWavuStats()">
-            ⚡ 全ステータス一括更新
+            ⚡ 全スチE�Eタス一括更新
           </button>
         </div>
       </div>
 
       <header class="saloon-header">
         <div class="saloon-title-wrap">
-          <h1 class="saloon-title" id="pageTitle" onclick="startEditTitle()" title="クリックしてタイトルを変更">
+          <h1 class="saloon-title" id="pageTitle" onclick="startEditTitle()" title="クリチE��してタイトルを変更">
             <span id="titleText" style="visibility:hidden"></span>
-            <span class="title-edit-hint">✏️</span>
+            <span class="title-edit-hint">✏︁E/span>
           </h1>
           <input class="title-input" type="text" id="titleInput" maxlength="40" style="display:none;"
-            aria-label="タイトル編集">
-          <div class="saloon-subtitle" id="subTitleText">鉄拳8 · … players</div>
+            aria-label="タイトル編雁E>
+          <div class="saloon-subtitle" id="subTitleText">鉁E��8 · … players</div>
           <div class="saloon-quick-actions">
-            <button type="button" class="vs-mode-toggle" id="vsModeToggleBtn" aria-pressed="false">⚔ VSモード β</button>
-            <button type="button" class="community-quick-toggle" id="communityQuickBtn">◈ 勢力図</button>
-            <button type="button" class="award-playback-toggle" id="awardPlaybackBtn" hidden>🏆 アワード</button>
+            <button type="button" class="vs-mode-toggle" id="vsModeToggleBtn" aria-pressed="false">⚁EVSモーチEβ</button>
+            <button type="button" class="community-quick-toggle" id="communityQuickBtn">◁E勢力図</button>
+            <button type="button" class="award-playback-toggle" id="awardPlaybackBtn" hidden>🏆 アワーチE/button>
           </div>
         </div>
         <br>
         <button class="btn-add-bounty" onclick="openAddModal()" id="btnAddMember">
-          ➕ メンバーを追加
+          ➁Eメンバ�Eを追加
         </button>
       </header>
 
       <!-- Loading -->
       <div class="loading-state" id="loadingState">
-        <p>掲示板データを読み込み中...</p>
+        <p>掲示板チE�Eタを読み込み中...</p>
       </div>
 
       <!-- Empty State -->
       <div class="empty-state" id="emptyState" style="display:none;">
-        <p>📜 現在、登録されたメンバーはいません</p>
+        <p>📜 現在、登録されたメンバ�EはぁE��せん</p>
       </div>
 
       <!-- Poster Grid -->
@@ -2473,65 +2473,64 @@
   <!-- Add / Edit Modal -->
   <div class="modal-overlay" id="editModal">
     <div class="modal-wood">
-      <button class="modal-close" type="button" onclick="closeModal('editModal')" aria-label="メンバー作成画面を閉じる">×</button>
-      <div class="modal-title" id="modalTitle">メンバーを作成</div>
+      <button class="modal-close" type="button" onclick="closeModal('editModal')" aria-label="メンバ�E作�E画面を閉じる">ÁE/button>
+      <div class="modal-title" id="modalTitle">メンバ�Eを作�E</div>
       <form id="memberForm" onsubmit="saveMember(event)">
         <input type="hidden" id="editKey" value="">
         <input type="hidden" id="photoData" value="">
 
         <div class="form-group">
-          <label class="form-label" for="inputName">カードに表示する名前（任意）</label>
-          <input class="form-input" type="text" id="inputName" placeholder="身内での呼び名など。未入力なら自動取得名を表示" maxlength="50" oninput="markNameInputEdited()">
+          <label class="form-label" for="inputName">カードに表示する名前�E�任意！E/label>
+          <input class="form-input" type="text" id="inputName" placeholder="身冁E��の呼び名など。未入力なら�E動取得名を表示" maxlength="50" oninput="markNameInputEdited()">
           <div class="name-tracking-status" id="nameTrackingStatus" role="status" aria-live="polite"></div>
-          <div class="form-note">名前を入力した場合は、その固定名に🔒を付け、EWGF・Wavuから取得した最新名を2段目に併記します。未入力なら自動取得名を大きな主表示にし、1段ですっきり表示します。</div>
+          <div class="form-note">名前を�E力した場合�E、その固定名に🔒を付け、EWGF・Wavuから取得した最新名を2段目に併記します。未入力なら�E動取得名を大きな主表示にし、E段ですっきり表示します、E/div>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="inputId">鉄拳8 ID (12桁ハイフン不要)</label>
-          <input class="form-input" type="text" id="inputId" placeholder="例: 3A4B5C6D7E8F (ハイフン不要)" required
+          <label class="form-label" for="inputId">鉁E��8 ID (12桁ハイフン不要E</label>
+          <input class="form-input" type="text" id="inputId" placeholder="侁E 3A4B5C6D7E8F (ハイフン不要E" required
             maxlength="60">
-          <div class="form-note">※ハイフンは自動で除去します。英字の大文字・小文字が違う場合も、該当プレイヤーを確認できれば正式なID表記へ自動補正します。</div>
+          <div class="form-note">※ハイフンは自動で除去します。英字�E大斁E���E小文字が違う場合も、該当�Eレイヤーを確認できれば正式なID表記へ自動補正します、E/div>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="inputSubtitle">二つ名 / 役職 / メモ（任意）</label>
-          <input class="form-input" type="text" id="inputSubtitle" placeholder="例: 俺は全てを支配する" maxlength="40">
+          <label class="form-label" for="inputSubtitle">二つ吁E/ 役職 / メモ�E�任意！E/label>
+          <input class="form-input" type="text" id="inputSubtitle" placeholder="侁E 俺は全てを支配すめE maxlength="40">
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="inputCountry">国籍 / 地域（任意）</label>
+          <label class="form-label" for="inputCountry">国籁E/ 地域（任意！E/label>
           <div class="country-picker" id="countryPicker">
             <button class="form-input country-picker-button" id="countryPickerButton" type="button" aria-haspopup="listbox" aria-expanded="false">
-              <span id="countryPickerButtonContent">未設定（カードには表示しない）</span><span aria-hidden="true">▾</span>
+              <span id="countryPickerButtonContent">未設定（カードには表示しなぁE��E/span><span aria-hidden="true">▾</span>
             </button>
             <div class="country-picker-menu" id="countryPickerMenu" role="listbox" hidden></div>
             <select id="inputCountry" hidden aria-hidden="true" tabindex="-1">
-              <option value="">未設定（カードには表示しない）</option>
+              <option value="">未設定（カードには表示しなぁE��E/option>
             </select>
           </div>
-          <div class="form-note">※設定した場合のみ、国旗SVGをカードに表示します。</div>
+          <div class="form-note">※設定した場合�Eみ、国旗SVGをカードに表示します、E/div>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="inputXUrl">X (Twitter) URL または ユーザー名</label>
-          <input class="form-input" type="text" id="inputXUrl" placeholder="例: @username または URL" maxlength="200">
-          <div class="form-note">※アカウントをお持ちでない場合は空欄のまま保存してください。（カード上のXボタンが非表示になります）</div>
+          <label class="form-label" for="inputXUrl">X (Twitter) URL また�E ユーザー吁E/label>
+          <input class="form-input" type="text" id="inputXUrl" placeholder="侁E @username また�E URL" maxlength="200">
+          <div class="form-note">※アカウントをお持ちでなぁE��合�E空欁E�Eまま保存してください。（カード上�EXボタンが非表示になります！E/div>
         </div>
 
 
 
         <!-- Photo Upload & Drag/Drop Area -->
         <div class="form-group">
-          <label class="form-label">プロフィール画像（ドラッグ＆ドロップ対応）</label>
+          <label class="form-label">プロフィール画像（ドラチE���E�E��ロチE�E対応！E/label>
           <div class="drop-zone" id="dropZone" onclick="triggerFileInput()">
             <div class="photo-upload-area">
               <div class="photo-preview" id="photoPreview">
-                <span>無画像</span>
+                <span>無画僁E/span>
               </div>
               <div class="photo-controls">
                 <label class="file-input-btn" onclick="event.stopPropagation()">
-                  📷 画像を選択
-                  <input type="file" id="inputPhotoFile" accept="image/*" style="display:none;"
+                  📷 画像を選抁E                  <input type="file" id="inputPhotoFile" accept="image/*" style="display:none;"
                     onchange="handleFileSelect(event)">
                 </label>
                 <div>
@@ -2540,8 +2539,8 @@
                 </div>
               </div>
             </div>
-            <div class="drop-hint">PCの方はここに画像をドラッグ＆ドロップして入力できます</div>
-            <div class="form-note">※画像を設定しない場合は、データ取得後に判定されたメインキャラクターの画像を表示します。休眠中と判定された場合のみ、データの鮮度を示すため落ち着いた色になります。</div>
+            <div class="drop-hint">PCの方はここに画像をドラチE���E�E��ロチE�Eして入力できまぁE/div>
+            <div class="form-note">※画像を設定しなぁE��合�E、データ取得後に判定されたメインキャラクターの画像を表示します。休眠中と判定された場合�Eみ、データの鮮度を示すため落ち着ぁE��色になります、E/div>
           </div>
         </div>
 
@@ -2552,7 +2551,7 @@
 
         <div class="modal-actions">
           <button class="btn-wood btn-cancel" type="button" onclick="closeModal('editModal')">キャンセル</button>
-          <button class="btn-wood btn-save" type="submit" id="btnSaveSubmit">メンバーを追加</button>
+          <button class="btn-wood btn-save" type="submit" id="btnSaveSubmit">メンバ�Eを追加</button>
         </div>
       </form>
     </div>
@@ -2561,16 +2560,16 @@
   <!-- Crop Modal (トリミング・領域選択モーダル) -->
   <div class="modal-overlay" id="cropModal">
     <div class="modal-wood" style="max-width: 520px;">
-      <div class="modal-title">切り抜き領域を選択</div>
+      <div class="modal-title">刁E��抜き領域を選抁E/div>
       <p style="font-size:0.8rem; color:#d1b894; text-align:center; margin-bottom: 12px;">
-        枠をドラッグ・ズームして最適な領域を決定してください
+        枠をドラチE��・ズームして最適な領域を決定してください
       </p>
       <div class="crop-container">
         <img id="cropImage" src="" alt="Crop Source">
       </div>
       <div class="modal-actions">
         <button class="btn-wood btn-cancel" type="button" onclick="closeModal('cropModal')">キャンセル</button>
-        <button class="btn-wood btn-save" type="button" onclick="applyCrop()">領域を決定（切り抜き）</button>
+        <button class="btn-wood btn-save" type="button" onclick="applyCrop()">領域を決定（�Eり抜き！E/button>
       </div>
     </div>
   </div>
@@ -2578,10 +2577,9 @@
   <!-- Delete Confirm Modal -->
   <div class="modal-overlay" id="deleteModal">
     <div class="modal-wood">
-      <div class="modal-title">メンバーを削除</div>
+      <div class="modal-title">メンバ�Eを削除</div>
       <p style="text-align:center; margin-bottom: 20px;">
-        <span id="deleteName" style="color:var(--gold-accent); font-weight:bold;"></span> を削除しますか？
-      </p>
+        <span id="deleteName" style="color:var(--gold-accent); font-weight:bold;"></span> を削除しますか�E�E      </p>
       <input type="hidden" id="deleteKey" value="">
       <div class="modal-actions">
         <button class="btn-wood btn-cancel" type="button" onclick="closeModal('deleteModal')">キャンセル</button>
@@ -2592,7 +2590,7 @@
 
   <!-- Toast -->
   <div class="toast" id="toast">
-    <span id="toastMsg">完了</span>
+    <span id="toastMsg">完亁E/span>
   </div>
 
   <script>
@@ -2622,9 +2620,8 @@
     let cropper = null;
     let currentTheme = 'wanted'; // 'wanted', 'modern', or 'japanese'
 
-    // === 12h自動更新の重複通信防止 ===
-    const backgroundFetchIds = new Set(); // リスト全体ではなくプレイヤーID単位で管理
-    const backgroundStatsQueue = [];
+    // === 12h自動更新の重褁E��信防止 ===
+    const backgroundFetchIds = new Set(); // リスト�E体ではなく�EレイヤーID単位で管琁E    const backgroundStatsQueue = [];
     let backgroundStatsQueueRunning = false;
     const waitForStatsIntegration = (timeoutMs = 6000) => {
       if (window.kentomoStatsIntegrationReady) return Promise.resolve(true);
@@ -2642,7 +2639,7 @@
         window.addEventListener('kentomo:stats-integration-ready', onReady, { once: true });
       });
     };
-    const reportQueuedBackgroundFetch = (job, message = 'リスト内の取得順を待っています') => {
+    const reportQueuedBackgroundFetch = (job, message = 'リスト�Eの取得頁E��征E��てぁE��ぁE) => {
       window.dispatchEvent(new CustomEvent('kentomo:fetch-progress', {
         detail: { memberKey: job.memberKey, gameId: job.gameId, stage: 'queued', at: Date.now(), message }
       }));
@@ -2681,7 +2678,7 @@
               window.dispatchEvent(new CustomEvent('kentomo:fetch-progress', {
                 detail: {
                   memberKey: job.memberKey, gameId: job.gameId, stage: 'error', at: Date.now(),
-                  errorMessage: '統計モジュールの起動を確認できません。再読み込み後に再試行してください。'
+                  errorMessage: '統計モジュールの起動を確認できません。�E読み込み後に再試行してください、E
                 }
               }));
             }
@@ -2749,12 +2746,12 @@
           }
         });
 
-        // 初期表示を LocalStorage カウント & 最終更新ログで即時描画
+        // 初期表示めELocalStorage カウンチE& 最終更新ログで即時描画
 
         updateLastUpdateLogBadge();
 
 
-        // Firebase リアルタイム全デバイス同期 最終更新ログリスナー (settings ノード)
+        // Firebase リアルタイム全チE��イス同期 最終更新ログリスナ�E (settings ノ�EチE
         db.ref('settings/last_update_log').on('value', (snap) => {
           updateLastUpdateLogBadge(snap.val());
         });
@@ -2780,7 +2777,7 @@
       if (currentTheme === 'modern') themeLabel = 'MODERN (ネオン)';
       if (currentTheme === 'japanese') themeLabel = 'JAPANESE (涼風和風)';
 
-      showToast(`UIテーマを [ ${themeLabel} ] に変更しました`);
+      showToast(`UIチE�Eマを [ ${themeLabel} ] に変更しました`);
     }
 
     function applyTheme(theme) {
@@ -2796,15 +2793,15 @@
       if (theme === 'wanted' && statusText.textContent.includes('ONLINE')) statusText.textContent = 'SALOON ONLINE';
       else if (theme === 'modern' && statusText.textContent.includes('ONLINE')) statusText.textContent = 'ONLINE';
       else if (theme === 'japanese' && statusText.textContent.includes('ONLINE')) statusText.textContent = '涼風 ONLINE';
-      btnAdd.innerHTML = '➕ メンバーを追加';
+      btnAdd.innerHTML = '➁Eメンバ�Eを追加';
 
       // A theme change must not refetch Firebase or rebuild every card. Replacing
       // the image DOM here caused a visible flash, especially on mobile.
-      const headerText = theme === 'japanese' ? '武芸者名鑑' : 'WANTED';
-      const subHeaderText = theme === 'japanese' ? '鉄拳八・対戦録' : 'DEAD OR ALIVE';
+      const headerText = theme === 'japanese' ? '武芸老E��鑁E : 'WANTED';
+      const subHeaderText = theme === 'japanese' ? '鉁E��八・対戦録' : 'DEAD OR ALIVE';
       const defaultSubtitle = theme === 'modern'
         ? 'Member'
-        : (theme === 'japanese' ? '好敵手' : '手配中');
+        : (theme === 'japanese' ? '好敵扁E : '手�E中');
       document.querySelectorAll('.poster-card').forEach((card) => {
         const member = window.currentMembersData?.[card.dataset.memberKey];
         const header = card.querySelector('.poster-header-text');
@@ -2863,7 +2860,7 @@
 
     function processImageFile(file) {
       if (!file.type.startsWith('image/')) {
-        showToast('⚠️ 画像ファイルを選択してください');
+        showToast('⚠�E�E画像ファイルを選択してください');
         return;
       }
 
@@ -2898,9 +2895,8 @@
       });
 
       let croppedDataUrl = canvas.toDataURL('image/jpeg', 0.72);
-      // Realtime Databaseへ巨大なBase64画像を入れない。絵柄によって
-      // 40KBを超える場合は、見た目を保てる範囲でもう一段圧縮する。
-      if (croppedDataUrl.length > 40 * 1024) {
+      // Realtime Databaseへ巨大なBase64画像を入れなぁE��絵柁E��よって
+      // 40KBを趁E��る場合�E、見た目を保てる篁E��でもう一段圧縮する、E      if (croppedDataUrl.length > 40 * 1024) {
         croppedDataUrl = canvas.toDataURL('image/jpeg', 0.58);
       }
       setPhotoPreview(croppedDataUrl);
@@ -2922,7 +2918,7 @@
     /* ===== Prototype Stats & Radar Chart Logic (ewgf.gg Official API) ===== */
     const DEFAULT_EWGF_API_KEY = '';
     const LOCAL_STATS_CACHE_KEY = 't8_wanted_ewgf_stats_v3';
-    const CACHE_TTL_MS = 12 * 60 * 60 * 1000; // 自動更新: 12時間キャッシュ
+    const CACHE_TTL_MS = 12 * 60 * 60 * 1000; // 自動更新: 12時間キャチE��ュ
 
     function getEwgfApiKey() {
       return localStorage.getItem('t8_ewgf_api_key') || DEFAULT_EWGF_API_KEY;
@@ -3069,9 +3065,7 @@
     };
 
     function getLocalStats(gameId, memberData = null) {
-      // 同じTEKKEN IDはリストをまたいで1つのキャッシュとして扱う。
-      // 各リストのFirebaseに残った古いfetchedStatsで、新しい共通キャッシュを上書きしない。
-      let localStats = null;
+      // 同じTEKKEN IDはリストをまたいで1つのキャチE��ュとして扱ぁE��E      // 吁E��スト�EFirebaseに残った古ぁEetchedStatsで、新しい共通キャチE��ュを上書きしなぁE��E      let localStats = null;
       try {
         const raw = localStorage.getItem(`${LOCAL_STATS_CACHE_KEY}_${gameId}`);
         if (raw) localStats = JSON.parse(raw);
@@ -3091,8 +3085,7 @@
 
       const localTime = Number(localStats.cachedAt || localStats.updatedAt || 0);
       const memberTime = Number(memberStats.cachedAt || memberStats.updatedAt || 0);
-      // 通信失敗の新しい記録で、過去の正常データを覆わない。
-      const localFailed = Boolean(localStats.isError || localStats.refreshFailed);
+      // 通信失敗�E新しい記録で、E��去の正常チE�Eタを要E��なぁE��E      const localFailed = Boolean(localStats.isError || localStats.refreshFailed);
       const memberFailed = Boolean(memberStats.isError || memberStats.refreshFailed);
       const newer = localFailed !== memberFailed
         ? (localFailed ? memberStats : localStats)
@@ -3158,10 +3151,9 @@
         stats.cachedAt = Date.now();
         localStorage.setItem(`${LOCAL_STATS_CACHE_KEY}_${gameId}`, JSON.stringify(stats));
 
-        // 非同期取得の完了後に別リストへ切り替わっている場合、現在のリストへ
-        // fetchedStatsだけのゴーストメンバーを作らない。現在表示中の実在メンバーと
-        // TEKKEN 8 IDが一致する場合に限ってFirebaseへ同期する。
-        if (!membersRef || !window.currentMembersData) return;
+        // 非同期取得�E完亁E��に別リストへ刁E��替わってぁE��場合、現在のリストへ
+        // fetchedStatsだけ�Eゴーストメンバ�Eを作らなぁE��現在表示中の実在メンバ�Eと
+        // TEKKEN 8 IDが一致する場合に限ってFirebaseへ同期する、E        if (!membersRef || !window.currentMembersData) return;
 
         let verifiedKey = null;
         if (memberKey) {
@@ -3219,9 +3211,9 @@
     function formatTimeAgo(ts) {
       if (!ts) return '未計測';
       const diffSec = Math.floor((Date.now() - ts) / 1000);
-      if (diffSec < 60) return 'たった今';
+      if (diffSec < 60) return 'たった仁E;
       const diffMin = Math.floor(diffSec / 60);
-      if (diffMin < 60) return `${diffMin}分前`;
+      if (diffMin < 60) return `${diffMin}刁E��`;
       const diffHour = Math.floor(diffMin / 60);
       if (diffHour < 24) return `${diffHour}時間前`;
       const diffDay = Math.floor(diffHour / 24);
@@ -3242,16 +3234,16 @@
 
     function getLastSeenBadgeHtml(ts, battle = null) {
       const scopeText = 'Ranked / Group / Player / Quick の全対戦を対象';
-      const scopeAttrs = `tabindex="0" role="button" data-last-seen-scope="${scopeText}" aria-label="最終対戦。${scopeText}"`;
+      const scopeAttrs = `tabindex="0" role="button" data-last-seen-scope="${scopeText}" aria-label="最終対戦、E{scopeText}"`;
       if (!ts) {
-        return `<div class="last-seen-badge inactive" ${scopeAttrs}><span class="last-seen-icon">❓</span><span class="last-seen-label">最終対戦</span><span class="last-seen-time">データ未取得</span></div>`;
+        return `<div class="last-seen-badge inactive" ${scopeAttrs}><span class="last-seen-icon">❁E/span><span class="last-seen-label">最終対戦</span><span class="last-seen-time">チE�Eタ未取征E/span></div>`;
       }
       const diffHour = (Date.now() - ts) / (1000 * 3600);
       const timeStr = formatTimeAgo(ts);
       const exactStr = formatExactDateTime(ts);
       const character = battle && battle.latestBattleCharacter ? escapeHtml(battle.latestBattleCharacter) : '';
       const rawType = battle && battle.latestBattleType ? String(battle.latestBattleType) : '';
-      const type = rawType && !/^(?:種別不明|unknown)$/i.test(rawType) ? escapeHtml(rawType) : '';
+      const type = rawType && !/^(?:種別不�E|unknown)$/i.test(rawType) ? escapeHtml(rawType) : '';
       const detail = character || type ? `<span class="last-seen-detail">${[character, type].filter(Boolean).join(' · ')}</span>` : '';
       const detailClass = detail ? ' has-battle-detail' : '';
       const badgeContent = (icon) => `<span class="last-seen-icon">${icon}</span><span class="last-seen-label">最終対戦</span><span class="last-seen-time">${timeStr}</span><span class="last-seen-exact">${exactStr}</span>${detail}`;
@@ -3298,10 +3290,8 @@
         updateLastUpdateLogBadge(logData);
       } catch (e) {}
 
-      // 更新ログは表示用の端末内データに限定する。取得カードごとの
-      // Firebase書き込みは、旧ルール環境でpermission_deniedを人数分
-      // 連続発生させるため行わない。統計本体はfetchedStatsへ同期される。
-    }
+      // 更新ログは表示用の端末冁E��ータに限定する。取得カードごとの
+      // Firebase書き込みは、旧ルール環墁E��permission_deniedを人数刁E      // 連続発生させるため行わなぁE��統計本体�EfetchedStatsへ同期される、E    }
 
     function updateLastUpdateLogBadge(logData) {
       const badge = document.getElementById('lastUpdateLogText');
@@ -3345,7 +3335,7 @@
           badge.style.color = '#edd9b4';
           return;
         }
-        badge.textContent = '🕒 最終データ更新: 記録なし';
+        badge.textContent = '🕒 最終データ更新: 記録なぁE;
       }
     }
 
@@ -3370,19 +3360,18 @@
 
     function promptCustomWorkerUrl() {
       const current = getCustomWorkerUrl();
-      const res = prompt('Cloudflare Worker (または Wavu プロキシ) の URL を入力してください:\n(例: https://my-wavu-proxy.workers.dev)', current);
+      const res = prompt('Cloudflare Worker (また�E Wavu プロキシ) の URL を�E力してください:\n(侁E https://my-wavu-proxy.workers.dev)', current);
       if (res !== null) {
         setCustomWorkerUrl(res);
         if (res.trim()) {
-          showToast('🌐 自前 Worker URL を保存しました！');
+          showToast('🌐 自剁EWorker URL を保存しました�E�E);
         } else {
           showToast('🧹 Worker URL をクリアしました');
         }
       }
     }
 
-    // σ² < 75 のキャラだけから最多試合キャラを選ぶ。該当者がいない場合だけ全キャラに広げる。
-    function selectWavuMain(charGamesMap, charRatingMap, charSigmaMap = {}) {
+    // σ² < 75 のキャラだけから最多試合キャラを選ぶ。該当老E��ぁE��ぁE��合だけ�Eキャラに庁E��る、E    function selectWavuMain(charGamesMap, charRatingMap, charSigmaMap = {}) {
       let mainChar = null;
       let mainCharGames = 0;
       const allEntries = Object.entries(charGamesMap || {});
@@ -3409,9 +3398,8 @@
       };
     }
 
-    // Wavu の rating カードを DOM から読む。正規表現で入れ子の div を読むと
-    // ページ構造の小さな変更で壊れるため、各カードを独立して解析する。
-    function parseWavuRatings(html) {
+    // Wavu の rating カードを DOM から読む。正規表現で入れ子�E div を読むと
+    // ペ�Eジ構造の小さな変更で壊れるため、各カードを独立して解析する、E    function parseWavuRatings(html) {
       const charGamesMap = {};
       const charRatingMap = {};
       const charSigmaMap = {};
@@ -3443,8 +3431,7 @@
       return { charGamesMap, charRatingMap, charSigmaMap, qualifiedCharGamesMap, qualifiedCharRatingMap };
     }
 
-    // wank.wavu.wiki から全キャラの試合数と μ を取得する。
-    async function fetchRealWavuData(cleanId) {
+    // wank.wavu.wiki から全キャラの試合数と μ を取得する、E    async function fetchRealWavuData(cleanId) {
       let ratingMu = null;
       let mainChar = null;
       let mainCharGames = null;
@@ -3453,7 +3440,7 @@
       let charSigmaMap = {};
       let wavuLatestTs = null;
 
-      // 自前 Worker URL が設定されている場合は優先使用 (Cloudflare ブロック完全回避)
+      // 自剁EWorker URL が設定されてぁE��場合�E優先使用 (Cloudflare ブロチE��完�E回避)
       const customWorker = getCustomWorkerUrl();
       if (customWorker) {
         try {
@@ -3481,9 +3468,7 @@
               if (data.charSigmaMap) {
                 charSigmaMap = data.charSigmaMap;
               }
-              // Worker が Leaderboard グループを返した場合は、その中だけで選ぶ。
-              // 古いWavu HTMLでは σ 値の要素名が変わることがあるため、数値のclass名には依存しない。
-              const qualifiedGames = data.qualifiedCharGamesMap || {};
+              // Worker ぁELeaderboard グループを返した場合�E、その中だけで選ぶ、E              // 古いWavu HTMLでは ρE値の要素名が変わることがあるため、数値のclass名には依存しなぁE��E              const qualifiedGames = data.qualifiedCharGamesMap || {};
               const qualifiedRatings = data.qualifiedCharRatingMap || {};
               const selected = Object.keys(qualifiedGames).length > 0
                 ? selectWavuMain(qualifiedGames, qualifiedRatings)
@@ -3548,8 +3533,7 @@
               : selectWavuMain(charGamesMap, charRatingMap, charSigmaMap);
             mainChar = selected.mainChar;
             mainCharGames = selected.mainCharGames;
-            // 対象キャラの μ がなければ、対戦履歴から推定した値を残す。
-            if (selected.ratingMu !== null) ratingMu = selected.ratingMu;
+            // 対象キャラの μ がなければ、対戦履歴から推定した値を残す、E            if (selected.ratingMu !== null) ratingMu = selected.ratingMu;
 
             return { ratingMu, mainChar, mainCharGames, charGamesMap, charRatingMap, charSigmaMap, wavuLatestTs };
           }
@@ -3564,7 +3548,7 @@
       const cleanId = cleanTekkenId(gameId);
       const cached = getLocalStats(cleanId);
 
-      // 12時間以内のキャッシュがあり、強制的更新でなければそのまま返す (1日100回クォータの徹底節約)
+      // 12時間以冁E�EキャチE��ュがあり、強制皁E��新でなければそ�Eまま返す (1日100回クォータの徹底節紁E
       if (!forceRefresh && cached && (Date.now() - (cached.cachedAt || 0) < CACHE_TTL_MS) && !cached.isError) {
         return cached;
       }
@@ -3579,7 +3563,7 @@
         let workerProfile = null;
         const customWorker = getCustomWorkerUrl();
 
-        // 1. 自前 Worker がある場合は優先使用
+        // 1. 自剁EWorker がある場合�E優先使用
         if (customWorker) {
           try {
             const workerEndpoint = `${customWorker.replace(/\/$/, '')}?ewgfId=${encodeURIComponent(cleanId)}${forceRefresh ? '&force=1' : ''}`;
@@ -3588,9 +3572,7 @@
               json = await res.json();
               if (json && json.ok === true && json.ewgfId) workerProfile = json;
             } else if (memberKey && (res.status === 404 || res.status === 422) && /^[A-Za-z0-9]{12}$/.test(cleanId)) {
-              // EWGF/WavuのプレイヤーURLは大小文字を区別する。過去に誤った
-              // 大小文字で保存されたメンバーは、検索で正式IDを復元して再試行する。
-              const resolvedPlayer = await resolveCanonicalTekkenId(cleanId);
+              // EWGF/WavuのプレイヤーURLは大小文字を区別する。過去に誤っぁE              // 大小文字で保存されたメンバ�Eは、検索で正式IDを復允E��て再試行する、E              const resolvedPlayer = await resolveCanonicalTekkenId(cleanId);
               if (resolvedPlayer.status === 'corrected') {
                 const correctedStats = await fetchEwgfStats(
                   resolvedPlayer.gameId,
@@ -3608,8 +3590,7 @@
           }
         }
 
-        // 2. 直接 fetch または CORS プロキシ経由で api.ewgf.gg を試行
-        if (!json && apiKey) {
+        // 2. 直接 fetch また�E CORS プロキシ経由で api.ewgf.gg を試衁E        if (!json && apiKey) {
           const targetUrl = `https://api.ewgf.gg/external/battles/${encodeURIComponent(cleanId)}`;
           const fetchTargets = [
             { url: targetUrl, headers: { 'Authorization': `Bearer ${apiKey}` } },
@@ -3635,8 +3616,7 @@
 
         const battles = json ? (Array.isArray(json) ? json : (json.data || [])) : [];
 
-        // wank.wavu.wiki から最新 μ レート & メインキャラ試合数 & 最新対戦日時を取得
-        const wavuData = await fetchRealWavuData(cleanId);
+        // wank.wavu.wiki から最新 μ レーチE& メインキャラ試合数 & 最新対戦日時を取征E        const wavuData = await fetchRealWavuData(cleanId);
         const cachedLifetimeTotals = cached && Number.isFinite(Number(cached.totalRecordedGames)) ? {
           totalRankedGames: cached.totalRankedGames,
           totalPlayerMatchGames: cached.totalPlayerMatchGames,
@@ -3667,12 +3647,10 @@
             .replace(/[\s\-‐‑‒–—―]/g, '');
           const latestInfo = getPlayerBattleInfo(latestBattle);
           const recentMain = wavuData && wavuData.mainChar;
-          // ewgf の履歴は新しい順。Recent main と同じキャラが最初に現れた試合の段位を採用する。
-          const recentMainBattle = recentMain
+          // ewgf の履歴は新しい頁E��Recent main と同じキャラが最初に現れた試合�E段位を採用する、E          const recentMainBattle = recentMain
             ? battles.find((battle) => normaliseCharacter(getPlayerBattleInfo(battle).char) === normaliseCharacter(recentMain))
             : null;
-          // Recent main が決まっているのに直近50戦にいない場合、他キャラの段位は表示しない。
-          const rankBattleInfo = recentMain
+          // Recent main が決まってぁE��のに直迁E0戦にぁE��ぁE��合、他キャラの段位�E表示しなぁE��E          const rankBattleInfo = recentMain
             ? (recentMainBattle ? getPlayerBattleInfo(recentMainBattle) : null)
             : latestInfo;
           const playerChar = latestInfo.char;
@@ -3684,8 +3662,7 @@
             battleTs = new Date(latestBattle.battle_at).getTime();
           }
 
-          // ewgf の battle_at と wavu の battle_at を比較し、より最新のタイムスタンプを優先
-          let wavuTs = wavuData ? wavuData.wavuLatestTs : null;
+          // ewgf の battle_at と wavu の battle_at を比輁E��、より最新のタイムスタンプを優允E          let wavuTs = wavuData ? wavuData.wavuLatestTs : null;
           let finalTs = battleTs;
           if (wavuTs && (!finalTs || wavuTs > finalTs)) {
             finalTs = wavuTs;
@@ -3693,13 +3670,11 @@
 
           const statsData = {
             gameId: cleanId,
-            // メインと Rating は Wavu で同じキャラを基準にする。ewgf の最新対戦キャラでは上書きしない。
-            mainChar: (wavuData && wavuData.mainChar) || playerChar || 'Unknown',
+            // メインと Rating は Wavu で同じキャラを基準にする。ewgf の最新対戦キャラでは上書きしなぁE��E            mainChar: (wavuData && wavuData.mainChar) || playerChar || 'Unknown',
             mainCharGames: (wavuData && wavuData.mainCharGames !== null)
               ? wavuData.mainCharGames
               : (cached ? cached.mainCharGames : null),
-            // Recent main を直近50戦で最後に使用した試合時点の段位。
-            danRank: playerRank || (recentMain ? '直近50戦内に記録なし' : 'Unranked'),
+            // Recent main を直迁E0戦で最後に使用した試合時点の段位、E            danRank: playerRank || (recentMain ? '直迁E0戦冁E��記録なぁE : 'Unranked'),
             tekkenPower: playerPower || 0,
             ratingMu: wavuData.ratingMu !== null ? wavuData.ratingMu : (cached ? cached.ratingMu : null),
             charRatingMap: { ...(wavuData.charRatingMap || {}) },
@@ -3714,11 +3689,10 @@
           setLocalStats(cleanId, statsData, memberKey);
           return statsData;
         } else if (wavuData && wavuData.ratingMu !== null) {
-          // ewgf記録がなくても wavu データが取れた場合
-          let wavuTs = wavuData ? wavuData.wavuLatestTs : null;
+          // ewgf記録がなくてめEwavu チE�Eタが取れた場吁E          let wavuTs = wavuData ? wavuData.wavuLatestTs : null;
           const wavuOnlyStats = {
             gameId: cleanId,
-            mainChar: wavuData.mainChar || (cached ? cached.mainChar : 'Wavu取得済'),
+            mainChar: wavuData.mainChar || (cached ? cached.mainChar : 'Wavu取得渁E),
             mainCharGames: wavuData.mainCharGames || null,
             danRank: cached ? cached.danRank : '-',
             tekkenPower: cached ? cached.tekkenPower : 0,
@@ -3735,7 +3709,7 @@
         } else {
           const noBattleStats = {
             gameId: cleanId,
-            mainChar: cached ? cached.mainChar : '対戦記録なし',
+            mainChar: cached ? cached.mainChar : '対戦記録なぁE,
             danRank: cached ? cached.danRank : '-',
             tekkenPower: cached ? cached.tekkenPower : 0,
             ratingMu: cached ? cached.ratingMu : null,
@@ -3863,12 +3837,12 @@
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = currentTheme === 'modern' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)';
-        ctx.fillText('編集でグラフ設定', centerX, centerY);
+        ctx.fillText('編雁E��グラフ設宁E, centerX, centerY);
       }
     }
 
     async function refreshCardStats(gameId, key, { silent = false, isManual = true } = {}) {
-      if (!silent) showToast(`🔄 EWGF・Wavuから ID[${gameId}] の最新データを取得中...`);
+      if (!silent) showToast(`🔄 EWGF・Wavuから ID[${gameId}] の最新チE�Eタを取得中...`);
       let memberName = '';
       if (window.currentMembersData && window.currentMembersData[key]) {
         memberName = window.currentMembersData[key].name || '';
@@ -3906,7 +3880,7 @@
         if (rankEl) rankEl.textContent = stats.danRank || '-';
         const ratingEl = container.querySelector('.val-rating');
         if (ratingEl) {
-          ratingEl.textContent = stats.isError ? '取得失敗' : (stats.ratingMu !== null ? `μ ${stats.ratingMu}` : '-');
+          ratingEl.textContent = stats.isError ? '取得失敁E : (stats.ratingMu !== null ? `μ ${stats.ratingMu}` : '-');
         }
         const powerEl = container.querySelector('.val-power');
         if (powerEl) {
@@ -3918,11 +3892,11 @@
       }
       if (!silent && stats && (stats.refreshFailed || stats.isError)) {
         const status = stats.refreshErrorStatus ? `HTTP ${stats.refreshErrorStatus}` : '通信エラー';
-        showToast(`⚠️ 取得失敗（${status}）：${stats.refreshErrorMessage || '時間を置いて再取得してください'}`);
+        showToast(`⚠�E�E取得失敗！E{status}�E�！E{stats.refreshErrorMessage || '時間を置ぁE��再取得してください'}`);
       } else if (!silent && stats && stats.refreshUsedSharedCache) {
-        showToast('ℹ️ 強制取得が混雑したため、安全な共有キャッシュを表示しました');
+        showToast('ℹ�E�E強制取得が混雑したため、安�Eな共有キャチE��ュを表示しました');
       } else if (!silent) {
-        showToast(`✨ EWGF・Wavuの最新データへ更新しました！`);
+        showToast(`✨ EWGF・Wavuの最新チE�Eタへ更新しました�E�`);
       }
       return stats;
     }
@@ -3931,8 +3905,8 @@
     async function refreshAllWavuStats() {
       if (!window.currentMembersData) {
         showToast(window.currentMembersLoaded
-          ? 'このリストにはメンバーがいません'
-          : '⚠️ メンバーデータを読み込み中です...');
+          ? 'こ�Eリストにはメンバ�Eがいません'
+          : '⚠�E�Eメンバ�EチE�Eタを読み込み中でぁE..');
         return;
       }
       const uniquePlayers = new Map();
@@ -3945,30 +3919,30 @@
         return;
       }
       const confirmed = confirm(
-        `現在のリストにいる${uniquePlayers.size}人について、EWGF・Wavuから最新データを取得します。\n` +
-        '通信が発生し、完了まで時間がかかる場合があります。実行しますか？'
+        `現在のリストにぁE��${uniquePlayers.size}人につぁE��、EWGF・Wavuから最新チE�Eタを取得します、En` +
+        '通信が発生し、完亁E��で時間がかかる場合があります。実行しますか�E�E
       );
       if (!confirmed) return;
 
-      showToast(`⚡ ${uniquePlayers.size}人の最新データを順次取得中...`);
-      recordLastUpdateLog('manual', '全メンバー一括');
+      showToast(`⚡ ${uniquePlayers.size}人の最新チE�Eタを頁E��取得中...`);
+      recordLastUpdateLog('manual', '全メンバ�E一括');
       for (const [cleanId, { key }] of uniquePlayers) {
         await refreshCardStats(cleanId, key);
       }
-      showToast(`🎉 ${uniquePlayers.size}人のデータ更新が完了しました！`);
+      showToast(`🎉 ${uniquePlayers.size}人のチE�Eタ更新が完亁E��ました�E�`);
     }
 
     const fetchProgressByMember = new Map();
     const FETCH_STAGE_VIEW = {
-      saved: { step: 1, tone: 'pending', icon: '1', label: 'IDを保存しました', detail: '基本情報の取得を開始します' },
-      queued: { step: 1, tone: 'pending', icon: '…', label: '取得順を待っています', detail: '同じプレイヤーの処理完了を待機中' },
-      sources: { step: 2, tone: 'pending', icon: '2', label: '基本情報を取得中', detail: 'EWGF・Wavuへ接続しています' },
-      analyzing: { step: 3, tone: 'pending', icon: '3', label: 'ランク・キャラを分析中', detail: '取得した対戦情報をカード用に整理しています' },
-      saving: { step: 4, tone: 'pending', icon: '4', label: '取得結果を保存中', detail: '端末とマイリストへ反映しています' },
-      ready: { step: 5, tone: 'fresh', icon: '✓', label: '最新データ', detail: 'EWGF・Wavuから正常に取得しました' },
-      cached: { step: 5, tone: 'cached', icon: '◷', label: '保存データ', detail: '保存済みの取得結果を使用しています' },
-      partial: { step: 5, tone: 'partial', icon: '!', label: '一部データ', detail: '取得できた情報を表示しています' },
-      error: { step: 1, tone: 'error', icon: '!', label: '取得失敗', detail: '取得診断から原因を確認できます' }
+      saved: { step: 1, tone: 'pending', icon: '1', label: 'IDを保存しました', detail: '基本惁E��の取得を開始しまぁE },
+      queued: { step: 1, tone: 'pending', icon: '…', label: '取得頁E��征E��てぁE��ぁE, detail: '同じプレイヤーの処琁E��亁E��征E��中' },
+      sources: { step: 2, tone: 'pending', icon: '2', label: '基本惁E��を取得中', detail: 'EWGF・Wavuへ接続してぁE��ぁE },
+      analyzing: { step: 3, tone: 'pending', icon: '3', label: 'ランク・キャラを�E析中', detail: '取得した対戦惁E��をカード用に整琁E��てぁE��ぁE },
+      saving: { step: 4, tone: 'pending', icon: '4', label: '取得結果を保存中', detail: '端末とマイリストへ反映してぁE��ぁE },
+      ready: { step: 5, tone: 'fresh', icon: '✁E, label: '最新チE�Eタ', detail: 'EWGF・Wavuから正常に取得しました' },
+      cached: { step: 5, tone: 'cached', icon: '◷', label: '保存データ', detail: '保存済みの取得結果を使用してぁE��ぁE },
+      partial: { step: 5, tone: 'partial', icon: '!', label: '一部チE�Eタ', detail: '取得できた惁E��を表示してぁE��ぁE },
+      error: { step: 1, tone: 'error', icon: '!', label: '取得失敁E, detail: '取得診断から原因を確認できまぁE }
     };
 
     function acquisitionStateFor(member, stats, liveProgress = null) {
@@ -3996,15 +3970,15 @@
       if (stats && !stats.initialFetchPending && isBackgroundSync) {
         return {
           ...FETCH_STAGE_VIEW.cached,
-          label: '完全自動取得',
-          detail: 'バックグラウンド自動取得の保存結果です',
+          label: '完�E自動取征E,
+          detail: 'バックグラウンド�E動取得�E保存結果でぁE,
           stats
         };
       }
       if (member?.initialFetchPending || stats?.initialFetchPending || meta.state === 'saved') {
         return { ...FETCH_STAGE_VIEW.saved };
       }
-      return { ...FETCH_STAGE_VIEW.cached, label: '取得状態不明', detail: '保存時刻を確認できません' };
+      return { ...FETCH_STAGE_VIEW.cached, label: '取得状態不�E', detail: '保存時刻を確認できません' };
     }
 
     function acquisitionStatusHtml(memberKey, member, stats) {
@@ -4012,7 +3986,7 @@
       const progress = Math.max(8, Math.min(100, Number(state.step || 1) * 20));
       const isPending = state.tone === 'pending';
       return `
-        <button type="button" class="data-reliability-badge tone-${state.tone}" onclick="openFetchDiagnostics('${escapeHtml(memberKey)}')" title="データ取得状態と診断を表示">
+        <button type="button" class="data-reliability-badge tone-${state.tone}" onclick="openFetchDiagnostics('${escapeHtml(memberKey)}')" title="チE�Eタ取得状態と診断を表示">
           <span class="data-reliability-icon">${escapeHtml(state.icon)}</span>
           <span>${escapeHtml(state.label)}</span>
         </button>
@@ -4061,9 +4035,9 @@
       modal.hidden = true;
       modal.innerHTML = `
         <div class="fetch-diagnostics-dialog" role="dialog" aria-modal="true" aria-labelledby="fetchDiagnosticsTitle">
-          <button type="button" class="fetch-diagnostics-close" aria-label="閉じる">×</button>
-          <div class="fetch-diagnostics-kicker">データの現在地</div>
-          <h2 id="fetchDiagnosticsTitle">このカードのデータ状況</h2>
+          <button type="button" class="fetch-diagnostics-close" aria-label="閉じめE>ÁE/button>
+          <div class="fetch-diagnostics-kicker">チE�Eタの現在地</div>
+          <h2 id="fetchDiagnosticsTitle">こ�Eカード�EチE�Eタ状況E/h2>
           <div class="fetch-diagnostics-content"></div>
         </div>
       `;
@@ -4080,9 +4054,9 @@
     }
 
     function diagnosticSourceRow(label, state, timing) {
-      const normalized = state === 'ready' ? '取得済み' : (state === 'error' ? '取得失敗' : '記録なし');
+      const normalized = state === 'ready' ? '取得済み' : (state === 'error' ? '取得失敁E : '記録なぁE);
       const tone = state === 'ready' ? 'ready' : (state === 'error' ? 'error' : 'unknown');
-      const timingText = Number.isFinite(Number(timing)) ? `${(Number(timing) / 1000).toFixed(1)}秒` : '—';
+      const timingText = Number.isFinite(Number(timing)) ? `${(Number(timing) / 1000).toFixed(1)}秒` : ' E;
       return `<div class="fetch-source-row"><strong>${escapeHtml(label)}</strong><span class="tone-${tone}">${normalized}</span><small>${timingText}</small></div>`;
     }
 
@@ -4116,11 +4090,11 @@
       const hasFirebaseSnapshot = Boolean(member.fetchedStats && Object.keys(member.fetchedStats).length);
       const profileTime = completedAt ? formatExactDateTime(completedAt) : '保存時刻を確認できません';
       const activityTime = activityCheckedAt ? formatExactDateTime(activityCheckedAt) : 'まだ照会記録がありません';
-      const latestBattleTime = latestBattleAt ? formatExactDateTime(latestBattleAt) : '最終対戦は未確認';
-      const latestRankedTime = latestRankedAt ? formatExactDateTime(latestRankedAt) : '最終ランクマは未確認';
+      const latestBattleTime = latestBattleAt ? formatExactDateTime(latestBattleAt) : '最終対戦は未確誁E;
+      const latestRankedTime = latestRankedAt ? formatExactDateTime(latestRankedAt) : '最終ランクマ�E未確誁E;
       const workerDetail = backgroundSync
-        ? '完全自動取得で更新済み（約6時間間隔）'
-        : (stats.refreshUsedSharedCache ? '共有キャッシュを使って取得済み' : '今回の取得経路は保存データです');
+        ? '完�E自動取得で更新済み�E�紁E時間間隔�E�E
+        : (stats.refreshUsedSharedCache ? '共有キャチE��ュを使って取得済み' : '今回の取得経路は保存データでぁE);
       const errorStatus = live?.errorStatus || stats.refreshErrorStatus || meta.errorStatus || null;
       const errorMessage = live?.errorMessage || stats.refreshErrorMessage || meta.errorMessage || '';
       const isAdmin = Boolean(window.isCurrentUserAdmin);
@@ -4130,49 +4104,49 @@
           <span>${escapeHtml(state.icon)}</span>
           <div><strong>${escapeHtml(state.label)}</strong><small>${escapeHtml(state.detail || '')}</small></div>
         </section>
-        <section class="data-location-board" aria-label="データの現在地">
-          <div class="data-location-board-head"><div><h3>いま表示しているデータ</h3><p>種類ごとに、最後に確認した時刻と保存先を示します。</p></div><span>${backgroundSync ? '完全自動' : '保存データ'}</span></div>
+        <section class="data-location-board" aria-label="チE�Eタの現在地">
+          <div class="data-location-board-head"><div><h3>ぁE��表示してぁE��チE�Eタ</h3><p>種類ごとに、最後に確認した時刻と保存�Eを示します、E/p></div><span>${backgroundSync ? '完�E自勁E : '保存データ'}</span></div>
           <div class="data-location-lanes">
             <article class="data-location-lane">
-              <header><span aria-hidden="true">◈</span><div><strong>プロフィール・ランク</strong><small>${escapeHtml(profileTime)}</small></div></header>
-              <p>段位・鉄拳力・μ・メインキャラ・ペンタゴン</p>
+              <header><span aria-hidden="true">◁E/span><div><strong>プロフィール・ランク</strong><small>${escapeHtml(profileTime)}</small></div></header>
+              <p>段位�E鉁E��力�Eμ・メインキャラ・ペンタゴン</p>
               <div class="data-location-route">
-                ${dataLocationStep('↗', 'EWGF / Wavu', `EWGF ${sources.ewgf === 'ready' ? '取得済み' : '未確認'}・Wavu ${sources.wavu === 'ready' ? '取得済み' : '未確認'}`, sources.ewgf === 'error' || sources.wavu === 'error' ? 'error' : (sources.ewgf === 'ready' ? 'ready' : 'unknown'))}
-                ${dataLocationStep('⚙', '拳トモ Worker', workerDetail, backgroundSync || stats.refreshUsedSharedCache ? 'ready' : 'unknown')}
-                ${dataLocationStep('☁', 'Firebase', hasFirebaseSnapshot ? 'このマイリストに保存済み' : 'このリストには未保存', hasFirebaseSnapshot ? 'ready' : 'unknown')}
-                ${dataLocationStep('◉', 'このブラウザ', hasBrowserSnapshot ? '端末キャッシュを利用可能' : '端末キャッシュは未作成', hasBrowserSnapshot ? 'ready' : 'unknown')}
+                ${dataLocationStep('ↁE, 'EWGF / Wavu', `EWGF ${sources.ewgf === 'ready' ? '取得済み' : '未確誁E}・Wavu ${sources.wavu === 'ready' ? '取得済み' : '未確誁E}`, sources.ewgf === 'error' || sources.wavu === 'error' ? 'error' : (sources.ewgf === 'ready' ? 'ready' : 'unknown'))}
+                ${dataLocationStep('⚁E, '拳トモ Worker', workerDetail, backgroundSync || stats.refreshUsedSharedCache ? 'ready' : 'unknown')}
+                ${dataLocationStep('☁E, 'Firebase', hasFirebaseSnapshot ? 'こ�Eマイリストに保存済み' : 'こ�Eリストには未保孁E, hasFirebaseSnapshot ? 'ready' : 'unknown')}
+                ${dataLocationStep('◁E, 'こ�Eブラウザ', hasBrowserSnapshot ? '端末キャチE��ュを利用可能' : '端末キャチE��ュは未作�E', hasBrowserSnapshot ? 'ready' : 'unknown')}
               </div>
             </article>
             <article class="data-location-lane activity">
-              <header><span aria-hidden="true">◷</span><div><strong>最終対戦・活動</strong><small>${escapeHtml(activityTime)}</small></div></header>
-              <p>最終対戦: ${escapeHtml(latestBattleTime)}<br>最終ランクマ: ${escapeHtml(latestRankedTime)}</p>
+              <header><span aria-hidden="true">◷</span><div><strong>最終対戦・活勁E/strong><small>${escapeHtml(activityTime)}</small></div></header>
+              <p>最終対戦: ${escapeHtml(latestBattleTime)}<br>最終ランクチE ${escapeHtml(latestRankedTime)}</p>
               <div class="data-location-route">
-                ${dataLocationStep('↗', '対戦情報', latestBattleAt ? '最終対戦を確認済み' : '最終対戦は未確認', latestBattleAt ? 'ready' : 'unknown')}
-                ${dataLocationStep('⚙', '軽量更新', 'リスト表示中は5分ごとに確認', activityCheckedAt ? 'ready' : 'unknown')}
-                ${dataLocationStep('☁', 'Firebase', hasFirebaseSnapshot ? '活動情報をリストへ同期' : '保存先を確認できません', hasFirebaseSnapshot ? 'ready' : 'unknown')}
-                ${dataLocationStep('◉', 'このブラウザ', hasBrowserSnapshot ? '表示用の最新値を保持' : '端末保存は未作成', hasBrowserSnapshot ? 'ready' : 'unknown')}
+                ${dataLocationStep('ↁE, '対戦惁E��', latestBattleAt ? '最終対戦を確認済み' : '最終対戦は未確誁E, latestBattleAt ? 'ready' : 'unknown')}
+                ${dataLocationStep('⚁E, '軽量更新', 'リスト表示中は5刁E��とに確誁E, activityCheckedAt ? 'ready' : 'unknown')}
+                ${dataLocationStep('☁E, 'Firebase', hasFirebaseSnapshot ? '活動情報をリストへ同期' : '保存�Eを確認できません', hasFirebaseSnapshot ? 'ready' : 'unknown')}
+                ${dataLocationStep('◁E, 'こ�Eブラウザ', hasBrowserSnapshot ? '表示用の最新値を保持' : '端末保存�E未作�E', hasBrowserSnapshot ? 'ready' : 'unknown')}
               </div>
             </article>
           </div>
         </section>
         <section class="fetch-source-list">
-          <h3>取得元の応答</h3>
+          <h3>取得�Eの応筁E/h3>
           ${diagnosticSourceRow('EWGF', sources.ewgf, timings.ewgf)}
           ${diagnosticSourceRow('Wavu', sources.wavu, timings.wavu)}
         </section>
         ${errorMessage ? `<section class="fetch-diagnostics-error"><strong>${errorStatus ? `HTTP ${escapeHtml(String(errorStatus))}` : '通信エラー'}</strong><p>${escapeHtml(errorMessage)}</p></section>` : ''}
         ${isAdmin ? `
           <details class="fetch-diagnostics-admin" open>
-            <summary>管理者向け詳細</summary>
+            <summary>管琁E��E��け詳細</summary>
             <dl>
-              <div><dt>処理状態</dt><dd>${escapeHtml(live?.stage || meta.state || 'unknown')}</dd></div>
-              <div><dt>処理時間</dt><dd>${Number.isFinite(Number(meta.durationMs)) ? `${(Number(meta.durationMs) / 1000).toFixed(1)}秒` : '—'}</dd></div>
-              <div><dt>データ形式</dt><dd>${escapeHtml(meta.schema || member.fetchedStats?.schema || 'legacy')}</dd></div>
-              <div><dt>共有キャッシュ</dt><dd>${stats.refreshUsedSharedCache ? '使用' : '通常'}</dd></div>
+              <div><dt>処琁E��慁E/dt><dd>${escapeHtml(live?.stage || meta.state || 'unknown')}</dd></div>
+              <div><dt>処琁E��閁E/dt><dd>${Number.isFinite(Number(meta.durationMs)) ? `${(Number(meta.durationMs) / 1000).toFixed(1)}秒` : ' E}</dd></div>
+              <div><dt>チE�Eタ形弁E/dt><dd>${escapeHtml(meta.schema || member.fetchedStats?.schema || 'legacy')}</dd></div>
+              <div><dt>共有キャチE��ュ</dt><dd>${stats.refreshUsedSharedCache ? '使用' : '通常'}</dd></div>
             </dl>
           </details>
         ` : ''}
-        <button type="button" class="fetch-diagnostics-retry" onclick="document.getElementById('fetchDiagnosticsModal').hidden=true;document.body.classList.remove('fetch-diagnostics-open');refreshSingleMemberStats('${escapeHtml(memberKey)}')">このプレイヤーを再取得</button>
+        <button type="button" class="fetch-diagnostics-retry" onclick="document.getElementById('fetchDiagnosticsModal').hidden=true;document.body.classList.remove('fetch-diagnostics-open');refreshSingleMemberStats('${escapeHtml(memberKey)}')">こ�Eプレイヤーを�E取征E/button>
       `;
       modal.hidden = false;
       document.body.classList.add('fetch-diagnostics-open');
@@ -4279,13 +4253,13 @@
         let headerText = 'WANTED';
         let subHeaderText = 'DEAD OR ALIVE';
         if (currentTheme === 'japanese') {
-          headerText = '武芸者名鑑';
-          subHeaderText = '鉄拳八・対戦録';
+          headerText = '武芸老E��鑁E;
+          subHeaderText = '鉁E��八・対戦録';
         }
 
-        let defaultSubtitle = '手配中';
+        let defaultSubtitle = '手�E中';
         if (currentTheme === 'modern') defaultSubtitle = 'Member';
-        if (currentTheme === 'japanese') defaultSubtitle = '好敵手';
+        if (currentTheme === 'japanese') defaultSubtitle = '好敵扁E;
 
         const cachedStats = getLocalStats(cleanGameId, m);
         const lifetimeDataValue = field => Number.isFinite(Number(cachedStats?.[field])) ? Math.max(0, Number(cachedStats[field])) : '';
@@ -4306,12 +4280,12 @@
           !cachedStats?.isError &&
           !cachedStats?.refreshFailed
         );
-        const initialFetchBadgeHtml = '<div class="last-seen-badge inactive"><span class="last-seen-icon">⏳</span><span class="last-seen-label">初回データ</span><span class="last-seen-time">準備中</span></div>';
+        const initialFetchBadgeHtml = '<div class="last-seen-badge inactive"><span class="last-seen-icon">⏳</span><span class="last-seen-label">初回チE�Eタ</span><span class="last-seen-time">準備中</span></div>';
         const landscapeImage = String(cachedStats?.mainCharImage || photoData || '').trim();
         const landscapeImageHtml = landscapeImage
           ? `<img src="${escapeHtml(landscapeImage)}" alt="${escapeHtml(cachedStats?.mainChar || m.name || cleanGameId)}">`
           : `<span class="avatar-initials">${escapeHtml(getInitials(m.name || cleanGameId))}</span>`;
-        const landscapeNameMode = m.nameMode === 'auto' ? '<span class="landscape-name-mode" aria-label="自動取得名を追従中" title="自動取得名を追従中">↻</span>' : '<span class="landscape-name-mode" aria-label="ユーザーが入力した固定名" title="ユーザーが入力した固定名">⌕</span>';
+        const landscapeNameMode = m.nameMode === 'auto' ? '<span class="landscape-name-mode" aria-label="自動取得名を追従中" title="自動取得名を追従中">↻</span>' : '<span class="landscape-name-mode" aria-label="ユーザーが�E力した固定名" title="ユーザーが�E力した固定名">⌁E/span>';
         const landscapeMain = initialFetchPending ? '準備中' : (cachedStats?.mainChar || '取得中');
         const landscapeRank = initialFetchPending ? '準備中' : (cachedStats?.danRank || '-');
         const landscapeRating = initialFetchPending ? '取得中' : (cachedStats?.ratingMu !== null && cachedStats?.ratingMu !== undefined ? `μ ${cachedStats.ratingMu}` : '-');
@@ -4323,17 +4297,17 @@
         const landscapeDormant = typeof window.isDormantStats === 'function'
           ? window.isDormantStats(cachedStats)
           : Boolean(cachedStats?.rankIsAllTimeHighest || cachedStats?.ratingIsHistorical);
-        const landscapeDormantLabel = landscapeDormant ? '<span class="landscape-dormant-label">（休眠中）</span>' : '';
+        const landscapeDormantLabel = landscapeDormant ? '<span class="landscape-dormant-label">�E�休眠中�E�E/span>' : '';
         const landscapeCountryBadge = countryCode
           ? `<span class="landscape-country-badge" title="${escapeHtml(countryDisplayName(countryCode))}" aria-label="${escapeHtml(countryDisplayName(countryCode))}"><img src="${countryFlagImageUrl(countryCode)}" alt="" aria-hidden="true"></span>`
           : '';
         const landscapePentagonReady = Boolean(cachedStats?.statPentagon && typeof window.openStatPentagonDetail === 'function');
         const landscapeSummaryHtml = `
-          <div class="landscape-card-summary${landscapeDormant ? ' is-dormant' : ''}" role="button" tabindex="0" onclick="openCompactPlayerDetails('${escapeHtml(key)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openCompactPlayerDetails('${escapeHtml(key)}')}" aria-label="${escapeHtml(primaryDisplayName)}の詳細を開く">
+          <div class="landscape-card-summary${landscapeDormant ? ' is-dormant' : ''}" role="button" tabindex="0" onclick="openCompactPlayerDetails('${escapeHtml(key)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openCompactPlayerDetails('${escapeHtml(key)}')}" aria-label="${escapeHtml(primaryDisplayName)}の詳細を開ぁE>
             <span class="landscape-main-icon">${landscapeImageHtml}</span>
             <span class="landscape-player"><span class="landscape-player-name"><strong>${escapeHtml(primaryDisplayName)}</strong>${landscapeDormantLabel}${landscapeCountryBadge}${landscapeNameMode}</span><span class="landscape-player-sub"><span>${escapeHtml(landscapeMain)}</span><span class="landscape-rank-mobile"> · ${escapeHtml(landscapeRank)}</span><span class="landscape-sub-id"> · ${escapeHtml(cleanGameId)}</span></span></span>
             <span class="landscape-metrics"><span class="landscape-metric"><small>RANK</small><b>${escapeHtml(landscapeRank)}</b></span><span class="landscape-metric"><small>μ RATING</small><b class="${landscapeRatingTone}">${escapeHtml(landscapeRating)}</b></span><span class="landscape-metric is-power"><small>POWER</small><b>${escapeHtml(landscapePower)}</b></span></span>
-            <button type="button" class="landscape-pentagon-shortcut" onclick="event.stopPropagation();openCompactPentagonDetails('${escapeHtml(key)}')" title="ペンタゴン分析を開く" aria-label="ペンタゴン分析を開く"${landscapePentagonReady ? '' : ' disabled'}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 9 6.5-3.4 10.5H6.4L3 8.5 12 2Z"></path></svg></button>
+            <button type="button" class="landscape-pentagon-shortcut" onclick="event.stopPropagation();openCompactPentagonDetails('${escapeHtml(key)}')" title="ペンタゴン刁E��を開ぁE aria-label="ペンタゴン刁E��を開ぁE${landscapePentagonReady ? '' : ' disabled'}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 9 6.5-3.4 10.5H6.4L3 8.5 12 2Z"></path></svg></button>
             <span class="landscape-open-mark" aria-hidden="true">›</span>
           </div>`;
 
@@ -4349,13 +4323,13 @@
           </div>
 
           <div class="poster-name${trackedAutoName ? ' has-tracked-name' : ''}">
-            <div class="poster-name-primary"><span class="poster-name-text">${escapeHtml(primaryDisplayName)}</span>${m.nameMode === 'auto' ? '<span class="poster-name-auto-icon" title="自動取得名を追従中" aria-label="自動取得名を追従中">↻</span>' : '<span class="poster-name-lock-icon" title="ユーザーが入力した固定名" aria-label="ユーザーが入力した固定名"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path><path d="M12 15v2"></path></svg></span>'}</div>
-            ${trackedAutoName ? `<span class="poster-name-tracked" title="自動取得名：${escapeHtml(trackedAutoName)}">${escapeHtml(trackedAutoName)}</span>` : ''}
+            <div class="poster-name-primary"><span class="poster-name-text">${escapeHtml(primaryDisplayName)}</span>${m.nameMode === 'auto' ? '<span class="poster-name-auto-icon" title="自動取得名を追従中" aria-label="自動取得名を追従中">↻</span>' : '<span class="poster-name-lock-icon" title="ユーザーが�E力した固定名" aria-label="ユーザーが�E力した固定名"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path><path d="M12 15v2"></path></svg></span>'}</div>
+            ${trackedAutoName ? `<span class="poster-name-tracked" title="自動取得名�E�E{escapeHtml(trackedAutoName)}">${escapeHtml(trackedAutoName)}</span>` : ''}
           </div>
           <div class="poster-nickname">${escapeHtml(m.subtitle || defaultSubtitle)}</div>
           <div class="player-message${cachedStats && normalizePlayerMessage(cachedStats.playerMessage) ? '' : ' is-empty'}">${cachedStats && normalizePlayerMessage(cachedStats.playerMessage) ? escapeHtml(normalizePlayerMessage(cachedStats.playerMessage)) : '&nbsp;'}</div>
 
-          <!-- ewgf.gg / Wavu 公式データ直接連動 (レーダーチャート全撤廃・純粋本物データ表示) -->
+          <!-- ewgf.gg / Wavu 公式データ直接連勁E(レーダーチャート�E撤廁E�E純粋本物チE�Eタ表示) -->
           <div class="card-stats-container" id="stats_box_${key}">
             <div class="data-acquisition-status" data-acquisition-member="${escapeHtml(key)}">
               ${acquisitionStatusHtml(key, m, cachedStats)}
@@ -4367,20 +4341,20 @@
             <div class="stats-preview-head">
               <div>
                 <p class="stats-preview-eyebrow">Recent main</p>
-                <div class="stats-preview-main"><span class="val-main-char">${initialFetchPending ? '初回データ準備中' : (cachedStats ? escapeHtml(cachedStats.mainChar) : '取得中')}</span><span class="stats-preview-games">${!initialFetchPending && cachedStats && cachedStats.mainCharGames ? `· ${cachedStats.mainCharGames.toLocaleString()} games` : ''}</span></div>
+                <div class="stats-preview-main"><span class="val-main-char">${initialFetchPending ? '初回チE�Eタ準備中' : (cachedStats ? escapeHtml(cachedStats.mainChar) : '取得中')}</span><span class="stats-preview-games">${!initialFetchPending && cachedStats && cachedStats.mainCharGames ? `· ${cachedStats.mainCharGames.toLocaleString()} games` : ''}</span></div>
               </div>
               <span class="stats-preview-badge">ewgf + wavu</span>
             </div>
-            <button type="button" class="stats-preview-lifetime-row" title="ランクマ・プレマ・クイック・グループの内訳を表示" onclick="event.stopPropagation();window.openLifetimeBreakdown(this)" data-ranked-games="${lifetimeDataValue('totalRankedGames')}" data-player-games="${lifetimeDataValue('totalPlayerMatchGames')}" data-quick-games="${lifetimeDataValue('totalQuickMatchGames')}" data-group-games="${lifetimeDataValue('totalGroupMatchGames')}" data-total-games="${lifetimeDataValue('totalRecordedGames')}"${!initialFetchPending && cachedStats && cachedStats.totalRecordedGames !== null && cachedStats.totalRecordedGames !== undefined && Number.isFinite(Number(cachedStats.totalRecordedGames)) ? '' : ' hidden'}><span>生涯・全マッチング</span><strong class="stats-preview-lifetime-value">${!initialFetchPending && cachedStats && cachedStats.totalRecordedGames !== null && cachedStats.totalRecordedGames !== undefined && Number.isFinite(Number(cachedStats.totalRecordedGames)) ? `${Math.max(0, Number(cachedStats.totalRecordedGames)).toLocaleString()}戦` : ''}</strong></button>
+            <button type="button" class="stats-preview-lifetime-row" title="ランクマ�Eプレマ�EクイチE��・グループ�E冁E��を表示" onclick="event.stopPropagation();window.openLifetimeBreakdown(this)" data-ranked-games="${lifetimeDataValue('totalRankedGames')}" data-player-games="${lifetimeDataValue('totalPlayerMatchGames')}" data-quick-games="${lifetimeDataValue('totalQuickMatchGames')}" data-group-games="${lifetimeDataValue('totalGroupMatchGames')}" data-total-games="${lifetimeDataValue('totalRecordedGames')}"${!initialFetchPending && cachedStats && cachedStats.totalRecordedGames !== null && cachedStats.totalRecordedGames !== undefined && Number.isFinite(Number(cachedStats.totalRecordedGames)) ? '' : ' hidden'}><span>生涯・全マッチング</span><strong class="stats-preview-lifetime-value">${!initialFetchPending && cachedStats && cachedStats.totalRecordedGames !== null && cachedStats.totalRecordedGames !== undefined && Number.isFinite(Number(cachedStats.totalRecordedGames)) ? `${Math.max(0, Number(cachedStats.totalRecordedGames)).toLocaleString()}戦` : ''}</strong></button>
 
             <div class="stats-preview-metrics">
               <div class="stats-preview-metric stats-preview-metric-rank">
                 <span class="stats-preview-label">Rank</span>
-                <span class="stats-preview-value val-rank ${!initialFetchPending && cachedStats && /直近50戦内に記録なし/.test(cachedStats.danRank || '') ? 'stats-preview-missing' : ''}">${initialFetchPending ? '準備中' : (cachedStats ? escapeHtml(cachedStats.danRank || '-') : '-')}</span>
+                <span class="stats-preview-value val-rank ${!initialFetchPending && cachedStats && /直迁E0戦冁E��記録なぁE.test(cachedStats.danRank || '') ? 'stats-preview-missing' : ''}">${initialFetchPending ? '準備中' : (cachedStats ? escapeHtml(cachedStats.danRank || '-') : '-')}</span>
               </div>
               <div class="stats-preview-metric">
                 <span class="stats-preview-label">μ Rating</span>
-                <span class="stats-preview-value stats-preview-rating val-rating">${initialFetchPending ? '自動取得中' : (cachedStats && cachedStats.isError ? '取得失敗' : (cachedStats && cachedStats.ratingMu !== null ? `μ ${cachedStats.ratingMu}` : 'データ取得中'))}</span>
+                <span class="stats-preview-value stats-preview-rating val-rating">${initialFetchPending ? '自動取得中' : (cachedStats && cachedStats.isError ? '取得失敁E : (cachedStats && cachedStats.ratingMu !== null ? `μ ${cachedStats.ratingMu}` : 'チE�Eタ取得中'))}</span>
               </div>
               <div class="stats-preview-metric">
                 <span class="stats-preview-label">Power</span>
@@ -4403,15 +4377,15 @@
             <a class="link-btn wavu-btn" href="${escapeHtml(wavuUrl)}" target="_blank" rel="noopener">${ICON_WAVU}<span>wavu</span></a>
           </div>
 
-          <!-- スマートな最下部管理バー -->
+          <!-- スマ�Eトな最下部管琁E��ー -->
           <div class="card-admin-bar">
-            <button class="card-admin-btn failed-card-retry-btn${!initialFetchPending && cachedStats && (cachedStats.isError || cachedStats.refreshFailed) ? ' is-visible' : ''}" data-retry-member="${escapeHtml(key)}" onclick="retryFailedMemberStats('${escapeHtml(key)}')" title="このプレイヤーだけ共有キャッシュから再試行">↻ 再試行</button>
-            <button class="card-admin-btn card-capture-btn card-admin-icon-action" onclick="exportPlayerCardFromButton(this, event)" title="このプレイヤーカードをPNG画像として保存" aria-label="${escapeHtml(m.name || cleanGameId)}のカード画像を保存">
+            <button class="card-admin-btn failed-card-retry-btn${!initialFetchPending && cachedStats && (cachedStats.isError || cachedStats.refreshFailed) ? ' is-visible' : ''}" data-retry-member="${escapeHtml(key)}" onclick="retryFailedMemberStats('${escapeHtml(key)}')" title="こ�Eプレイヤーだけ�E有キャチE��ュから再試衁E>↻ 再試衁E/button>
+            <button class="card-admin-btn card-capture-btn card-admin-icon-action" onclick="exportPlayerCardFromButton(this, event)" title="こ�EプレイヤーカードをPNG画像として保孁E aria-label="${escapeHtml(m.name || cleanGameId)}のカード画像を保孁E>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.4 5.5 9.7 3.8h4.6l1.3 1.7H19A2.5 2.5 0 0 1 21.5 8v9A2.5 2.5 0 0 1 19 19.5H5A2.5 2.5 0 0 1 2.5 17V8A2.5 2.5 0 0 1 5 5.5h3.4ZM12 8a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9Zm0 2a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5Z"/></svg>
             </button>
-            <button class="card-admin-btn admin-card-refresh-btn card-admin-icon-action" data-refresh-member="${escapeHtml(key)}" onclick="refreshSingleMemberStats('${escapeHtml(key)}')" title="このプレイヤーだけ統計データを安全に再取得" aria-label="統計データを再取得"><span class="card-admin-refresh-icon" aria-hidden="true">↻</span><span class="mobile-hidden-label">再取得</span></button>
-            <button class="card-admin-btn card-admin-icon-action card-admin-mutation-action" onclick="openEditModal('${key}')" title="編集" aria-label="メンバーを編集">${ICON_EDIT}<span class="mobile-hidden-label">編集</span></button>
-            <button class="card-admin-btn delete-btn card-admin-icon-action card-admin-mutation-action" onclick="openDeleteModal('${key}', '${escapeHtml(m.name)}')" title="削除" aria-label="メンバーを削除">${ICON_DELETE}<span class="mobile-hidden-label">削除</span></button>
+            <button class="card-admin-btn admin-card-refresh-btn card-admin-icon-action" data-refresh-member="${escapeHtml(key)}" onclick="refreshSingleMemberStats('${escapeHtml(key)}')" title="こ�Eプレイヤーだけ統計データを安�Eに再取征E aria-label="統計データを�E取征E><span class="card-admin-refresh-icon" aria-hidden="true">↻</span><span class="mobile-hidden-label">再取征E/span></button>
+            <button class="card-admin-btn card-admin-icon-action card-admin-mutation-action" onclick="openEditModal('${key}')" title="編雁E aria-label="メンバ�Eを編雁E>${ICON_EDIT}<span class="mobile-hidden-label">編雁E/span></button>
+            <button class="card-admin-btn delete-btn card-admin-icon-action card-admin-mutation-action" onclick="openDeleteModal('${key}', '${escapeHtml(m.name)}')" title="削除" aria-label="メンバ�Eを削除">${ICON_DELETE}<span class="mobile-hidden-label">削除</span></button>
           </div>
         `;
 
@@ -4467,7 +4441,7 @@
         unset.type = 'button';
         unset.className = 'country-picker-option';
         unset.dataset.countryCode = '';
-        unset.textContent = '未設定（カードには表示しない）';
+        unset.textContent = '未設定（カードには表示しなぁE��E;
         menu.appendChild(unset);
         for (const option of [...select.options].slice(1)) {
           const code = option.value;
@@ -4515,7 +4489,7 @@
       if (!select || !content) return;
       const code = normalizeCountryCode(select.value);
       if (!code) {
-        content.innerHTML = '未設定（カードには表示しない）';
+        content.innerHTML = '未設定（カードには表示しなぁE��E;
         return;
       }
       content.innerHTML = `<img src="${countryFlagImageUrl(code)}" alt=""><span>${escapeHtml(countryDisplayName(code))} (${code})</span>`;
@@ -4535,7 +4509,7 @@
       modal.id = 'compactPlayerDetailModal';
       modal.className = 'compact-player-modal';
       modal.hidden = true;
-      modal.innerHTML = '<section class="compact-player-dialog" role="dialog" aria-modal="true" aria-labelledby="compactPlayerTitle"><button type="button" class="compact-player-close" aria-label="閉じる">×</button><div class="compact-player-content"></div></section>';
+      modal.innerHTML = '<section class="compact-player-dialog" role="dialog" aria-modal="true" aria-labelledby="compactPlayerTitle"><button type="button" class="compact-player-close" aria-label="閉じめE>ÁE/button><div class="compact-player-content"></div></section>';
       document.body.appendChild(modal);
       let historyEntryActive = false;
       const close = ({ fromHistory = false } = {}) => {
@@ -4590,12 +4564,12 @@
       const name = member.nameMode === 'auto' && cleanTekkenId(member.name).toUpperCase() === gameId.toUpperCase() ? '名前取得中…' : (member.name || gameId);
       const image = String(stats.mainCharImage || member.photoData || '').trim();
       const imageHtml = image ? `<img class="compact-player-avatar" src="${escapeHtml(image)}" alt="${escapeHtml(stats.mainChar || name)}">` : `<span class="avatar-initials compact-player-avatar">${escapeHtml(getInitials(name))}</span>`;
-      const rank = stats.danRank || 'データ取得中';
-      const rating = stats.ratingMu !== null && stats.ratingMu !== undefined ? `μ ${stats.ratingMu}` : 'データ取得中';
-      const power = stats.tekkenPower ? Number(stats.tekkenPower).toLocaleString() : 'データ取得中';
+      const rank = stats.danRank || 'チE�Eタ取得中';
+      const rating = stats.ratingMu !== null && stats.ratingMu !== undefined ? `μ ${stats.ratingMu}` : 'チE�Eタ取得中';
+      const power = stats.tekkenPower ? Number(stats.tekkenPower).toLocaleString() : 'チE�Eタ取得中';
       const lifetimeGames = Number(stats.totalRecordedGames);
       const lifetimeGamesHtml = Number.isFinite(lifetimeGames)
-        ? `<div class="compact-player-lifetime" title="ランクマ・プレマ・クイック・グループの全キャラ合計"><span>生涯・全マッチング</span><strong>${Math.max(0, lifetimeGames).toLocaleString()}戦</strong></div>`
+        ? `<div class="compact-player-lifetime" title="ランクマ�Eプレマ�EクイチE��・グループ�E全キャラ合訁E><span>生涯・全マッチング</span><strong>${Math.max(0, lifetimeGames).toLocaleString()}戦</strong></div>`
         : '';
       const ratingValue = Number(stats.ratingMu);
       const ratingTone = Number.isFinite(ratingValue)
@@ -4607,7 +4581,7 @@
       const message = normalizePlayerMessage(stats.playerMessage);
       const pentagonReady = stats.statPentagon && typeof window.openStatPentagonDetail === 'function';
       const readonly = document.body.classList.contains('shared-list-readonly');
-      const latestBattle = stats.lastSeenTimestamp ? formatTimeAgo(Number(stats.lastSeenTimestamp)) : 'データ未取得';
+      const latestBattle = stats.lastSeenTimestamp ? formatTimeAgo(Number(stats.lastSeenTimestamp)) : 'チE�Eタ未取征E;
       const latestDetail = [stats.latestBattleCharacter, stats.latestBattleType].filter(Boolean).join(' · ');
       const returnTracking = typeof window.ensureDormantReturnTracking === 'function'
         ? window.ensureDormantReturnTracking(key, member, stats)
@@ -4623,24 +4597,24 @@
         ? new Intl.DateTimeFormat('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(returnedRankedAt))
         : '';
       const compactReturnHtml = showDormantReturn
-        ? `<button type="button" class="compact-player-latest compact-return-action"><b>↻ 復帰を確認</b><span>${dormantReturnDays ? `${dormantReturnDays}日ぶりにランクマッチへ復帰` : 'ランクマッチへ復帰'}${returnedRankedLabel ? ` · ${escapeHtml(returnedRankedLabel)}` : ''}</span></button>`
+        ? `<button type="button" class="compact-player-latest compact-return-action"><b>↻ 復帰を確誁E/b><span>${dormantReturnDays ? `${dormantReturnDays}日ぶりにランクマッチへ復帰` : 'ランクマッチへ復帰'}${returnedRankedLabel ? ` · ${escapeHtml(returnedRankedLabel)}` : ''}</span></button>`
         : '';
       const trackedAutoName = member.nameMode !== 'auto' ? String(member.autoName || '').trim() : '';
       const compactNameMode = member.nameMode === 'auto'
         ? '<span class="compact-player-name-mode" title="自動取得名を追従中">↻</span>'
-        : '<span class="compact-player-name-mode" title="ユーザーが入力した固定名">🔒</span>';
+        : '<span class="compact-player-name-mode" title="ユーザーが�E力した固定名">🔒</span>';
       const compactCountryCode = normalizeCountryCode(member.countryCode || '');
       const compactCountryBadge = compactCountryCode
         ? `<span class="compact-country-badge" title="${escapeHtml(countryDisplayName(compactCountryCode))}" aria-label="${escapeHtml(countryDisplayName(compactCountryCode))}"><img src="${countryFlagImageUrl(compactCountryCode)}" alt="" aria-hidden="true"></span>`
         : '';
-      const compactDormantLabel = dormant ? '<span class="compact-dormant-label">（休眠中）</span>' : '';
+      const compactDormantLabel = dormant ? '<span class="compact-dormant-label">�E�休眠中�E�E/span>' : '';
       const platformConfig = {
         steam: { label: 'Steam', icon: 'assets/platform/steam.svg' },
         playstation: { label: 'PlayStation', icon: 'assets/platform/playstation.svg' },
         xbox: { label: 'Xbox', icon: 'assets/platform/xbox.svg' }
       }[String(stats.platform || '').toLowerCase()];
       const platformHtml = platformConfig && /^https:\/\//i.test(String(stats.platformProfileUrl || ''))
-        ? `<a class="compact-player-platform" href="${escapeHtml(stats.platformProfileUrl)}" target="_blank" rel="noopener noreferrer" title="${platformConfig.label}プロフィールを開く" aria-label="${platformConfig.label}プロフィールを開く"><img src="${platformConfig.icon}" alt=""></a>`
+        ? `<a class="compact-player-platform" href="${escapeHtml(stats.platformProfileUrl)}" target="_blank" rel="noopener noreferrer" title="${platformConfig.label}プロフィールを開ぁE aria-label="${platformConfig.label}プロフィールを開ぁE><img src="${platformConfig.icon}" alt=""></a>`
         : '';
       let compactXUrl = String(member.xUrl || '').trim();
       if (compactXUrl && !/^https?:\/\//i.test(compactXUrl)) {
@@ -4650,14 +4624,14 @@
         ? `<a href="${escapeHtml(compactXUrl)}" target="_blank" rel="noopener">X</a>`
         : '';
       content.innerHTML = `
-        ${platformHtml}<div class="compact-player-heading${dormant ? ' is-dormant' : ''}">${imageHtml}<div><h2 id="compactPlayerTitle">${escapeHtml(name)}${compactDormantLabel}${compactCountryBadge}${compactNameMode}</h2>${trackedAutoName ? `<span class="compact-player-tracked-name">自動取得名：${escapeHtml(trackedAutoName)}</span>` : ''}<p>${escapeHtml(stats.mainChar || 'Recent main 取得中')} · ${escapeHtml(gameId)}</p></div></div>
+        ${platformHtml}<div class="compact-player-heading${dormant ? ' is-dormant' : ''}">${imageHtml}<div><h2 id="compactPlayerTitle">${escapeHtml(name)}${compactDormantLabel}${compactCountryBadge}${compactNameMode}</h2>${trackedAutoName ? `<span class="compact-player-tracked-name">自動取得名�E�E{escapeHtml(trackedAutoName)}</span>` : ''}<p>${escapeHtml(stats.mainChar || 'Recent main 取得中')} · ${escapeHtml(gameId)}</p></div></div>
         <button type="button" class="compact-player-latest compact-last-battle-action"><b>◷ 最終対戦</b><span>${escapeHtml(latestBattle)}${latestDetail ? ` · ${escapeHtml(latestDetail)}` : ''}</span></button>
         ${compactReturnHtml}
         <div class="compact-player-values${dormant ? ' is-dormant' : ''}"><div><small>RANK</small><b class="compact-player-rank${rankIconHtml ? ' has-rank-icon' : ''}">${rankIconHtml}<span>${escapeHtml(rank)}</span></b></div><div><small>μ RATING</small><b class="${ratingTone}">${escapeHtml(rating)}</b></div><div><small>POWER</small><b>${escapeHtml(power)}</b></div></div>
         ${lifetimeGamesHtml}
-        <div class="compact-player-status"><button type="button" class="compact-main-reason-action">◎ メインキャラ判定の根拠</button><button type="button" class="compact-matchup-action">⇄ 得意・苦手キャラ</button>${dormant ? '<button type="button" class="compact-dormant-action is-dormant">💤 休眠中：判定理由</button>' : ''}</div>
+        <div class="compact-player-status"><button type="button" class="compact-main-reason-action">◁Eメインキャラ判定�E根拠</button><button type="button" class="compact-matchup-action">⇁E得意・苦手キャラ</button>${dormant ? '<button type="button" class="compact-dormant-action is-dormant">💤 休眠中�E�判定理由</button>' : ''}</div>
         ${message ? `<p class="compact-player-message">${escapeHtml(message)}</p>` : ''}
-        <div class="compact-player-action-area"><div class="compact-player-action-section"><small>PROFILE</small>${compactXLink}<a href="https://ewgf.gg/player/${encodeURIComponent(gameId)}" target="_blank" rel="noopener">ewgf</a><a href="https://wank.wavu.wiki/player/${encodeURIComponent(gameId)}" target="_blank" rel="noopener">wavu</a></div><div class="compact-player-action-section"><small>ACTIONS</small><button type="button" class="compact-pentagon-action"${pentagonReady ? '' : ' disabled'}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 9 6.5-3.4 10.5H6.4L3 8.5 12 2Z"></path></svg>${pentagonReady ? 'ペンタゴン分析' : 'ペンタゴン取得中…'}</button>${readonly ? '<span class="compact-player-readonly-note">🔒 閲覧専用（取り込み後に編集・削除可）</span>' : '<button type="button" class="compact-refresh-action">再取得</button><button type="button" class="compact-edit-action">編集</button><button type="button" class="compact-delete-action">削除</button>'}</div></div>`;
+        <div class="compact-player-action-area"><div class="compact-player-action-section"><small>PROFILE</small>${compactXLink}<a href="https://ewgf.gg/player/${encodeURIComponent(gameId)}" target="_blank" rel="noopener">ewgf</a><a href="https://wank.wavu.wiki/player/${encodeURIComponent(gameId)}" target="_blank" rel="noopener">wavu</a></div><div class="compact-player-action-section"><small>ACTIONS</small><button type="button" class="compact-pentagon-action"${pentagonReady ? '' : ' disabled'}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 9 6.5-3.4 10.5H6.4L3 8.5 12 2Z"></path></svg>${pentagonReady ? 'ペンタゴン刁E��' : 'ペンタゴン取得中…'}</button>${readonly ? '<span class="compact-player-readonly-note">🔒 閲覧専用�E�取り込み後に編雁E�E削除可�E�E/span>' : '<button type="button" class="compact-refresh-action">再取征E/button><button type="button" class="compact-edit-action">編雁E/button><button type="button" class="compact-delete-action">削除</button>'}</div></div>`;
       const pentagonButton = content.querySelector('.compact-pentagon-action');
       if (pentagonButton) pentagonButton.addEventListener('click', () => {
         modal.hidden = true;
@@ -4693,7 +4667,7 @@
       });
       content.querySelector('.compact-dormant-action')?.addEventListener('click', () => window.openDormantPlayerDetails?.(member, stats));
       content.querySelector('.compact-return-action')?.addEventListener('click', () => window.openDormantReturnDetails?.(member, stats));
-      content.querySelector('.compact-last-battle-action')?.addEventListener('click', () => showToast(`最終対戦：${latestBattle}${latestDetail ? `（${latestDetail}）` : ''}`));
+      content.querySelector('.compact-last-battle-action')?.addEventListener('click', () => showToast(`最終対戦�E�E{latestBattle}${latestDetail ? `�E�E{latestDetail}�E�` : ''}`));
       content.querySelector('.compact-refresh-action')?.addEventListener('click', () => window.refreshSingleMemberStats?.(key));
       content.querySelector('.compact-edit-action')?.addEventListener('click', () => {
         modal.hidden = true;
@@ -4708,7 +4682,7 @@
       const member = window.currentMembersData?.[key];
       const stats = member ? getLocalStats(cleanTekkenId(member.gameId), member) : null;
       if (!member || !stats?.statPentagon || typeof window.openStatPentagonDetail !== 'function') {
-        showToast('ペンタゴンを取得中です。少し待ってから開いてください');
+        showToast('ペンタゴンを取得中です。少し征E��てから開いてください');
         return;
       }
       // This shortcut originates on the list, not in the compact player
@@ -4727,7 +4701,7 @@
 
     function normalizePlayerMessage(value) {
       let message = String(value || '').replace(/\s+/g, ' ').trim();
-      const quotePairs = [['"', '"'], ['“', '”'], ['「', '」'], ["'", "'"], ['‘', '’']];
+      const quotePairs = [['"', '"'], [' E, ' E], ['、E, '、E], ["'", "'"], [' E, ' E]];
       let changed = true;
       while (changed && message.length >= 2) {
         changed = false;
@@ -4753,7 +4727,7 @@
         document.execCommand('copy');
         document.body.removeChild(ta);
       }
-      showToast(`🎯 ${name} の 鉄拳8 ID [${gameId}] をコピーしました！`);
+      showToast(`🎯 ${name} の 鉁E��8 ID [${gameId}] をコピ�Eしました�E�`);
     }
 
     function renderColorPresets() {
@@ -4785,7 +4759,7 @@
         if (url) {
           preview.innerHTML = `<img src="${escapeHtml(url)}" alt="Preview">`;
         } else {
-          preview.innerHTML = `<span>無画像</span>`;
+          preview.innerHTML = `<span>無画僁E/span>`;
         }
       }
 
@@ -4801,8 +4775,8 @@
     }
 
     function openAddModal() {
-      document.getElementById('modalTitle').textContent = 'メンバーを作成';
-      document.getElementById('btnSaveSubmit').textContent = 'メンバーを追加';
+      document.getElementById('modalTitle').textContent = 'メンバ�Eを作�E';
+      document.getElementById('btnSaveSubmit').textContent = 'メンバ�Eを追加';
 
       document.getElementById('editKey').value = '';
       document.getElementById('inputName').value = '';
@@ -4827,12 +4801,12 @@
     const modalReturnHandlers = new Map();
     function openEditModal(key, options = {}) {
       if (document.body.classList.contains('shared-list-readonly')) {
-        showToast('閲覧専用リストは編集できません');
+        showToast('閲覧専用リスト�E編雁E��きません');
         return;
       }
       const populateAndOpen = (m) => {
-        document.getElementById('modalTitle').textContent = 'メンバーを編集';
-        document.getElementById('btnSaveSubmit').textContent = 'メンバー情報を更新';
+        document.getElementById('modalTitle').textContent = 'メンバ�Eを編雁E;
+        document.getElementById('btnSaveSubmit').textContent = 'メンバ�E惁E��を更新';
 
         const cleanId = cleanTekkenId(m.gameId);
 
@@ -4888,13 +4862,13 @@
       const isAuto = !value || (!userEdited && initialMode === 'auto' && value === initialName);
       status.classList.toggle('manual', !isAuto);
       status.innerHTML = isAuto
-        ? '<span class="name-tracking-status-icon" aria-hidden="true">🔄</span><span><strong>自動取得名を1段で表示</strong><small>大きな主表示がEWGF・Wavu側の最新名へ追従します。</small></span>'
-        : '<span class="name-tracking-status-icon" aria-hidden="true">🔒</span><span><strong>入力名＋自動取得名を併記</strong><small>入力した名前は大きく固定し、最新の自動取得名をその下に表示して追従します。</small></span>';
+        ? '<span class="name-tracking-status-icon" aria-hidden="true">🔄</span><span><strong>自動取得名めE段で表示</strong><small>大きな主表示がEWGF・Wavu側の最新名へ追従します、E/small></span>'
+        : '<span class="name-tracking-status-icon" aria-hidden="true">🔒</span><span><strong>入力名�E��E動取得名を併訁E/strong><small>入力した名前�E大きく固定し、最新の自動取得名をその下に表示して追従します、E/small></span>';
     }
 
     function openDeleteModal(key, name) {
       if (document.body.classList.contains('shared-list-readonly')) {
-        showToast('閲覧専用リストからは削除できません');
+        showToast('閲覧専用リストから�E削除できません');
         return;
       }
       document.getElementById('deleteKey').value = key;
@@ -4939,7 +4913,7 @@
         `https://tight-bar-55c1.uracil123.workers.dev/?ewgfId=${encodeURIComponent(gameId)}&mode=latest`,
         { cache: 'no-store', signal: controller.signal }
       ).then(async response => {
-        if (!response.ok) throw new Error(`Worker名前取得 HTTP ${response.status}`);
+        if (!response.ok) throw new Error(`Worker名前取征EHTTP ${response.status}`);
         const payload = await response.json();
         return validateName(payload.playerName);
       });
@@ -4947,7 +4921,7 @@
         `https://r.jina.ai/http://wank.wavu.wiki/player/${encodeURIComponent(gameId)}`,
         { cache: 'no-store', signal: controller.signal }
       ).then(async response => {
-        if (!response.ok) throw new Error(`Wavu名前取得 HTTP ${response.status}`);
+        if (!response.ok) throw new Error(`Wavu名前取征EHTTP ${response.status}`);
         const text = await response.text();
         const titleMatch = text.match(/^Title:\s*(.+?)\s*[•·]\s*Wavu Wank\s*$/mi);
         return validateName(titleMatch ? titleMatch[1] : '');
@@ -4974,15 +4948,13 @@
         });
       };
 
-      // r.jina.ai が返すMarkdown形式。
-      const linkPattern = /\[([^\]\r\n]+)\]\(https?:\/\/wank\.wavu\.wiki\/player\/([A-Za-z0-9]{12})\)/gi;
+      // r.jina.ai が返すMarkdown形式、E      const linkPattern = /\[([^\]\r\n]+)\]\(https?:\/\/wank\.wavu\.wiki\/player\/([A-Za-z0-9]{12})\)/gi;
       let match;
       while ((match = linkPattern.exec(String(text || ''))) !== null) {
         addCandidate(match[2], match[1]);
       }
 
-      // AllOrigins / corsproxy.io が返すWavu本来のHTML形式。
-      const htmlLinkPattern = /<a\b[^>]*href=["'](?:https?:\/\/wank\.wavu\.wiki)?\/player\/([A-Za-z0-9]{12})["'][^>]*>([\s\S]*?)<\/a>/gi;
+      // AllOrigins / corsproxy.io が返すWavu本来のHTML形式、E      const htmlLinkPattern = /<a\b[^>]*href=["'](?:https?:\/\/wank\.wavu\.wiki)?\/player\/([A-Za-z0-9]{12})["'][^>]*>([\s\S]*?)<\/a>/gi;
       while ((match = htmlLinkPattern.exec(String(text || ''))) !== null) {
         addCandidate(match[1], match[2]);
       }
@@ -4994,9 +4966,7 @@
       if (!/^[A-Za-z0-9]{12}$/.test(cleanedId)) {
         return { gameId: cleanedId, playerName: '', status: 'invalid-format' };
       }
-      // 大小文字だけが違う別IDが理論上共存しても誤流用しないよう、
-      // キャッシュキーには入力された大小文字をそのまま残す。
-      const cacheKey = cleanedId;
+      // 大小文字だけが違う別IDが理論上�E存しても誤流用しなぁE��ぁE��E      // キャチE��ュキーには入力された大小文字をそ�Eまま残す、E      const cacheKey = cleanedId;
       if (canonicalTekkenIdLookupCache.has(cacheKey)) {
         return canonicalTekkenIdLookupCache.get(cacheKey);
       }
@@ -5025,9 +4995,7 @@
           console.warn('Confusable TEKKEN 8 ID Worker lookup failed', cleanedId, error);
         }
         const wavuSearchUrl = `https://wank.wavu.wiki/player/search?q=${encodeURIComponent(cleanedId)}`;
-        // Jina は検索結果を一時的に「候補なし」でキャッシュすることがある。
-        // キャッシュ回避キーを付け、別CORS経路も順番に試す。
-        const lookupUrls = [
+        // Jina は検索結果を一時的に「候補なし」でキャチE��ュすることがある、E        // キャチE��ュ回避キーを付け、別CORS経路も頁E��に試す、E        const lookupUrls = [
           `https://r.jina.ai/http://wank.wavu.wiki/player/search?q=${encodeURIComponent(cleanedId)}&kentomo=${Date.now()}`,
           `https://api.allorigins.win/raw?url=${encodeURIComponent(wavuSearchUrl)}`,
           `https://corsproxy.io/?${encodeURIComponent(wavuSearchUrl)}`
@@ -5103,7 +5071,7 @@
       Object.assign(member, updates);
       if (membersRef) await membersRef.child(memberKey).update(updates);
       if (idWasCorrected) {
-        showToast(`保存済みIDを正式表記へ修復しました：${previousId} → ${canonicalId}`);
+        showToast(`保存済みIDを正式表記へ修復しました�E�E{previousId} ↁE${canonicalId}`);
       } else if (updates.name) {
         showToast(`${resolvedPlayer.playerName} のプレイヤー名を取得しました`);
       }
@@ -5113,13 +5081,11 @@
     async function confirmNewPlayerId(gameId) {
       if (!/^[A-Za-z0-9]{12}$/.test(gameId)) {
         return confirm(
-          `TEKKEN 8 ID「${gameId}」は12文字ではありません。\n` +
-          'コピー漏れや入力ミスの可能性がありますが、このまま追加しますか？'
+          `TEKKEN 8 ID、E{gameId}」�E12斁E��ではありません、En` +
+          'コピ�E漏れめE�E力ミスの可能性がありますが、このまま追加しますか�E�E
         );
       }
-      // 登録操作をEWGFの障害やレート制限に依存させない。
-      // 正しい形式なら先に保存し、プロフィール確認は通常の共有キャッシュ更新へ任せる。
-      return true;
+      // 登録操作をEWGFの障害めE��ート制限に依存させなぁE��E      // 正しい形式なら�Eに保存し、�Eロフィール確認�E通常の共有キャチE��ュ更新へ任せる、E      return true;
     }
 
     function isUsableInitialMemberStats(stats) {
@@ -5174,7 +5140,7 @@
       const rawGameId = document.getElementById('inputId').value.trim();
       let gameId = cleanTekkenId(rawGameId);
       if (!gameId) {
-        showToast('TEKKEN 8 IDを入力してください');
+        showToast('TEKKEN 8 IDを�E力してください');
         return;
       }
 
@@ -5197,7 +5163,7 @@
         const lookupSubmit = document.getElementById('btnSaveSubmit');
         const lookupOriginalLabel = lookupSubmit.textContent;
         lookupSubmit.disabled = true;
-        lookupSubmit.textContent = 'TEKKEN 8 IDを照合中...';
+        lookupSubmit.textContent = 'TEKKEN 8 IDを�E合中...';
         resolvedPlayer = await resolveCanonicalTekkenId(gameId);
         lookupSubmit.disabled = false;
         lookupSubmit.textContent = lookupOriginalLabel;
@@ -5206,9 +5172,9 @@
         const enteredId = gameId;
         gameId = resolvedPlayer.gameId;
         document.getElementById('inputId').value = gameId;
-        showToast(`ID表記を自動補正しました：${enteredId} → ${gameId}`);
+        showToast(`ID表記を自動補正しました�E�E{enteredId} ↁE${gameId}`);
       } else if (resolvedPlayer.status === 'ambiguous') {
-        showToast('大文字・小文字だけではプレイヤーを一意に特定できませんでした');
+        showToast('大斁E���E小文字だけではプレイヤーを一意に特定できませんでした');
         return;
       }
 
@@ -5218,8 +5184,8 @@
       );
       if (duplicateEntry) {
         const duplicateName = duplicateEntry[1] && duplicateEntry[1].name ? duplicateEntry[1].name : '登録済みプレイヤー';
-        alert(`TEKKEN 8 ID「${gameId}」は、このリストに「${duplicateName}」として既に登録されています。\n同じIDを同じリストへ複数登録することはできません。`);
-        showToast('同じTEKKEN 8 IDはこのリストに重複登録できません');
+        alert(`TEKKEN 8 ID、E{gameId}」�E、このリストに、E{duplicateName}」として既に登録されてぁE��す、En同じIDを同じリストへ褁E��登録することはできません。`);
+        showToast('同じTEKKEN 8 IDはこ�Eリストに重褁E��録できません');
         return;
       }
       if (!key && !(await confirmNewPlayerId(gameId))) return;
@@ -5227,7 +5193,7 @@
       const submit = document.getElementById('btnSaveSubmit');
       const originalLabel = submit.textContent;
       submit.disabled = true;
-      submit.textContent = 'プレイヤー情報を確認中...';
+      submit.textContent = 'プレイヤー惁E��を確認中...';
 
       try {
         const enteredName = document.getElementById('inputName').value.trim();
@@ -5338,7 +5304,7 @@
     function confirmDelete() {
       if (document.body.classList.contains('shared-list-readonly')) {
         closeModal('deleteModal');
-        showToast('閲覧専用リストからは削除できません');
+        showToast('閲覧専用リストから�E削除できません');
         return;
       }
       const key = document.getElementById('deleteKey').value;
@@ -5397,8 +5363,7 @@
       titleEl.style.display = '';
     }
 
-    // GitHub Pagesで古いindex.htmlが残らないよう、以前のService Workerとそのキャッシュを解除する。
-    if ('serviceWorker' in navigator) {
+    // GitHub Pagesで古ぁEndex.htmlが残らなぁE��ぁE��以前�EService Workerとそ�EキャチE��ュを解除する、E    if ('serviceWorker' in navigator) {
       window.addEventListener('load', async () => {
         try {
           const registrations = await navigator.serviceWorker.getRegistrations();
@@ -5419,12 +5384,12 @@
 
   </script>
   <script src="html2canvas.min.js?v=1.4.1"></script>
-  <script src="user-lists-prototype.js?v=20260802-matchup-inline-retry"></script>
+  <script src="user-lists-prototype.js?v=20260802-pentagon-mobile-gap-modal-center"></script>
   <script src="admin-access-prototype.js?v=20260801-community-entry"></script>
   <script>
     (() => {
       const integrationScript = document.createElement('script');
-      const assetVersion = '20260802-matchup-inline-retry';
+      const assetVersion = '20260802-pentagon-mobile-gap-modal-center';
       integrationScript.src = `stats-integration-v4.js?v=${assetVersion}`;
       integrationScript.async = false;
       integrationScript.onload = () => {
@@ -5450,18 +5415,18 @@
   <script>
     (() => {
       const entries = [
-        ['rankedGames', 'ランクマッチ'], ['quickGames', 'クイックバトル'],
-        ['playerGames', 'プレイヤーマッチ'], ['groupGames', 'グループバトル']
+        ['rankedGames', 'ランクマッチE], ['quickGames', 'クイチE��バトル'],
+        ['playerGames', 'プレイヤーマッチE], ['groupGames', 'グループバトル']
       ];
       const numberOrNull = value => Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : null;
-      const formatGames = value => value === null ? '—' : `${value.toLocaleString()}戦`;
+      const formatGames = value => value === null ? ' E : `${value.toLocaleString()}戦`;
       function ensureLifetimeBreakdownDialog() {
         let dialog = document.getElementById('lifetimeBreakdownDialog');
         if (dialog) return dialog;
         dialog = document.createElement('dialog');
         dialog.id = 'lifetimeBreakdownDialog';
         dialog.className = 'lifetime-breakdown-dialog';
-        dialog.innerHTML = '<div class="lifetime-breakdown-inner"><button class="lifetime-breakdown-close" type="button">閉じる</button><h2>生涯・全マッチングの内訳</h2><p>全キャラ合算。EWGFに記録されている対戦が対象です。</p><dl class="lifetime-breakdown-list"></dl></div>';
+        dialog.innerHTML = '<div class="lifetime-breakdown-inner"><button class="lifetime-breakdown-close" type="button">閉じめE/button><h2>生涯・全マッチングの冁E��</h2><p>全キャラ合算、EWGFに記録されてぁE��対戦が対象です、E/p><dl class="lifetime-breakdown-list"></dl></div>';
         dialog.querySelector('.lifetime-breakdown-close').addEventListener('click', () => dialog.close());
         dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
         document.body.appendChild(dialog);
@@ -5475,7 +5440,7 @@
         entries.forEach(([field, label]) => {
           const value = numberOrNull(row?.dataset?.[field]);
           const item = document.createElement('div');
-          const percent = total !== null && total > 0 && value !== null ? `${(value / total * 100).toFixed(1)}%` : '—';
+          const percent = total !== null && total > 0 && value !== null ? `${(value / total * 100).toFixed(1)}%` : ' E;
           item.innerHTML = `<dt></dt><dd></dd><small></small>`;
           item.querySelector('dt').textContent = label;
           item.querySelector('dd').textContent = formatGames(value);
@@ -5484,7 +5449,7 @@
         });
         const totalItem = document.createElement('div');
         totalItem.className = 'lifetime-breakdown-total';
-        totalItem.innerHTML = '<dt>合計</dt><dd></dd><small>100.0%</small>';
+        totalItem.innerHTML = '<dt>合訁E/dt><dd></dd><small>100.0%</small>';
         totalItem.querySelector('dd').textContent = formatGames(total);
         list.appendChild(totalItem);
         if (!dialog.open) dialog.showModal();
