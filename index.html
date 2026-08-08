@@ -33,7 +33,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <link rel="stylesheet" href="user-lists-prototype.css?v=20260808-encoding-recovery">
+  <link rel="stylesheet" href="user-lists-prototype.css?v=20260808-page-open-shared-cache-first">
   <link rel="stylesheet" href="admin-access-prototype.css?v=20260801-community-entry">
 
   <!-- Cropper.js (画像トリミング・クロップ用) -->
@@ -2381,7 +2381,7 @@
   <script>
     // Change this fixed feature version only when integration UI assets change.
     (() => {
-      const assetVersion = '20260808-encoding-recovery';
+      const assetVersion = '20260808-page-open-shared-cache-first';
       const stylesheet = document.createElement('link');
       stylesheet.rel = 'stylesheet';
       stylesheet.href = `stats-integration-v4.css?v=${assetVersion}`;
@@ -3867,13 +3867,13 @@
       }
     }
 
-    async function refreshCardStats(gameId, key, { silent = false, isManual = true } = {}) {
+    async function refreshCardStats(gameId, key, { silent = false, isManual = true, force = true } = {}) {
       if (!silent) showToast(`🔄 EWGF・Wavuから ID[${gameId}] の最新データを取得中...`);
       let memberName = '';
       if (window.currentMembersData && window.currentMembersData[key]) {
         memberName = window.currentMembersData[key].name || '';
       }
-      const stats = await fetchEwgfStats(gameId, true, key, isManual, memberName);
+      const stats = await fetchEwgfStats(gameId, force, key, isManual, memberName);
       const container = document.getElementById(`stats_box_${key}`);
       const retryButton = document.querySelector(`[data-retry-member="${CSS.escape(key)}"]`);
       if (retryButton) retryButton.classList.toggle('is-visible', Boolean(stats && (stats.isError || stats.refreshFailed)));
@@ -5419,12 +5419,12 @@
 
   </script>
   <script src="html2canvas.min.js?v=1.4.1"></script>
-  <script src="user-lists-prototype.js?v=20260808-encoding-recovery"></script>
+  <script src="user-lists-prototype.js?v=20260808-page-open-shared-cache-first"></script>
   <script src="admin-access-prototype.js?v=20260801-community-entry"></script>
   <script>
     (() => {
       const integrationScript = document.createElement('script');
-      const assetVersion = '20260808-encoding-recovery';
+      const assetVersion = '20260808-page-open-shared-cache-first';
       integrationScript.src = `stats-integration-v4.js?v=${assetVersion}`;
       integrationScript.async = false;
       integrationScript.onload = () => {

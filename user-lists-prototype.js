@@ -5441,8 +5441,8 @@
           // storing the profile it updates every visible field, including the
           // independent lifetime all-match row.
           const stats = typeof window.refreshCardStats === 'function'
-            ? await window.refreshCardStats(gameId, key, { silent: true, isManual: false })
-            : await fetchEwgfStats(gameId, true, key, false, member.name || '');
+            ? await window.refreshCardStats(gameId, key, { silent: true, isManual: false, force: false })
+            : await fetchEwgfStats(gameId, false, key, false, member.name || '');
           if (stats?.isError || stats?.refreshFailed || stats?.refreshUsedSharedCache) skipped += 1;
           else completed += 1;
           window.refreshVisibleStats?.();
