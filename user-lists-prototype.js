@@ -5358,17 +5358,19 @@
   // sweep. Keep it distinct from the five-minute latest-battle polling above:
   // a quick series of list switches must never fan out into several full runs.
   const PAGE_OPEN_PROFILE_LIST_COOLDOWN_MS = 30 * 60 * 1000;
-  const PAGE_OPEN_PROFILE_GLOBAL_COOLDOWN_MS = 2 * 60 * 1000;
+  const PAGE_OPEN_PROFILE_GLOBAL_COOLDOWN_MS = 5 * 60 * 1000;
   // The server sweep is a 12-hour safety net. An actively opened list should
   // feel fresher, so only profiles updated within the last three hours skip
   // the on-open sequential pass.
   const PAGE_OPEN_PROFILE_FRESHNESS_MS = 3 * 60 * 60 * 1000;
   const PAGE_OPEN_PROFILE_SETTLE_MS = 1800;
   const PAGE_OPEN_PROFILE_GAP_MS = 900;
+  const PAGE_OPEN_PROFILE_RETRY_DELAYS_MS = [65 * 1000, 5 * 60 * 1000, 15 * 60 * 1000];
   let pageOpenProfileRunSerial = 0;
   let pageOpenProfileTimer = null;
   let pageOpenProfileStartedAt = 0;
   let pageOpenProfileActive = false;
+  const pageOpenProfileRetryTimers = new Map();
 
   const pageOpenProfileStorageKey = listId => {
     const uid = String(activeUser?.uid || 'guest');
@@ -5395,8 +5397,46 @@
     return timestamp > 0 && now - timestamp >= 0 && now - timestamp < PAGE_OPEN_PROFILE_FRESHNESS_MS;
   };
 
+  const clearPageOpenProfileRetryTimers = () => {
+    pageOpenProfileRetryTimers.forEach(timer => clearTimeout(timer));
+    pageOpenProfileRetryTimers.clear();
+  };
+
+  const schedulePageOpenProfileRetry = (listId, runSerial, entry, attempt = 0) => {
+    const retryKey = `${listId}:${String(entry.gameId || '').toUpperCase()}`;
+    const delay = PAGE_OPEN_PROFILE_RETRY_DELAYS_MS[attempt];
+    if (!delay || pageOpenProfileRetryTimers.has(retryKey)) return;
+    const timer = setTimeout(async () => {
+      pageOpenProfileRetryTimers.delete(retryKey);
+      if (runSerial !== pageOpenProfileRunSerial || activeListId !== listId || sharedListView) return;
+      pageOpenProfileActive = true;
+      window.kentomoPageOpenProfileRefresh = true;
+      try {
+        const stats = await window.refreshCardStats(entry.gameId, entry.key, {
+          silent: true,
+          isManual: false,
+          force: false
+        });
+        window.refreshVisibleStats?.();
+        if (stats?.isError || stats?.refreshFailed) {
+          schedulePageOpenProfileRetry(listId, runSerial, entry, attempt + 1);
+        } else {
+          showToast(`↻ ${entry.member.name || entry.gameId}の自動再試行が成功しました`);
+        }
+      } catch (error) {
+        console.warn('List-open profile automatic retry failed', entry.gameId, error);
+        schedulePageOpenProfileRetry(listId, runSerial, entry, attempt + 1);
+      } finally {
+        window.kentomoPageOpenProfileRefresh = false;
+        pageOpenProfileActive = false;
+      }
+    }, delay);
+    pageOpenProfileRetryTimers.set(retryKey, timer);
+  };
+
   function scheduleOwnedListProfileRefresh(listId, members) {
     if (!listId || !members || !Object.keys(members).length || !activeUser || sharedListView) return;
+    clearPageOpenProfileRetryTimers();
     const now = Date.now();
     if (now - readPageOpenProfileStartedAt(listId) < PAGE_OPEN_PROFILE_LIST_COOLDOWN_MS) return;
     const runSerial = ++pageOpenProfileRunSerial;
@@ -5431,6 +5471,7 @@
     showToast(`↻ このリストの未更新データを順次更新中（${stalePlayers.length}/${uniquePlayers.size}人）`);
     let completed = 0;
     let skipped = 0;
+    const failedEntries = [];
     try {
       for (const { key, member, gameId } of stalePlayers) {
         // A new list selection invalidates this sweep after the current member.
@@ -5443,7 +5484,10 @@
           const stats = typeof window.refreshCardStats === 'function'
             ? await window.refreshCardStats(gameId, key, { silent: true, isManual: false, force: false })
             : await fetchEwgfStats(gameId, false, key, false, member.name || '');
-          if (stats?.isError || stats?.refreshFailed || stats?.refreshUsedSharedCache) skipped += 1;
+          if (stats?.isError || stats?.refreshFailed) {
+            skipped += 1;
+            failedEntries.push({ key, member, gameId });
+          } else if (stats?.refreshUsedSharedCache) skipped += 1;
           else completed += 1;
           window.refreshVisibleStats?.();
         } catch (error) {
@@ -5461,9 +5505,13 @@
         // Only a run that obtained at least one usable profile should suppress
         // another list-open attempt. A transient all-failure remains retryable.
         if (completed > 0) writePageOpenProfileStartedAt(listId, now);
+        failedEntries.forEach(entry => schedulePageOpenProfileRetry(listId, runSerial, entry));
         showToast(skipped
           ? `↻ リスト更新完了：${completed}人を更新、${skipped}人は保存データを使用`
           : `↻ リスト更新完了：${completed}人を更新しました`);
+        if (failedEntries.length) {
+          showToast(`↻ 取得失敗${failedEntries.length}人は、時間を空けて自動再試行します`);
+        }
       }
     } finally {
       window.kentomoPageOpenProfileRefresh = false;
