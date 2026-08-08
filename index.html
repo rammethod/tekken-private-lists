@@ -5510,8 +5510,8 @@
   <script>
     (() => {
       const entries = [
-        ['rankedGames', 'ランクマッチ'], ['quickGames', 'クイックバトル'],
-        ['playerGames', 'プレイヤーマッチ'], ['groupGames', 'グループバトル']
+        ['rankedGames', 'Ranked Match'], ['quickGames', 'Quick Battle'],
+        ['playerGames', 'Player Match'], ['groupGames', 'Group Battle']
       ];
       const numberOrNull = value => Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : null;
       const formatGames = value => value === null ? '—' : `${value.toLocaleString()}戦`;
@@ -5521,7 +5521,7 @@
         dialog = document.createElement('dialog');
         dialog.id = 'lifetimeBreakdownDialog';
         dialog.className = 'lifetime-breakdown-dialog';
-        dialog.innerHTML = '<div class="lifetime-breakdown-inner"><button class="lifetime-breakdown-close" type="button">閉じる</button><h2>生涯・全マッチングの内訳</h2><p>全キャラ合算。EWGFに記録されている対戦が対象です。</p><dl class="lifetime-breakdown-list"></dl></div>';
+        dialog.innerHTML = '<div class="lifetime-breakdown-inner"><button class="lifetime-breakdown-close" type="button" aria-label="閉じる">×</button><h2>生涯・全マッチングの内訳</h2><p>全キャラ合算。EWGFに記録されている対戦が対象です。</p><dl class="lifetime-breakdown-list"></dl></div>';
         dialog.querySelector('.lifetime-breakdown-close').addEventListener('click', () => dialog.close());
         dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
         document.body.appendChild(dialog);
