@@ -3334,6 +3334,16 @@
     document.body.appendChild(dialog);
     dialog.addEventListener('close', () => dialog.remove(), { once: true });
     const stat = (label, value, note = '') => `<div><small>${label}</small><strong>${value}</strong>${note ? `<em>${note}</em>` : ''}</div>`;
+    const formatCommunityPointBreakdown = entry => {
+      const points = Number(entry?.points);
+      const mainCount = Math.max(0, Math.floor(Number(entry?.mainCount) || 0));
+      const subCount = Math.max(0, Math.floor(Number(entry?.subCount) || 0));
+      const terms = [];
+      if (mainCount) terms.push(`1.0pt × ${mainCount}`);
+      if (subCount) terms.push(`0.5pt × ${subCount}`);
+      if (!terms.length || !Number.isFinite(points)) return '内訳: —';
+      return `内訳: ${terms.join(' + ')} = ${points.toFixed(1)}pt`;
+    };
     dialog.querySelector('h2').textContent = `ひとくち勢力図 / ${listName}`;
     dialog.querySelector('.community-insights-lead').textContent = shareId ? '共有リストのアクセス概算と、メンバー構成です' : 'メンバー構成です。共有URLを作成するとアクセス概算も表示します。';
     const colors = ['#a78bfa', '#67e8f9', '#fde68a', '#fb7185', '#86efac', '#94a3b8'];
@@ -3347,7 +3357,13 @@
     centerImage.hidden = !community.favoriteImage;
     pie.querySelector('strong').textContent = community.favorite;
     pie.querySelector('span').textContent = `${community.favoritePoints.toFixed(1)}pt / ${community.favoritePercent}%`;
-    dialog.querySelector('.community-pie-legend').innerHTML = community.chartEntries.map((entry, index) => `<li><i style="--community-color:${colors[index % colors.length]}"></i>${entry.image ? `<img src="${escapeHtml(entry.image)}" alt="">` : '<span class="community-pie-no-image">?</span>'}<b>${escapeHtml(entry.character)}<em>メイン ${entry.mainCount || 0}人 / サブ ${entry.subCount || 0}人</em></b><small>${entry.points.toFixed(1)}pt</small></li>`).join('') || '<li>キャラ情報を取得中です</li>';
+    dialog.querySelector('.community-pie-legend').innerHTML = community.chartEntries.map((entry, index) => {
+      const mainCount = Math.max(0, Math.floor(Number(entry.mainCount) || 0));
+      const subCount = Math.max(0, Math.floor(Number(entry.subCount) || 0));
+      const points = Number(entry.points);
+      const pointText = Number.isFinite(points) ? `${points.toFixed(1)}pt` : '—';
+      return `<li><i style="--community-color:${colors[index % colors.length]}"></i>${entry.image ? `<img src="${escapeHtml(entry.image)}" alt="">` : '<span class="community-pie-no-image">?</span>'}<b><span class="community-pie-character-name">${escapeHtml(entry.character)}</span><em class="community-pie-meta">メイン ${mainCount}人 / サブ ${subCount}人</em><em class="community-pie-formula">${escapeHtml(formatCommunityPointBreakdown(entry))}</em></b><small>${pointText}</small></li>`;
+    }).join('') || '<li>キャラ情報を取得中です</li>';
     const estimatedHours = Math.round(community.totalRecordedGames * 2.5 / 6) / 10;
     const activityPercent = community.memberCount ? Math.round(community.active / community.memberCount * 100) : 0;
     dialog.querySelector('.community-community-grid').innerHTML = [stat('ランクマ活動基準達成率', `${activityPercent}%`, `${community.active} / ${community.memberCount}人 · 7日3戦 または 30日10戦`), stat('休眠中', `${community.dormant}人`, 'カードの休眠バッジ判定'), stat('確認キャラ数', `${community.characterCount}キャラ`), stat('メインランクマ合計', `${Math.round(community.mainRankedGames).toLocaleString()}戦`), stat('全プレイヤー総試合数', `${Math.round(community.totalRecordedGames).toLocaleString()}戦`, `全マッチング · 推定 ${estimatedHours.toLocaleString()}時間`), stat('メンバー', `${community.memberCount}人`)].join('');
