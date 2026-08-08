@@ -3306,10 +3306,18 @@
     const sorted = [...counts.entries()].sort((a, b) => b[1].points - a[1].points || a[0].localeCompare(b[0], 'ja'));
     const memberCount = Object.keys(members || {}).length;
     const [favorite, favoriteData] = sorted[0] || ['集計中', { points: 0, mainCount: 0, subCount: 0, image: '' }];
-    const chartEntries = sorted.slice(0, 5).map(([character, value]) => ({ character, ...value }));
+    // Keep the pie chart fair at the cutoff: if several characters tie with
+    // the fifth-place score, none of them should be chosen arbitrarily by
+    // localeCompare. They are all part of the aggregated "その他" segment.
+    const cutoffPoints = sorted.length > 5 ? Number(sorted[4][1].points) : null;
+    const visibleEntries = cutoffPoints === null
+      ? sorted
+      : sorted.filter(([, value]) => Number(value.points) > cutoffPoints);
+    const chartEntries = visibleEntries.map(([character, value]) => ({ character, ...value }));
     const visiblePoints = chartEntries.reduce((sum, entry) => sum + entry.points, 0);
     if (signals > visiblePoints) {
-      const omitted = sorted.slice(5);
+      const visibleCharacters = new Set(visibleEntries.map(([character]) => character));
+      const omitted = sorted.filter(([character]) => !visibleCharacters.has(character));
       const otherMainCount = omitted.reduce((sum, [, value]) => sum + Number(value.mainCount || 0), 0);
       const otherSubCount = omitted.reduce((sum, [, value]) => sum + Number(value.subCount || 0), 0);
       chartEntries.push({ character: 'その他', points: signals - visiblePoints, mainCount: otherMainCount, subCount: otherSubCount, image: '' });
