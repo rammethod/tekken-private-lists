@@ -3306,13 +3306,11 @@
     const sorted = [...counts.entries()].sort((a, b) => b[1].points - a[1].points || a[0].localeCompare(b[0], 'ja'));
     const memberCount = Object.keys(members || {}).length;
     const [favorite, favoriteData] = sorted[0] || ['集計中', { points: 0, mainCount: 0, subCount: 0, image: '' }];
-    // Keep the pie chart fair at the cutoff: if several characters tie with
-    // the fifth-place score, none of them should be chosen arbitrarily by
-    // localeCompare. They are all part of the aggregated "その他" segment.
-    const cutoffPoints = sorted.length > 5 ? Number(sorted[4][1].points) : null;
-    const visibleEntries = cutoffPoints === null
-      ? sorted
-      : sorted.filter(([, value]) => Number(value.points) > cutoffPoints);
+    // Keep the legend readable by showing the five largest character groups.
+    // The stable localeCompare tiebreak above makes tied groups deterministic;
+    // ties at the fifth-place boundary must not hide every character when all
+    // groups have the same score.
+    const visibleEntries = sorted.length > 5 ? sorted.slice(0, 5) : sorted;
     const chartEntries = visibleEntries.map(([character, value]) => ({ character, ...value }));
     const visiblePoints = chartEntries.reduce((sum, entry) => sum + entry.points, 0);
     if (signals > visiblePoints) {
