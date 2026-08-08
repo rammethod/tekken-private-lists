@@ -3308,7 +3308,12 @@
     const [favorite, favoriteData] = sorted[0] || ['集計中', { points: 0, mainCount: 0, subCount: 0, image: '' }];
     const chartEntries = sorted.slice(0, 5).map(([character, value]) => ({ character, ...value }));
     const visiblePoints = chartEntries.reduce((sum, entry) => sum + entry.points, 0);
-    if (signals > visiblePoints) chartEntries.push({ character: 'その他', points: signals - visiblePoints, mainCount: 0, subCount: 0, image: '' });
+    if (signals > visiblePoints) {
+      const omitted = sorted.slice(5);
+      const otherMainCount = omitted.reduce((sum, [, value]) => sum + Number(value.mainCount || 0), 0);
+      const otherSubCount = omitted.reduce((sum, [, value]) => sum + Number(value.subCount || 0), 0);
+      chartEntries.push({ character: 'その他', points: signals - visiblePoints, mainCount: otherMainCount, subCount: otherSubCount, image: '' });
+    }
     return { memberCount, active, dormant, characterCount: counts.size, mainRankedGames, mainRankedGamesMembers, totalRankedAndPlayerGames, totalRankedAndPlayerGamesMembers, totalRecordedGames, totalRecordedGamesMembers, favorite, favoriteData, favoritePoints: favoriteData.points, favoriteImage: favoriteData.image, favoritePercent: signals ? Math.round(favoriteData.points / signals * 100) : 0, signals, chartEntries };
   }
   async function openCommunityInsights() {
