@@ -3273,7 +3273,7 @@
       .catch(error => console.warn('Shared access tracking failed', error));
   }
   function communityCharacterDistribution(members) {
-    const counts = new Map(); let active = 0; let signals = 0; let mainRankedGames = 0; let mainRankedGamesMembers = 0; let totalRankedAndPlayerGames = 0; let totalRankedAndPlayerGamesMembers = 0; let totalRecordedGames = 0; let totalRecordedGamesMembers = 0;
+    const counts = new Map(); let active = 0; let dormant = 0; let signals = 0; let mainRankedGames = 0; let mainRankedGamesMembers = 0; let totalRankedAndPlayerGames = 0; let totalRankedAndPlayerGamesMembers = 0; let totalRecordedGames = 0; let totalRecordedGamesMembers = 0;
     Object.values(members || {}).forEach(member => {
       const stats = memberStats(member);
       const mainGames = Number(stats.mainCharGames);
@@ -3301,6 +3301,7 @@
         counts.set(character, { points: current.points + weight, mainCount: current.mainCount + (weight === 1 ? 1 : 0), subCount: current.subCount + (weight === .5 ? 1 : 0), image: current.image || image }); signals += weight;
       });
       if (window.hasRecentRankedActivity?.(stats)) active += 1;
+      if (window.isDormantStats?.(stats)) dormant += 1;
     });
     const sorted = [...counts.entries()].sort((a, b) => b[1].points - a[1].points || a[0].localeCompare(b[0], 'ja'));
     const memberCount = Object.keys(members || {}).length;
@@ -3308,7 +3309,7 @@
     const chartEntries = sorted.slice(0, 5).map(([character, value]) => ({ character, ...value }));
     const visiblePoints = chartEntries.reduce((sum, entry) => sum + entry.points, 0);
     if (signals > visiblePoints) chartEntries.push({ character: 'その他', points: signals - visiblePoints, mainCount: 0, subCount: 0, image: '' });
-    return { memberCount, active, characterCount: counts.size, mainRankedGames, mainRankedGamesMembers, totalRankedAndPlayerGames, totalRankedAndPlayerGamesMembers, totalRecordedGames, totalRecordedGamesMembers, favorite, favoriteData, favoritePoints: favoriteData.points, favoriteImage: favoriteData.image, favoritePercent: signals ? Math.round(favoriteData.points / signals * 100) : 0, signals, chartEntries };
+    return { memberCount, active, dormant, characterCount: counts.size, mainRankedGames, mainRankedGamesMembers, totalRankedAndPlayerGames, totalRankedAndPlayerGamesMembers, totalRecordedGames, totalRecordedGamesMembers, favorite, favoriteData, favoritePoints: favoriteData.points, favoriteImage: favoriteData.image, favoritePercent: signals ? Math.round(favoriteData.points / signals * 100) : 0, signals, chartEntries };
   }
   async function openCommunityInsights() {
     const shareId = activeShareId();
@@ -3335,9 +3336,10 @@
     pie.querySelector('span').textContent = `${community.favoritePoints.toFixed(1)}pt / ${community.favoritePercent}%`;
     dialog.querySelector('.community-pie-legend').innerHTML = community.chartEntries.map((entry, index) => `<li><i style="--community-color:${colors[index % colors.length]}"></i>${entry.image ? `<img src="${escapeHtml(entry.image)}" alt="">` : '<span class="community-pie-no-image">?</span>'}<b>${escapeHtml(entry.character)}<em>メイン ${entry.mainCount || 0}人 / サブ ${entry.subCount || 0}人</em></b><small>${entry.points.toFixed(1)}pt</small></li>`).join('') || '<li>キャラ情報を取得中です</li>';
     const estimatedHours = Math.round(community.totalRecordedGames * 2.5 / 6) / 10;
-    dialog.querySelector('.community-community-grid').innerHTML = [stat('現役率', `${community.memberCount ? Math.round(community.active / community.memberCount * 100) : 0}%`), stat('現役メンバー', `${community.active} / ${community.memberCount}人`), stat('確認キャラ数', `${community.characterCount}キャラ`), stat('メインランクマ合計', `${Math.round(community.mainRankedGames).toLocaleString()}戦`), stat('全プレイヤー総試合数', `${Math.round(community.totalRecordedGames).toLocaleString()}戦`, `全マッチング · 推定 ${estimatedHours.toLocaleString()}時間`), stat('メンバー', `${community.memberCount}人`)].join('');
+    const activityPercent = community.memberCount ? Math.round(community.active / community.memberCount * 100) : 0;
+    dialog.querySelector('.community-community-grid').innerHTML = [stat('ランクマ活動基準達成率', `${activityPercent}%`, `${community.active} / ${community.memberCount}人 · 7日3戦 または 30日10戦`), stat('休眠中', `${community.dormant}人`, 'カードの休眠バッジ判定'), stat('確認キャラ数', `${community.characterCount}キャラ`), stat('メインランクマ合計', `${Math.round(community.mainRankedGames).toLocaleString()}戦`), stat('全プレイヤー総試合数', `${Math.round(community.totalRecordedGames).toLocaleString()}戦`, `全マッチング · 推定 ${estimatedHours.toLocaleString()}時間`), stat('メンバー', `${community.memberCount}人`)].join('');
     dialog.showModal();
-    const communityNote = `円グラフはメインを1pt、サブ候補を0.5ptとして、各プレイヤー最大2キャラまで合算。メインランクマ合計は確認できた${community.mainRankedGamesMembers}/${community.memberCount}人、全プレイヤー総試合数は確認できた${community.totalRecordedGamesMembers}/${community.memberCount}人の試合数です。総試合数はランクマ・プレマ・クイック・グループの全マッチングを合算。推定対戦時間は1試合約2.5分で換算しており、ロード・待機・トレーニング時間は含みません。`;
+    const communityNote = `ランクマ活動基準達成率は、直近7日で3試合以上または直近30日で10試合以上のランクマ実績を満たした人数の割合です。休眠中はカードに休眠バッジが表示されている人数で、同じ指標ではありません。円グラフはメインを1pt、サブ候補を0.5ptとして、各プレイヤー最大2キャラまで合算。メインランクマ合計は確認できた${community.mainRankedGamesMembers}/${community.memberCount}人、全プレイヤー総試合数は確認できた${community.totalRecordedGamesMembers}/${community.memberCount}人の試合数です。総試合数はランクマ・プレマ・クイック・グループの全マッチングを合算。推定対戦時間は1試合約2.5分で換算しており、ロード・待機・トレーニング時間は含みません。`;
     if (!shareId) { dialog.querySelector('.community-access-grid').hidden = true; dialog.querySelector('.community-insights-note').textContent = communityNote; return; }
     try {
       const response = await fetch(`${KENTOMO_WORKER_URL}/?mode=shared-access-summary&shareId=${encodeURIComponent(shareId)}`, { cache: 'no-store' });
