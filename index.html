@@ -33,7 +33,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <link rel="stylesheet" href="user-lists-prototype.css?v=20260808-dormant-character-background">
+  <link rel="stylesheet" href="user-lists-prototype.css?v=20260808-pentagon-comment-buttons">
   <link rel="stylesheet" href="admin-access-prototype.css?v=20260801-community-entry">
 
   <!-- Cropper.js (画像トリミング・クロップ用) -->
@@ -2377,11 +2377,69 @@
       }
     }
 
+    /* 20260808-desktop-modal-scale: enlarge desktop windows without changing mobile. */
+    @media (min-width:701px) {
+      .modal-overlay { padding:30px; }
+      .modal-wood { max-width:720px; padding:42px; border-radius:18px; }
+      #cropModal .modal-wood { max-width:780px !important; }
+      .modal-close { top:15px; right:18px; width:46px; height:46px; font-size:1.85rem; }
+      .modal-title { font-size:2.4rem; margin-bottom:30px; }
+      .form-group { margin-bottom:24px; }
+      .form-label { font-size:1rem; margin-bottom:9px; }
+      .form-input { padding:15px 18px; font-size:1.15rem; }
+      .modal-actions { gap:18px; margin-top:36px; }
+      .btn-wood { padding:12px 30px; }
+
+      .compact-player-modal { padding:24px; }
+      .compact-player-dialog { width:min(705px,calc(100vw - 48px)); padding:33px; border-radius:27px; }
+      .compact-player-close { top:15px; right:15px; width:51px; height:51px; font-size:2rem; }
+      .compact-player-platform { top:17px; right:78px; width:48px; height:48px; }
+      .compact-player-platform img { width:29px; height:29px; }
+      .compact-player-heading { gap:18px; padding-right:63px; }
+      .compact-player-heading img,.compact-player-heading .avatar-initials { width:93px; height:93px; }
+      .compact-player-heading h2 { font-size:1.74rem; }
+      .compact-player-heading p { margin-top:6px; font-size:.99rem; }
+      .compact-player-tracked-name { margin-top:5px; font-size:.93rem; }
+      .compact-player-values { gap:15px; margin:26px 0 20px; }
+      .compact-player-values div { min-height:111px; padding:18px 14px; border-radius:15px; }
+      .compact-player-values small { font-size:.81rem; }
+      .compact-player-values b { margin-top:8px; font-size:clamp(1.1rem,3.2vw,1.56rem); }
+      .compact-player-rank { gap:9px; }
+      .compact-player-rank img { width:96px; height:81px; }
+      .compact-player-latest { gap:12px; margin-top:20px; padding:14px 16px; border-radius:15px; }
+      .compact-player-latest b { font-size:.93rem; }
+      .compact-player-latest span { font-size:1.14rem; }
+      .compact-player-lifetime { gap:15px; margin:-6px 0 18px; padding:14px 16px; border-radius:15px; font-size:.96rem; }
+      .compact-player-lifetime strong { font-size:1.32rem; }
+      .compact-player-message { margin:18px 0; padding:15px; font-size:1.1rem; }
+      .compact-player-status { gap:10px; margin:18px 0; }
+      .compact-player-status button,.compact-player-status a { gap:9px; padding:10px 14px; font-size:.93rem; }
+      .compact-player-status img { width:21px; height:21px; }
+      .compact-player-action-area { gap:15px; margin-top:21px; padding-top:18px; }
+      .compact-player-action-section { gap:10px; }
+      .compact-player-action-section > small { font-size:.72rem; }
+      .compact-player-action-section button,.compact-player-action-section a { padding:12px 15px; font-size:.98rem; }
+      .compact-player-readonly-note { font-size:.87rem; }
+      .compact-pentagon-action { gap:9px; }
+      .compact-pentagon-action svg { width:23px; height:23px; }
+
+      .lifetime-breakdown-dialog { width:min(585px,calc(100vw - 48px)); max-height:calc(100vh - 48px); border-radius:24px; }
+      .lifetime-breakdown-inner { padding:30px; }
+      .lifetime-breakdown-inner h2 { font-size:1.5rem; }
+      .lifetime-breakdown-inner p { margin:8px 0 21px; font-size:1.02rem; }
+      .lifetime-breakdown-list { gap:10px; }
+      .lifetime-breakdown-list div { gap:15px; padding:12px 14px; border-radius:14px; }
+      .lifetime-breakdown-list dt { font-size:1.14rem; }
+      .lifetime-breakdown-list dd { font-size:1.2rem; }
+      .lifetime-breakdown-list small { font-size:.98rem; }
+      .lifetime-breakdown-close { margin:-6px -6px 0 15px; padding:6px 12px; font-size:1rem; }
+    }
+
   </style>
   <script>
     // Change this fixed feature version only when integration UI assets change.
     (() => {
-      const assetVersion = '20260808-dormant-character-background';
+      const assetVersion = '20260808-pentagon-comment-buttons';
       const stylesheet = document.createElement('link');
       stylesheet.rel = 'stylesheet';
       stylesheet.href = `stats-integration-v4.css?v=${assetVersion}`;
@@ -5421,12 +5479,12 @@
 
   </script>
   <script src="html2canvas.min.js?v=1.4.1"></script>
-  <script src="user-lists-prototype.js?v=20260808-dormant-character-background"></script>
+  <script src="user-lists-prototype.js?v=20260808-pentagon-comment-buttons"></script>
   <script src="admin-access-prototype.js?v=20260801-community-entry"></script>
   <script>
     (() => {
       const integrationScript = document.createElement('script');
-      const assetVersion = '20260808-dormant-character-background';
+      const assetVersion = '20260808-pentagon-comment-buttons';
       integrationScript.src = `stats-integration-v4.js?v=${assetVersion}`;
       integrationScript.async = false;
       integrationScript.onload = () => {

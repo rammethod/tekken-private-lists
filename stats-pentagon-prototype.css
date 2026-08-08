@@ -70,3 +70,31 @@ body.theme-wanted .stats-preview-badge{border-color:#c58a47;background:#2a160b;c
 .stats-preview-win-rate.is-elite-65{color:#f6d36f;text-shadow:0 1px 2px rgba(35,22,5,.92),0 0 3px rgba(246,211,111,.28)}
 body.theme-modern .stats-preview-win-rate.is-elite-65{color:#f6d36f;text-shadow:0 1px 2px rgba(0,0,0,.9),0 0 5px rgba(246,211,111,.28)}
 body.theme-japanese .stats-preview-win-rate.is-elite-65{color:#8a5700;text-shadow:none}
+
+/* 20260808-desktop-modal-scale: enlarge desktop analysis windows without changing mobile. */
+@media (min-width:701px){
+  .stat-detail-modal{padding:24px}
+  .stat-detail-dialog{
+    width:min(1440px,calc(100vw - 48px));
+    max-height:min(1200px,calc(100vh - 48px));
+    padding:36px;
+    border-radius:33px;
+  }
+  .stat-detail-close{right:19px;top:19px;z-index:3;width:57px;height:57px;font-size:2.25rem}
+  .stat-detail-kicker{font-size:.9rem}
+  .stat-detail-dialog h2{margin:8px 170px 0 0;font-size:1.875rem}
+  .stat-detail-memo{margin:21px 0 27px;padding:19px;font-size:1.25rem;font-weight:800;line-height:1.8;letter-spacing:.01em}
+  .stat-detail-layout{grid-template-columns:minmax(0,1fr) minmax(0,1fr);margin:21px 0 27px;gap:30px}
+  .stat-detail-layout .stat-detail-pentagon-canvas{width:min(100%,780px)}
+  .stat-detail-left .stat-detail-chart{min-height:645px}
+  .stat-detail-side .stat-detail-groups{gap:10px}
+  .stat-detail-side .stat-detail-groups section,.stat-detail-side .stat-detail-groups section:last-child{padding:13px 16px}
+  .stat-detail-side .stat-detail-groups h3{margin-bottom:7px;font-size:1rem}
+  .stat-detail-side .stat-detail-row{grid-template-columns:6.5em minmax(55px,1fr) 1.7em;gap:12px;margin-top:6px;font-size:.85rem}
+  .stat-detail-row>i{height:10px}
+  .stat-detail-row>b{font-size:1.05rem}
+  .stat-detail-note{margin-top:21px;font-size:.82rem}
+  .stat-detail-actions{top:19px;right:96px;z-index:2;margin-top:0}
+  .stat-detail-capture{width:57px;height:57px}
+  .stat-detail-capture svg{width:28px;height:28px}
+}
