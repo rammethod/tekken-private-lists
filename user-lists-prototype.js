@@ -2412,6 +2412,22 @@
           </div>
         </div>
       </dialog>
+      <dialog class="list-order-dialog shared-member-guide-dialog" id="sharedMemberGuideDialog" aria-labelledby="sharedMemberGuideTitle">
+        <div class="list-order-panel">
+          <div class="list-order-heading">
+            <div>
+              <strong id="sharedMemberGuideTitle">公開マイリストでは直接追加できません</strong>
+              <small>Googleログインすると、自分のマイリストを便利に使えます</small>
+            </div>
+            <button type="button" id="closeSharedMemberGuideBtn" aria-label="閉じる">×</button>
+          </div>
+          <p class="shared-member-guide-message"><strong>これは公開マイリストです</strong><span>このURLのリストへ直接メンバーを追加することはできません。Googleログインすれば、好きなメンバーを自分のマイリストに追加して、いつでも閲覧・管理できます。</span></p>
+          <div class="list-order-footer">
+            <button type="button" id="dismissSharedMemberGuideBtn">あとで</button>
+            <button type="button" id="sharedMemberGuideLoginBtn" class="workspace-primary-action">Googleでログイン</button>
+          </div>
+        </div>
+      </dialog>
       <dialog class="list-order-dialog" id="listOrderDialog">
         <div class="list-order-panel">
           <div class="list-order-heading">
@@ -2754,6 +2770,20 @@
     });
     byId('sharedImportConfirmDialog').addEventListener('close', () => {
       if (sharedImportConfirmResolve) closeSharedImportConfirmation(false, true);
+    });
+    byId('closeSharedMemberGuideBtn').onclick = () => closeSharedMemberGuideDialog();
+    byId('dismissSharedMemberGuideBtn').onclick = () => closeSharedMemberGuideDialog();
+    byId('sharedMemberGuideLoginBtn').onclick = async () => {
+      closeSharedMemberGuideDialog();
+      if (typeof window.openGoogleAccountLogin === 'function') await window.openGoogleAccountLogin();
+      else await signIn();
+    };
+    byId('sharedMemberGuideDialog').addEventListener('click', event => {
+      if (event.target === byId('sharedMemberGuideDialog')) closeSharedMemberGuideDialog();
+    });
+    byId('sharedMemberGuideDialog').addEventListener('cancel', event => {
+      event.preventDefault();
+      closeSharedMemberGuideDialog();
     });
     const vsButton = byId('vsModeToggleBtn');
     if (vsButton) vsButton.onclick = toggleVsMode;
@@ -4237,6 +4267,19 @@
     }
   }
 
+  function openSharedMemberGuideDialog() {
+    const dialog = byId('sharedMemberGuideDialog');
+    if (!dialog || dialog.open) return;
+    dialog.showModal();
+    if (history.state?.kentomoOverlay !== 'sharedMemberGuideDialog') {
+      history.pushState({ ...(history.state || {}), kentomoOverlay: 'sharedMemberGuideDialog' }, '');
+    }
+  }
+  function closeSharedMemberGuideDialog(fromHistory = false) {
+    byId('sharedMemberGuideDialog')?.close();
+    if (!fromHistory && history.state?.kentomoOverlay === 'sharedMemberGuideDialog') history.back();
+  }
+
   let sharedImportConfirmResolve = null;
   function closeSharedImportConfirmation(confirmed = false, fromHistory = false) {
     const dialog = byId('sharedImportConfirmDialog');
@@ -4839,7 +4882,15 @@
 
     const select = byId('myListSelect');
     select.disabled = false;
-    byId('workspaceAddMemberBtn').hidden = true;
+    const sharedAddMemberButton = byId('workspaceAddMemberBtn');
+    sharedAddMemberButton.hidden = false;
+    sharedAddMemberButton.title = user.isAnonymous
+      ? 'Googleログイン後に自分のマイリストへメンバーを追加'
+      : '自分のマイリストでメンバーを追加';
+    sharedAddMemberButton.setAttribute('aria-label', sharedAddMemberButton.title);
+    const sharedAddMemberLabel = sharedAddMemberButton.querySelector('span');
+    if (sharedAddMemberLabel) sharedAddMemberLabel.textContent = user.isAnonymous ? 'メンバー追加' : '自分のマイリストで追加';
+    sharedAddMemberButton.onclick = user.isAnonymous ? openSharedMemberGuideDialog : returnToOwnLists;
     const sharedManualSortOption = byId('memberSortMode').querySelector('option[value="manual"]');
     if (sharedManualSortOption) sharedManualSortOption.textContent = '元の並び順';
     byId('listActionsSummary').title = '表示順設定';
