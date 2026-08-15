@@ -3814,7 +3814,7 @@
       setTimeout(() => {
         if (activeListId !== subscribedListId) return;
         addPerCardListActions();
-        scheduleOwnedListProfileRefresh(subscribedListId, members);
+        scheduleListProfileRefresh(subscribedListId, members);
         if (Object.values(members || {}).some(member => !String(member?.autoName || '').trim())) {
           scheduleLatestBattleRefresh(800, true, true);
         }
@@ -4977,7 +4977,14 @@
           renderPosters(sharedListView.members);
           setTimeout(addPerCardListActions, 0);
         }
-        if (firstValue) resolve();
+        if (firstValue) {
+          // Public viewers should also receive a fresh local snapshot when
+          // the shared copy is older than the access freshness window. The
+          // refresh path never writes back because shared views have no
+          // membersRef.
+          scheduleListProfileRefresh(activeListId, sharedListView.members);
+          resolve();
+        }
         firstValue = false;
       }, error => {
         if (firstValue) reject(error);
@@ -5434,9 +5441,12 @@
   });
   scheduleLatestBattleRefresh(90 * 1000);
 
-  // Opening an owned list refreshes its full profile data in a slow, visible
-  // sweep. Keep it distinct from the five-minute latest-battle polling above:
-  // a quick series of list switches must never fan out into several full runs.
+  // Opening a list refreshes its full profile data in a slow, visible sweep.
+  // Shared viewers use the same Worker-backed path, but their membersRef is
+  // null, so their fresh result stays local and cannot modify the owner's
+  // Firebase list. Keep it distinct from the five-minute latest-battle
+  // polling above: a quick series of list switches must never fan out into
+  // several full runs.
   const PAGE_OPEN_PROFILE_LIST_COOLDOWN_MS = 30 * 60 * 1000;
   const PAGE_OPEN_PROFILE_GLOBAL_COOLDOWN_MS = 5 * 60 * 1000;
   // The server sweep is a 12-hour safety net. An actively opened list should
@@ -5450,6 +5460,7 @@
   let pageOpenProfileTimer = null;
   let pageOpenProfileStartedAt = 0;
   let pageOpenProfileActive = false;
+  let pageOpenProfileActiveListId = '';
   const pageOpenProfileRetryTimers = new Map();
 
   const pageOpenProfileStorageKey = listId => {
@@ -5488,14 +5499,15 @@
     if (!delay || pageOpenProfileRetryTimers.has(retryKey)) return;
     const timer = setTimeout(async () => {
       pageOpenProfileRetryTimers.delete(retryKey);
-      if (runSerial !== pageOpenProfileRunSerial || activeListId !== listId || sharedListView) return;
+      if (runSerial !== pageOpenProfileRunSerial || activeListId !== listId) return;
       pageOpenProfileActive = true;
+      pageOpenProfileActiveListId = listId;
       window.kentomoPageOpenProfileRefresh = true;
       try {
         const stats = await window.refreshCardStats(entry.gameId, entry.key, {
           silent: true,
           isManual: false,
-          force: false
+          force: true
         });
         window.refreshVisibleStats?.();
         if (stats?.isError || stats?.refreshFailed) {
@@ -5509,13 +5521,18 @@
       } finally {
         window.kentomoPageOpenProfileRefresh = false;
         pageOpenProfileActive = false;
+        if (pageOpenProfileActiveListId === listId) pageOpenProfileActiveListId = '';
       }
     }, delay);
     pageOpenProfileRetryTimers.set(retryKey, timer);
   };
 
-  function scheduleOwnedListProfileRefresh(listId, members) {
-    if (!listId || !members || !Object.keys(members).length || !activeUser || sharedListView) return;
+  function scheduleListProfileRefresh(listId, members) {
+    if (!listId || !members || !Object.keys(members).length || !activeUser) return;
+    // A successful Firebase sync can echo back while this list is still
+    // being swept. Do not invalidate the active run with a second timer.
+    // Switching to another list remains allowed because its list ID differs.
+    if (pageOpenProfileActive && pageOpenProfileActiveListId === listId) return;
     clearPageOpenProfileRetryTimers();
     const now = Date.now();
     if (now - readPageOpenProfileStartedAt(listId) < PAGE_OPEN_PROFILE_LIST_COOLDOWN_MS) return;
@@ -5523,14 +5540,14 @@
     clearTimeout(pageOpenProfileTimer);
     const earliestStart = pageOpenProfileStartedAt + PAGE_OPEN_PROFILE_GLOBAL_COOLDOWN_MS;
     const delay = Math.max(PAGE_OPEN_PROFILE_SETTLE_MS, earliestStart - now, 0);
-    pageOpenProfileTimer = setTimeout(() => runOwnedListProfileRefresh(listId, members, runSerial), delay);
+    pageOpenProfileTimer = setTimeout(() => runListProfileRefresh(listId, members, runSerial), delay);
   }
 
-  async function runOwnedListProfileRefresh(listId, members, runSerial) {
-    if (runSerial !== pageOpenProfileRunSerial || activeListId !== listId || sharedListView) return;
+  async function runListProfileRefresh(listId, members, runSerial) {
+    if (runSerial !== pageOpenProfileRunSerial || activeListId !== listId) return;
     if (pageOpenProfileActive || !window.kentomoStatsIntegrationReady) {
       pageOpenProfileTimer = setTimeout(
-        () => runOwnedListProfileRefresh(listId, members, runSerial),
+        () => runListProfileRefresh(listId, members, runSerial),
         1200
       );
       return;
@@ -5547,6 +5564,7 @@
     if (!stalePlayers.length) return;
 
     pageOpenProfileActive = true;
+    pageOpenProfileActiveListId = listId;
     pageOpenProfileStartedAt = now;
     showToast(`↻ このリストの未更新データを順次更新中（${stalePlayers.length}/${uniquePlayers.size}人）`);
     let completed = 0;
@@ -5555,15 +5573,15 @@
     try {
       for (const { key, member, gameId } of stalePlayers) {
         // A new list selection invalidates this sweep after the current member.
-        if (runSerial !== pageOpenProfileRunSerial || activeListId !== listId || sharedListView) break;
+        if (runSerial !== pageOpenProfileRunSerial || activeListId !== listId) break;
         window.kentomoPageOpenProfileRefresh = true;
         try {
           // Use the same card updater as the explicit refresh button. Besides
           // storing the profile it updates every visible field, including the
           // independent lifetime all-match row.
           const stats = typeof window.refreshCardStats === 'function'
-            ? await window.refreshCardStats(gameId, key, { silent: true, isManual: false, force: false })
-            : await fetchEwgfStats(gameId, false, key, false, member.name || '');
+            ? await window.refreshCardStats(gameId, key, { silent: true, isManual: false, force: true })
+            : await fetchEwgfStats(gameId, true, key, false, member.name || '');
           if (stats?.isError || stats?.refreshFailed) {
             skipped += 1;
             failedEntries.push({ key, member, gameId });
@@ -5596,6 +5614,7 @@
     } finally {
       window.kentomoPageOpenProfileRefresh = false;
       pageOpenProfileActive = false;
+      if (pageOpenProfileActiveListId === listId) pageOpenProfileActiveListId = '';
     }
   }
 
