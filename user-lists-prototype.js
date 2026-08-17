@@ -18,6 +18,8 @@
   const sharedListSyncSignatures = new Map();
   const pendingSharedListSources = new Map();
   const sharedListMirrorCache = new Map();
+  const sharedIdRepairInFlight = new Set();
+  let sharedIdRepairTimer = null;
   let accountPlayerLocations = new Map();
   let listMenuSignature = '';
   let memberRenderSignature = '';
@@ -3149,6 +3151,9 @@
     if (connectionStatusRef) connectionStatusRef.off();
     sharedListSyncTimers.forEach(timer => clearTimeout(timer));
     sharedListSyncTimers.clear();
+    clearTimeout(sharedIdRepairTimer);
+    sharedIdRepairTimer = null;
+    sharedIdRepairInFlight.clear();
     sharedListSyncSignatures.clear();
     pendingSharedListSources.clear();
     sharedListMirrorCache.clear();
@@ -3600,6 +3605,15 @@
   async function handleListCatalog(lists, includesMembers = false) {
       const { own: entries, favorites: favoriteEntries } = splitListEntries(lists);
       const ownLists = Object.fromEntries(entries);
+      currentListEntries = entries.map(([id, list]) => ({
+        id,
+        name: list.name || '名称未設定',
+        memberCount: Number.isFinite(Number(list.memberCount)) ? Number(list.memberCount) : Object.keys(list.members || {}).length,
+        order: Number(list.order || 0),
+        createdAt: Number(list.createdAt || 0),
+        shareId: validSharedListId(list.shareId),
+        sharedCreatedAt: Number(list.sharedCreatedAt || 0)
+      }));
       if (includesMembers) {
         accountPlayerLocations = new Map();
         entries.forEach(([listId, list]) => {
@@ -3613,15 +3627,7 @@
           scheduleSharedListSync(listId, list);
         });
       }
-      currentListEntries = entries.map(([id, list]) => ({
-        id,
-        name: list.name || '名称未設定',
-        memberCount: Number.isFinite(Number(list.memberCount)) ? Number(list.memberCount) : Object.keys(list.members || {}).length,
-        order: Number(list.order || 0),
-        createdAt: Number(list.createdAt || 0),
-        shareId: validSharedListId(list.shareId),
-        sharedCreatedAt: Number(list.sharedCreatedAt || 0)
-      }));
+      scheduleDuplicateShareIdRepair();
       const nextListMenuSignature = JSON.stringify({
         own: JSON.parse(createListMenuSignature(entries)),
         favorites: favoriteEntries.map(([, favorite]) => [favorite.shareId, favorite.name, favorite.order])
@@ -4074,9 +4080,110 @@
     }
   }
 
+  const duplicateSharedListIds = entries => {
+    const owners = new Map();
+    (entries || []).forEach(entry => {
+      const shareId = validSharedListId(entry?.shareId);
+      if (!shareId) return;
+      const listIds = owners.get(shareId) || [];
+      listIds.push(entry.id);
+      owners.set(shareId, listIds);
+    });
+    return new Set([...owners.entries()]
+      .filter(([, listIds]) => listIds.length > 1)
+      .map(([shareId]) => shareId));
+  };
+
+  const sharedSourceFreshness = source => {
+    const timestamps = [source?.createdAt, source?.order, source?.sharedCreatedAt];
+    Object.values(source?.members || {}).forEach(member => {
+      const stats = member?.fetchedStats || {};
+      timestamps.push(
+        member?.updatedAt,
+        member?.statsUpdatedAt,
+        stats.updatedAt,
+        stats.statsUpdatedAt,
+        stats.fetchedAt,
+        stats.cachedAt,
+        stats.fetchMeta?.completedAt
+      );
+    });
+    return timestamps.reduce((latest, value) => {
+      const numeric = Number(value || 0);
+      return Number.isFinite(numeric) && numeric > latest ? numeric : latest;
+    }, 0);
+  };
+
+  async function repairDuplicateSharedListIds() {
+    if (!activeUser || sharedListView || !listsRef) return;
+    const duplicateIds = duplicateSharedListIds(currentListEntries);
+    for (const duplicateId of duplicateIds) {
+      if (sharedIdRepairInFlight.has(duplicateId)) continue;
+      sharedIdRepairInFlight.add(duplicateId);
+      try {
+        const owners = currentListEntries.filter(entry => entry.shareId === duplicateId);
+        const sources = await Promise.all(owners.map(async entry => ({
+          id: entry.id,
+          source: (await listsRef.child(entry.id).once('value')).val() || {}
+        })));
+        if (sources.length < 2) continue;
+        sources.sort((a, b) => sharedSourceFreshness(b.source) - sharedSourceFreshness(a.source));
+        const duplicatesToMove = sources.slice(1);
+        for (const duplicate of duplicatesToMove) {
+          const newShareId = db.ref('sharedLists').push().key;
+          const sharedCreatedAt = Date.now();
+          await writeSharedListPayload(newShareId, {
+            ownerUid: activeUser.uid,
+            name: safeName(duplicate.source.name) || 'マイリスト',
+            members: sanitizeSharedMembers(duplicate.source.members),
+            createdAt: sharedCreatedAt,
+            updatedAt: firebase.database.ServerValue.TIMESTAMP
+          });
+          const updates = {
+            [`users/${activeUser.uid}/lists/${duplicate.id}/shareId`]: newShareId,
+            [`users/${activeUser.uid}/lists/${duplicate.id}/sharedCreatedAt`]: sharedCreatedAt
+          };
+          if (listIndexEnabled) {
+            updates[`users/${activeUser.uid}/listIndex/${duplicate.id}/shareId`] = newShareId;
+            updates[`users/${activeUser.uid}/listIndex/${duplicate.id}/sharedCreatedAt`] = sharedCreatedAt;
+          }
+          await updateWithOptionalListIndex(updates);
+          const localEntry = currentListEntries.find(entry => entry.id === duplicate.id);
+          if (localEntry) {
+            localEntry.shareId = newShareId;
+            localEntry.sharedCreatedAt = sharedCreatedAt;
+          }
+          sharedListSyncSignatures.delete(duplicate.id);
+          sharedListMirrorCache.delete(duplicate.id);
+        }
+        showToast('重複していた共有リンクを整理しました');
+      } catch (error) {
+        console.warn(`Duplicate shared list repair failed for ${duplicateId}`, error);
+      } finally {
+        sharedIdRepairInFlight.delete(duplicateId);
+      }
+    }
+  }
+
+  function scheduleDuplicateShareIdRepair() {
+    if (sharedIdRepairTimer || !activeUser || sharedListView) return;
+    if (!duplicateSharedListIds(currentListEntries).size) return;
+    sharedIdRepairTimer = setTimeout(() => {
+      sharedIdRepairTimer = null;
+      repairDuplicateSharedListIds().catch(error => console.warn('Duplicate shared list repair failed', error));
+    }, 0);
+  }
+
   function scheduleSharedListSync(listId, source) {
     const shareId = validSharedListId(source?.shareId);
     if (!shareId || !activeUser || sharedListView || isSharedFavoriteRecord(listId, source)) return;
+    const hasDuplicateOwner = currentListEntries.some(entry => entry.id !== listId && entry.shareId === shareId);
+    if (hasDuplicateOwner) {
+      clearTimeout(sharedListSyncTimers.get(listId));
+      sharedListSyncTimers.delete(listId);
+      pendingSharedListSources.delete(listId);
+      return;
+    }
     const signature = sharedListContentSignature(source);
     if (sharedListSyncSignatures.get(listId) === signature) return;
     pendingSharedListSources.set(listId, { source, shareId, signature });
@@ -4156,14 +4263,20 @@
       if (!source) return showToast('共有するリストがありません');
       const listName = safeName(source.name) || 'マイリスト';
       const members = sanitizeSharedMembers(source.members);
-      let shareId = validSharedListId(source.shareId)
+      const existingShareId = validSharedListId(source.shareId);
+      const hasDuplicateOwner = existingShareId
+        && currentListEntries.some(entry => entry.id !== activeListId && entry.shareId === existingShareId);
+      const sharedCreatedAt = !hasDuplicateOwner && Number(source.sharedCreatedAt || 0)
+        ? Number(source.sharedCreatedAt)
+        : Date.now();
+      let shareId = existingShareId && !hasDuplicateOwner
         ? String(source.shareId)
         : db.ref('sharedLists').push().key;
       const payload = {
         ownerUid: activeUser.uid,
         name: listName,
         members,
-        createdAt: Number(source.sharedCreatedAt || 0) || firebase.database.ServerValue.TIMESTAMP,
+        createdAt: sharedCreatedAt,
         updatedAt: firebase.database.ServerValue.TIMESTAMP
       };
       try {
@@ -4177,12 +4290,12 @@
       }
       await listsRef.child(activeListId).update({
         shareId,
-        sharedCreatedAt: Number(source.sharedCreatedAt || 0) || firebase.database.ServerValue.TIMESTAMP
+        sharedCreatedAt
       });
       if (listIndexEnabled) {
         await listIndexRef.child(activeListId).update({
           shareId,
-          sharedCreatedAt: Number(source.sharedCreatedAt || 0) || Date.now()
+          sharedCreatedAt
         });
       }
       sharedListSyncSignatures.set(activeListId, sharedListContentSignature(source));
@@ -4258,6 +4371,8 @@
         }
         const ref = listsRef.push();
         const imported = { ...list, name: `${safeName(list.name) || 'インポート'} (取込)`, order: Date.now() };
+        delete imported.shareId;
+        delete imported.sharedCreatedAt;
         await ref.set(imported);
         if (listIndexEnabled) await listIndexRef.child(ref.key).set(listIndexEntry(ref.key, imported));
       }
