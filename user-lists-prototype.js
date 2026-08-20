@@ -3178,7 +3178,7 @@
     }
     byId('listWorkspace')?.remove();
     byId('sharedListViewBanner')?.remove();
-    document.body.classList.remove('workspace-ui-active', 'shared-list-readonly');
+    document.body.classList.remove('workspace-ui-active', 'shared-list-readonly', 'shared-list-profile-refreshing');
     resetVsMode();
     activeListId = null;
     listsRef = null;
@@ -4948,6 +4948,23 @@
     }
   }
 
+  function updateSharedListRefreshStatus(state, text) {
+    const banner = byId('sharedListViewBanner');
+    const status = byId('sharedListRefreshStatus');
+    if (!banner || !status) return;
+    const busy = state === 'checking' || state === 'refreshing';
+    banner.classList.toggle('is-refreshing', busy);
+    document.body.classList.toggle('shared-list-profile-refreshing', busy);
+    status.dataset.state = state || '';
+    status.textContent = text || (
+      state === 'refreshing' ? '最新データを順次更新しています…' :
+      state === 'partial' ? '一部のデータを更新できませんでした。時間を置いて再確認します。' :
+      state === 'done' ? '最新データの確認が完了しました。' :
+      state === 'fresh' ? '保存データは最新です。' :
+      '保存済みデータを表示中。最新データを確認しています…'
+    );
+  }
+
   async function startSharedListView(user, authSession, shareId) {
     const identity = `${user.uid}:shared:${shareId}`;
     if (activeWorkspaceIdentity && activeWorkspaceIdentity !== identity) teardownUserWorkspace();
@@ -5018,6 +5035,7 @@
       <div>
         <strong>閲覧専用の共有リスト</strong>
         <span>元のマイリストの変更が自動反映されます。表示順は「リスト設定」からこの端末だけで変更できます。</span>
+        <span id="sharedListRefreshStatus" aria-live="polite">保存済みデータを表示中。最新データを確認しています…</span>
       </div>
       <div class="shared-list-view-actions">
         <button type="button" id="favoriteSharedListBtn">☆ この共有リストをお気に入りに登録</button>
@@ -5026,6 +5044,7 @@
       </div>
     `;
     byId('listWorkspace').insertAdjacentElement('afterend', banner);
+    updateSharedListRefreshStatus('checking');
     byId('favoriteSharedListBtn').onclick = toggleSharedListFavorite;
     byId('importSharedListViewBtn').onclick = importSharedListView;
     byId('returnToOwnListsBtn').onclick = returnToOwnLists;
@@ -5650,11 +5669,15 @@
     if (pageOpenProfileActive && pageOpenProfileActiveListId === listId) return;
     clearPageOpenProfileRetryTimers();
     const now = Date.now();
-    if (now - readPageOpenProfileStartedAt(listId) < PAGE_OPEN_PROFILE_LIST_COOLDOWN_MS) return;
+    if (now - readPageOpenProfileStartedAt(listId) < PAGE_OPEN_PROFILE_LIST_COOLDOWN_MS) {
+      if (sharedListView) updateSharedListRefreshStatus('fresh');
+      return;
+    }
     const runSerial = ++pageOpenProfileRunSerial;
     clearTimeout(pageOpenProfileTimer);
     const earliestStart = pageOpenProfileStartedAt + PAGE_OPEN_PROFILE_GLOBAL_COOLDOWN_MS;
     const delay = Math.max(PAGE_OPEN_PROFILE_SETTLE_MS, earliestStart - now, 0);
+    if (sharedListView) updateSharedListRefreshStatus('checking');
     pageOpenProfileTimer = setTimeout(() => runListProfileRefresh(listId, members, runSerial), delay);
   }
 
@@ -5676,11 +5699,15 @@
     }
     const stalePlayers = [...uniquePlayers.values()]
       .filter(({ member }) => !hasFreshProfileSnapshot(member, now));
-    if (!stalePlayers.length) return;
+    if (!stalePlayers.length) {
+      if (sharedListView) updateSharedListRefreshStatus('fresh');
+      return;
+    }
 
     pageOpenProfileActive = true;
     pageOpenProfileActiveListId = listId;
     pageOpenProfileStartedAt = now;
+    if (sharedListView) updateSharedListRefreshStatus('refreshing', `最新データを順次更新中（${stalePlayers.length}/${uniquePlayers.size}人）`);
     showToast(`↻ このリストの未更新データを順次更新中（${stalePlayers.length}/${uniquePlayers.size}人）`);
     let completed = 0;
     let skipped = 0;
@@ -5710,6 +5737,7 @@
           window.kentomoPageOpenProfileRefresh = false;
         }
         if (runSerial === pageOpenProfileRunSerial && activeListId === listId) {
+          if (sharedListView) updateSharedListRefreshStatus('refreshing', `最新データを順次更新中（${completed + skipped}/${stalePlayers.length}人）`);
           showToast(`↻ リストを順次更新中… ${completed + skipped}/${stalePlayers.length}人`);
           await new Promise(resolve => setTimeout(resolve, PAGE_OPEN_PROFILE_GAP_MS));
         }
@@ -5719,6 +5747,12 @@
         // another list-open attempt. A transient all-failure remains retryable.
         if (completed > 0) writePageOpenProfileStartedAt(listId, now);
         failedEntries.forEach(entry => schedulePageOpenProfileRetry(listId, runSerial, entry));
+        if (sharedListView) updateSharedListRefreshStatus(
+          failedEntries.length ? 'partial' : 'done',
+          failedEntries.length
+            ? `更新完了（${completed}人）。${failedEntries.length}人は時間を置いて再確認します。`
+            : `最新データの確認が完了しました（${completed}人）。`
+        );
         showToast(skipped
           ? `↻ リスト更新完了：${completed}人を更新、${skipped}人は保存データを使用`
           : `↻ リスト更新完了：${completed}人を更新しました`);
