@@ -5426,9 +5426,13 @@
     }
     const parsedAt = Date.parse(battle && battle.at || payload && payload.latestBattleAt || '');
     const previousAt = Number(stats.lastSeenTimestamp || 0);
+    // Migrate any legacy check-time revision to the source timestamp before
+    // comparing the next payload. Check time remains observability only.
+    if (previousAt > 0) stats.latestBattleRevisionAt = previousAt;
     const incomingIsCurrent = Number.isFinite(parsedAt) && parsedAt >= previousAt;
     if (incomingIsCurrent) {
       stats.lastSeenTimestamp = parsedAt;
+      stats.latestBattleRevisionAt = parsedAt;
       // Equal timestamps may be a corrected classification of the same battle.
       // Prefer the Worker's all-battle-type details over stale Firebase labels.
       if (battle && battle.character) stats.latestBattleCharacter = battle.character;
@@ -5438,7 +5442,6 @@
     }
     const checkedAt = Date.now();
     stats.latestBattleCheckedAt = checkedAt;
-    stats.latestBattleRevisionAt = checkedAt;
     // Do not advance stats.cachedAt here. That timestamp controls the separate
     // 12-hour Wavu qualification/rating refresh.
     try { localStorage.setItem(storageKey, JSON.stringify(stats)); } catch (_) {}
@@ -5513,7 +5516,7 @@
           const timeoutId = setTimeout(() => controller.abort(), 15000);
           try {
             const response = await fetch(
-              `https://tight-bar-55c1.uracil123.workers.dev/?ewgfId=${encodeURIComponent(gameId)}&mode=latest${force ? '&force=1' : ''}`,
+              `https://tight-bar-55c1.uracil123.workers.dev/?ewgfId=${encodeURIComponent(gameId)}&mode=latest&persist=1${force ? '&force=1' : ''}`,
               { cache: 'no-store', signal: controller.signal }
             );
             if (response.ok) {

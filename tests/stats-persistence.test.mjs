@@ -514,6 +514,38 @@ test("background snapshots contain three independent domains", () => {
   assert.equal(background.latestActivity.data.latestBattleRevisionAt, Date.parse(latest.battle.at));
 });
 
+test("background latest selection considers Wavu timestamp without stale profile details", () => {
+  const workerSource = readFileSync(new URL("../worker/ewgf-worker-with-stat-pentagon.js", import.meta.url), "utf8");
+  const selectionStart = workerSource.indexOf("function selectLatestBattle");
+  const selectionEnd = workerSource.indexOf("\nfunction extractWavuRatings", selectionStart);
+  assert.ok(selectionStart >= 0 && selectionEnd > selectionStart, "latest selection helper must remain discoverable");
+  const selectLatestBattle = runInNewContext(`(${workerSource.slice(selectionStart, selectionEnd)})`);
+  const selected = selectLatestBattle([
+    {
+      battle: { at: "2026-08-20T10:00:00.000Z", battleType: "Ranked Battle", character: "Stale Character" },
+      source: "ewgf-profile-recent-battles",
+      scope: "all-battle-types",
+    },
+    {
+      battle: { at: "2026-08-21T10:00:00.000Z", battleType: "", character: "" },
+      source: "wavu-latest-ranked-fallback",
+      scope: "ranked-only-fallback",
+    },
+  ]);
+  assert.equal(selected.source, "wavu-latest-ranked-fallback");
+  assert.equal(selected.battle.at, "2026-08-21T10:00:00.000Z");
+  assert.equal(selected.battle.character, "");
+  assert.equal(selected.battle.battleType, "");
+
+  const backgroundStart = workerSource.indexOf("async function fetchAwardSnapshot");
+  const backgroundEnd = workerSource.indexOf("\nfunction normalizeCharacterKey", backgroundStart);
+  assert.ok(backgroundStart >= 0 && backgroundEnd > backgroundStart, "background snapshot function must remain discoverable");
+  const backgroundSource = workerSource.slice(backgroundStart, backgroundEnd);
+  assert.match(backgroundSource, /wavu\?\.latestRankedBattleAt/);
+  assert.match(backgroundSource, /const selectedLatest = selectLatestBattle\(latestCandidates\)/);
+  assert.match(backgroundSource, /latestBattleSource: selectedLatest\?\.source/);
+});
+
 test("missing source timestamps remain unversioned", () => {
   assert.equal(buildEwgfProfileSourceSnapshot({ ...profile, latestBattleAt: null }, profileObservedAt).revisionAt, null);
   assert.equal(buildWavuSourceSnapshot({ ...wavu, latestRankedBattleAt: null }, profileObservedAt).revisionAt, null);
@@ -609,6 +641,8 @@ test("Worker routes retain cache-hit persistence wiring for throttled page-open/
   assert.match(workerSource, /"wavuRatings",\s*buildWavuSourceSnapshot/);
   assert.match(workerSource, /const cachedResponse = await getFreshCachedJson\(cache, cacheKey, WORKER_CACHE_TTL_SECONDS\);[\s\S]*?if \(cachedResponse\) \{[\s\S]*?if \(statsPersistRequested\) \{[\s\S]*?scheduleCachedFirebaseSourceSnapshot\(/);
   assert.match(workerSource, /"ewgfProfile",\s*buildEwgfProfileSourceSnapshot/);
+  assert.match(workerSource, /const latestCachedResponse = await getFreshCachedJson\(cache, latestCacheKey, LATEST_BATTLE_CACHE_TTL_SECONDS\);[\s\S]*?if \(latestCachedResponse\) \{[\s\S]*?if \(latestPersistRequested\) \{[\s\S]*?"latestActivity",\s*buildLatestActivitySourceSnapshot/);
+  assert.match(workerSource, /if \(!forceRefresh\) \{[\s\S]*?const latestCachedResponse = await getFreshCachedJson\(cache, latestCacheKey/);
 });
 
 test("Worker persistence targets canonical sibling nodes and keeps legacy fallback paths", () => {
@@ -635,7 +669,19 @@ test("active browser reads canonical stats and no longer publishes fetchedStats"
   assert.match(listsSource, /includeReturnTracking/);
   assert.match(listsSource, /setSharedBrowserMemberField/);
   assert.match(listsSource, /fetchedStats\/activityStats\/returnTracking/);
-  assert.match(listsSource, /mode=latest&persist=1/);
+  const visibleLatestStart = listsSource.indexOf("  async function refreshVisibleLatestBattles");
+  const visibleLatestEnd = listsSource.indexOf("\n  // Refresh the lightweight latest-battle endpoint", visibleLatestStart);
+  assert.ok(visibleLatestStart >= 0 && visibleLatestEnd > visibleLatestStart, "visible latest refresh block must remain discoverable");
+  const visibleLatestSource = listsSource.slice(visibleLatestStart, visibleLatestEnd);
+  assert.match(visibleLatestSource, /mode=latest&persist=1\$\{force \? '&force=1' : ''\}/);
+  assert.doesNotMatch(visibleLatestSource, /membersRef|firebase\.database|db\.ref/);
+  const latestCardStart = listsSource.indexOf("  const updateLatestBattleCard");
+  const latestCardEnd = listsSource.indexOf("\n  async function refreshNewMemberLatestBattle", latestCardStart);
+  assert.ok(latestCardStart >= 0 && latestCardEnd > latestCardStart, "latest card update block must remain discoverable");
+  const latestCardSource = listsSource.slice(latestCardStart, latestCardEnd);
+  assert.match(latestCardSource, /stats\.latestBattleRevisionAt = previousAt/);
+  assert.match(latestCardSource, /stats\.latestBattleRevisionAt = parsedAt/);
+  assert.doesNotMatch(latestCardSource, /latestBattleRevisionAt\s*=\s*checkedAt/);
   assert.match(listsSource, /const existingSnapshot = await db\.ref\(root\)\.once\(['"]value['"]\)/);
   assert.match(listsSource, /await writeSharedListDelta\(shareId, previous, next\)/);
   assert.doesNotMatch(listsSource, /db\.ref\(root\)\.set\(payload\)/);
