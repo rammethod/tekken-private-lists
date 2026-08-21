@@ -290,6 +290,10 @@ export function materializeFetchedStats({ current = {}, sourceSnapshots = {}, fe
   const ewgfData = ewgfSnapshot?.data;
   const wavuData = wavuSnapshot?.data;
   const activityData = activitySnapshot?.data;
+  const wavuHasQualifiedMain = hasMeaningfulValue(wavuData?.mainChar);
+  const wavuFieldsToClear = hasWavuAuthority && !wavuHasQualifiedMain && !hasEwgfAuthority
+    ? WAVU_FIELDS.filter((field) => field !== "mainChar" && field !== "mainCharGames")
+    : WAVU_FIELDS;
 
   let profileStats = cloneValue(legacy.profileStats);
   if (hasEwgfAuthority) {
@@ -297,9 +301,9 @@ export function materializeFetchedStats({ current = {}, sourceSnapshots = {}, fe
     profileStats = mergeDefined(profileStats, ewgfData);
   }
   if (hasWavuAuthority) {
-    clearFields(profileStats, WAVU_FIELDS);
+    clearFields(profileStats, wavuFieldsToClear);
     profileStats = mergeDefined(profileStats, wavuData);
-    if (!hasMeaningfulValue(wavuData?.mainChar) && hasEwgfAuthority) {
+    if (!wavuHasQualifiedMain && hasEwgfAuthority) {
       if (hasValue(ewgfData?.mainChar)) profileStats.mainChar = cloneValue(ewgfData.mainChar);
       if (hasValue(ewgfData?.mainCharGames)) profileStats.mainCharGames = cloneValue(ewgfData.mainCharGames);
     }
@@ -315,7 +319,7 @@ export function materializeFetchedStats({ current = {}, sourceSnapshots = {}, fe
 
   const authoritativeRootFields = [];
   if (hasEwgfAuthority) authoritativeRootFields.push(...EWGF_FIELDS);
-  if (hasWavuAuthority) authoritativeRootFields.push(...WAVU_FIELDS);
+  if (hasWavuAuthority) authoritativeRootFields.push(...wavuFieldsToClear);
   if (hasActivityAuthority) authoritativeRootFields.push(...ACTIVITY_FIELDS);
   clearFields(node, [...new Set(authoritativeRootFields)]);
 

@@ -251,6 +251,26 @@ test("missing Wavu main character falls back to EWGF profile", () => {
   assert.equal(node.profileStats.mainSelectionSource, undefined);
 });
 
+test("Wavu-first partial migration preserves legacy main character until EWGF authority arrives", () => {
+  const noWavuMain = buildWavuSourceSnapshot({
+    ...wavu,
+    mainChar: null,
+    mainCharGames: null,
+    latestRankedBattleAt: "2026-08-21T11:00:00.000Z",
+  }, profileObservedAt);
+  const applied = applySourceSnapshotsToFetchedStats({
+    mainChar: "Legacy Kazuya",
+    mainCharGames: 42,
+    legacyMarker: "keep me",
+  }, { wavuRatings: noWavuMain }, metadata());
+  assert.equal(applied.changed, true);
+  assert.equal(applied.node.profileStats.mainChar, "Legacy Kazuya");
+  assert.equal(applied.node.profileStats.mainCharGames, 42);
+  assert.equal(applied.node.mainChar, "Legacy Kazuya");
+  assert.equal(applied.node.mainCharGames, 42);
+  assert.equal(applied.node.legacyMarker, "keep me");
+});
+
 test("split and flat legacy nodes survive the first partial migration", () => {
   const split = applySourceSnapshotsToFetchedStats({
     "20260729-split-fetched-stats": {
