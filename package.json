@@ -3,7 +3,12 @@
   "private": true,
   "scripts": {
     "check": "node tools/check-repo.mjs",
+    "inspect:worker": "node tools/inspect-worker.mjs",
     "deploy:worker": "node tools/deploy-worker.mjs",
     "deploy:rules": "node tools/deploy-rules.mjs"
+  },
+  "devDependencies": {
+    "firebase-tools": "15.28.1",
+    "wrangler": "4.125.0"
   }
 }

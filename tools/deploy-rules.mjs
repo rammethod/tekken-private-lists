@@ -4,6 +4,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
+const firebaseBin = join(repoRoot, "node_modules", ".bin", process.platform === "win32" ? "firebase.cmd" : "firebase");
 const args = process.argv.slice(2);
 const candidateIndex = args.indexOf("--candidate");
 const projectIndex = args.indexOf("--project");
@@ -42,7 +43,17 @@ if (process.env.KENTOMO_ALLOW_RULES_DEPLOY !== "1") {
   process.exit(1);
 }
 
-const firebaseCheck = spawnSync("firebase", ["--version"], { stdio: "ignore" });
+if (!existsSync(firebaseBin)) {
+  console.error("RULES_DEPLOY: REFUSED");
+  console.error("Pinned local firebase-tools CLI is not installed.");
+  process.exit(1);
+}
+
+const firebaseCheck = spawnSync(firebaseBin, ["--version"], {
+  stdio: "ignore",
+  shell: process.platform === "win32",
+  windowsHide: true,
+});
 if (firebaseCheck.status !== 0) {
   console.error("RULES_DEPLOY: REFUSED");
   console.error("Firebase CLI is not available.");
@@ -50,7 +61,9 @@ if (firebaseCheck.status !== 0) {
 }
 
 console.error("Firebase Rules deploy uses only the explicitly selected candidate and project.");
-execFileSync("firebase", ["deploy", "--only", "database", "--project", project, "--config", configPath], {
+execFileSync(firebaseBin, ["deploy", "--only", "database", "--project", project, "--config", configPath], {
   cwd: repoRoot,
   stdio: "inherit",
+  shell: process.platform === "win32",
+  windowsHide: true,
 });

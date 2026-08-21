@@ -1,4 +1,15 @@
-# Canonical source path only. Production target settings remain unresolved
-# until Lead Engineer review confirms the Worker name, compatibility date, and
-# scheduled trigger. Do not add secrets or account credentials here.
+# Read-only Cloudflare inspection confirmed these production target settings
+# for the current Worker before this migration foundation was updated.
+name = "tight-bar-55c1"
+account_id = "d81e9284c64cedb0660c9c7d2a3610a0"
 main = "worker/ewgf-worker-with-stat-pentagon.js"
+compatibility_date = "2026-07-23"
+compatibility_flags = []
+workers_dev = true
+keep_vars = true
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+[secrets]
+required = ["EWGF_PUBLIC_API_KEY", "FIREBASE_SERVICE_ACCOUNT_JSON"]

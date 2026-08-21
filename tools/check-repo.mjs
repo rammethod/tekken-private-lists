@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 const repoRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const failures = [];
 const warnings = [];
+const isJavaScript = (filePath) => [".js", ".mjs"].includes(extname(filePath).toLowerCase());
 
 function rel(filePath) {
   return relative(repoRoot, filePath).replaceAll("\\", "/") || ".";
@@ -81,14 +82,20 @@ for (const jsonPath of [
 
 const wranglerPath = join(repoRoot, "wrangler.toml");
 const wranglerText = readFileSync(wranglerPath, "utf8");
-if (!/^\s*main\s*=\s*["']worker\/ewgf-worker-with-stat-pentagon\.js["']\s*$/m.test(wranglerText)) {
-  fail("wrangler.toml main must point to the canonical Worker");
-}
-if (!/^\s*name\s*=/m.test(wranglerText)) warnings.push("Worker name is unresolved");
-if (!/^\s*compatibility_date\s*=/m.test(wranglerText)) warnings.push("Worker compatibility_date is unresolved");
-if (!/^\s*crons?\s*=|^\s*\[triggers\]/m.test(wranglerText)) warnings.push("Worker scheduled trigger is unresolved");
+const requiredWranglerLines = [
+  [/^\s*name\s*=\s*["']tight-bar-55c1["']\s*$/m, "wrangler.toml Worker name is not the confirmed production Worker"],
+  [/^\s*account_id\s*=\s*["']d81e9284c64cedb0660c9c7d2a3610a0["']\s*$/m, "wrangler.toml account_id is not the confirmed production account"],
+  [/^\s*main\s*=\s*["']worker\/ewgf-worker-with-stat-pentagon\.js["']\s*$/m, "wrangler.toml main must point to the canonical Worker"],
+  [/^\s*compatibility_date\s*=\s*["']2026-07-23["']\s*$/m, "wrangler.toml compatibility_date does not match read-only production settings"],
+  [/^\s*compatibility_flags\s*=\s*\[\]\s*$/m, "wrangler.toml compatibility_flags must remain empty"],
+  [/^\s*workers_dev\s*=\s*true\s*$/m, "wrangler.toml workers_dev must remain enabled"],
+  [/^\s*keep_vars\s*=\s*true\s*$/m, "wrangler.toml keep_vars must protect dashboard vars during migration"],
+  [/^\s*crons\s*=\s*\["\*\/5 \* \* \* \*"\]\s*$/m, "wrangler.toml must record the confirmed cron trigger"],
+  [/^\s*required\s*=\s*\["EWGF_PUBLIC_API_KEY",\s*"FIREBASE_SERVICE_ACCOUNT_JSON"\]\s*$/m, "wrangler.toml must declare both required secret names"],
+];
+for (const [pattern, message] of requiredWranglerLines) if (!pattern.test(wranglerText)) fail(message);
 
-for (const filePath of files.filter((candidate) => extname(candidate).toLowerCase() === ".js")) {
+for (const filePath of files.filter(isJavaScript)) {
   const result = spawnSync(process.execPath, ["--check", filePath], { encoding: "utf8" });
   if (result.status !== 0) fail(`JavaScript syntax check failed: ${rel(filePath)}`);
 }
@@ -107,6 +114,6 @@ if (failures.length > 0) {
 
 console.log("REPO_CHECK: PASS");
 console.log(`FILES_SCANNED: ${files.length}`);
-console.log(`JAVASCRIPT_FILES_CHECKED: ${files.filter((filePath) => extname(filePath).toLowerCase() === ".js").length}`);
+console.log(`JAVASCRIPT_FILES_CHECKED: ${files.filter(isJavaScript).length}`);
 console.log("JSON_FILES_CHECKED: 5");
 for (const warning of warnings) console.log(`WARNING: ${warning}`);

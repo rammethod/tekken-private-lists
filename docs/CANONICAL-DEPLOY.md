@@ -11,13 +11,20 @@ copy of the Cloudflare Worker used by the data-refresh path.
 - `FIREBASE RULES CANONICALITY: UNRESOLVED`. The candidate files must not be
   treated as proof of the currently published Firebase Rules.
 
+The current production Worker was confirmed read-only before recording the
+Wrangler target: name `tight-bar-55c1`, compatibility date `2026-07-23`, no
+compatibility flags, `workers.dev` enabled, no routes, no custom domains, no
+non-secret vars, and cron `*/5 * * * *`. The remote secret binding currently
+visible by name is `FIREBASE_SERVICE_ACCOUNT_JSON`; `EWGF_PUBLIC_API_KEY` is a
+required migration binding and must be provisioned separately before deploy.
+
 The parent checkout copies of the Worker and Rules are retained as provenance
 outside this repository. The original Worker is not the sanitized deploy source.
 
 ## Secret boundary
 
 `EWGF_PUBLIC_API_KEY` and `FIREBASE_SERVICE_ACCOUNT_JSON` are runtime bindings,
-not repository configuration. Private keys, bearer tokens, API credentials,
+declared as required names in `wrangler.toml` but never as values. Private keys, bearer tokens, API credentials,
 `.env`, `.dev.vars`, and `*.local` files must not be committed.
 
 The canonical Worker fails closed when `EWGF_PUBLIC_API_KEY` is not bound. Do not
@@ -30,24 +37,28 @@ Run the read-only repository checks from this directory:
 
 ```text
 npm run check
+npm run inspect:worker
 ```
 
-The check validates JSON, JavaScript syntax, secret-shaped literals, the
-canonical Worker path, and whitespace errors. It does not contact production.
+The first command validates JSON, JavaScript syntax, secret-shaped literals,
+the canonical Worker path, and whitespace errors. The second command performs
+a read-only Cloudflare settings inspection and prints names/types only; it
+never prints secret values.
 
 ## Deployment guardrails
 
-Worker deployment is intentionally unresolved until Lead Engineer review fills
-in the Worker name, compatibility date, and scheduled trigger in
-`wrangler.toml`. The guarded command is:
+Worker deployment remains guarded by a fresh read-only confirmation gate and
+explicit operator approval. The guarded command is:
 
 ```powershell
 $env:KENTOMO_ALLOW_WORKER_DEPLOY = "1"
+$env:KENTOMO_WORKER_REMOTE_CONFIRMED = "1"
 npm run deploy:worker
 ```
 
-It also requires the `wrangler` CLI and pre-existing Cloudflare secret bindings.
-Do not run it until the target settings and bindings are independently confirmed.
+It uses the pinned local Wrangler CLI with `--strict` and `--keep-vars`, and
+rechecks the remote settings and requires both pre-existing Cloudflare secret
+bindings. It does not run `wrangler secret put`.
 
 Rules deployment requires an explicit candidate and Firebase project:
 
