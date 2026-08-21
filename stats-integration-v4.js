@@ -212,16 +212,15 @@
       // that bundled every character matchup table.
       const profileBaseUrl = `${EWGF_PROFILE_WORKER}/profile-v2?ewgfId=${encodeURIComponent(id)}`;
       const wavuBaseUrl = `${EWGF_PROFILE_WORKER}/?mode=wavu-ratings&gameId=${encodeURIComponent(id)}`;
-      // The admin flag is global for compatibility with the existing UI, so
-      // require an explicit manual request as well. Background requests that
-      // overlap an admin click must never inherit force=1.
+      // Only explicit page-open/manual requests receive a persistence flag.
+      // Background requests must never inherit force=1 from another action.
       // A list-open sweep is deliberately separate from an administrator
       // refresh. It is throttled in both the browser and Worker, then asks the
       // Worker for a fresh shared snapshot without exposing an unbounded force
       // path to ordinary card rendering.
-      const forceSuffix = window.forceAdminProfileRefresh && isManual
-        ? '&force=1&manualRefresh=1'
-        : (pageOpenRefresh ? '&force=1&pageOpen=1' : '');
+      const forceSuffix = pageOpenRefresh
+        ? '&force=1&pageOpen=1'
+        : (isManual && forceRefresh ? '&force=1&manualRefresh=1' : '');
       let refreshUsedSharedCache = false;
       const sourceTimingsMs = {};
       const sourceErrors = {};

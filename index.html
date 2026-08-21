@@ -2439,7 +2439,7 @@
   <script>
     // Change this fixed feature version only when integration UI assets change.
     (() => {
-      const assetVersion = '20260820-background-latest-and-queue-guard';
+      const assetVersion = '20260821-worker-authority-cutover';
       const stylesheet = document.createElement('link');
       stylesheet.rel = 'stylesheet';
       stylesheet.href = `stats-integration-v4.css?v=${assetVersion}`;
@@ -2992,12 +2992,16 @@
       if (key) localStorage.setItem('t8_ewgf_api_key', key.trim());
     }
 
-    const ACTIVITY_STATS_FIELDS = new Set([
-      'lastSeenTimestamp', 'latestBattleCharacter', 'latestBattleType',
-      'latestBattleCheckedAt', 'latestBattleRevisionAt',
-      'recentRankedGames7d', 'recentRankedGames30d',
-      'recentRankedSampleSize', 'latestRankedBattleAt', 'returnTracking'
-    ]);
+    const WORKER_STATS_SCHEMA = '20260821-source-snapshots-v1';
+    function isWorkerCanonicalStats(stats) {
+      return Boolean(
+        stats
+        && typeof stats === 'object'
+        && stats.schema === WORKER_STATS_SCHEMA
+        && stats.sourceSnapshots
+        && typeof stats.sourceSnapshots === 'object'
+      );
+    }
     function normalizeStoredStats(stats) {
       if (!stats || typeof stats !== 'object') return stats;
       if (!stats.profileStats && !stats.activityStats) return stats;
@@ -3015,25 +3019,6 @@
         updatedAt: Number(stats.updatedAt || stats.cachedAt || 0)
       };
     }
-    function structureStatsForFirebase(stats) {
-      if (!stats || typeof stats !== 'object') return stats;
-      const profileStats = {};
-      const activityStats = {};
-      Object.entries(stats).forEach(([field, value]) => {
-        if (value === undefined || ['fetchMeta', 'cachedAt', 'updatedAt'].includes(field)) return;
-        if (ACTIVITY_STATS_FIELDS.has(field)) activityStats[field] = value;
-        else profileStats[field] = value;
-      });
-      return {
-        schema: '20260729-split-fetched-stats',
-        profileStats,
-        activityStats,
-        fetchMeta: stats.fetchMeta || { state: stats.isError ? 'error' : 'ready' },
-        cachedAt: Number(stats.cachedAt || Date.now()),
-        updatedAt: Number(stats.updatedAt || Date.now())
-      };
-    }
-
     const RETURN_BADGE_DURATION_MS = 3 * 24 * 60 * 60 * 1000;
     const returnTrackingTimestamp = value => {
       const timestamp = typeof value === 'number' ? value : Date.parse(String(value || ''));
@@ -3109,6 +3094,38 @@
       const jstOffset = 9 * 60 * 60 * 1000;
       return Math.max(1, Math.floor((Math.floor((to + jstOffset) / 86400000) - Math.floor((from + jstOffset) / 86400000))));
     };
+    function getReturnTrackingCandidate(stats) {
+      if (!stats || typeof stats !== 'object') return null;
+      const direct = stats.returnTracking;
+      if (direct && typeof direct === 'object' && !Array.isArray(direct)) return direct;
+      const nested = stats.activityStats?.returnTracking;
+      return nested && typeof nested === 'object' && !Array.isArray(nested) ? nested : null;
+    }
+    function getReturnTrackingRevision(tracking) {
+      if (!tracking || typeof tracking !== 'object') return 0;
+      return Math.max(
+        returnTrackingTimestamp(tracking.dormantSince),
+        returnTrackingTimestamp(tracking.returnReportedAt),
+        returnTrackingTimestamp(tracking.returnBadgeUntil),
+        returnTrackingTimestamp(tracking.dormantEndedAt),
+        returnTrackingTimestamp(tracking.baselineLatestRankedBattleAt),
+        returnTrackingTimestamp(tracking.returnedBattleAt)
+      );
+    }
+    function getNewestReturnTracking(...statsList) {
+      let newest = null;
+      let newestRevision = -1;
+      statsList.forEach(stats => {
+        const candidate = getReturnTrackingCandidate(stats);
+        if (!candidate) return;
+        const revision = getReturnTrackingRevision(candidate);
+        if (revision >= newestRevision) {
+          newest = candidate;
+          newestRevision = revision;
+        }
+      });
+      return newest ? JSON.parse(JSON.stringify(newest)) : null;
+    }
     window.ensureDormantReturnTracking = (memberKey, member, stats) => {
       if (!stats || !memberKey || !member) return stats?.returnTracking || null;
       const nextTracking = resolveDormantReturnTracking(stats, stats);
@@ -3137,9 +3154,34 @@
         if (raw) localStats = JSON.parse(raw);
       } catch (e) {}
 
-      const memberStats = memberData && memberData.fetchedStats
+      const canonicalMemberStats = memberData && isWorkerCanonicalStats(memberData.workerFetchedStats)
+        ? normalizeStoredStats(memberData.workerFetchedStats)
+        : null;
+      let legacyMemberStats = memberData && memberData.fetchedStats
         ? normalizeStoredStats(memberData.fetchedStats)
         : null;
+      const legacyReturnTracking = getReturnTrackingCandidate(memberData);
+      if (legacyReturnTracking) {
+        legacyMemberStats = {
+          ...(legacyMemberStats || {}),
+          returnTracking: legacyReturnTracking
+        };
+      }
+      const memberStats = canonicalMemberStats || legacyMemberStats;
+      // Once the Worker-owned schema is present, it is the freshness authority.
+      // Do not let a stale browser cache or legacy fetchedStats node win.
+      if (canonicalMemberStats) {
+        // returnTracking is browser/Kentomo-owned compatibility state, not a
+        // source snapshot. Preserve the newest local/legacy transition while
+        // keeping every other canonical field authoritative.
+        const returnTracking = getNewestReturnTracking(legacyMemberStats, localStats);
+        if (returnTracking) canonicalMemberStats.returnTracking = returnTracking;
+        else delete canonicalMemberStats.returnTracking;
+        try {
+          localStorage.setItem(`${LOCAL_STATS_CACHE_KEY}_${gameId}`, JSON.stringify(canonicalMemberStats));
+        } catch (e) {}
+        return canonicalMemberStats;
+      }
       if (!localStats && !memberStats) return null;
       if (!localStats) {
         try {
@@ -3219,8 +3261,8 @@
         localStorage.setItem(`${LOCAL_STATS_CACHE_KEY}_${gameId}`, JSON.stringify(stats));
 
         // 非同期取得の完了後に別リストへ切り替わっている場合、現在のリストへ
-        // fetchedStatsだけのゴーストメンバーを作らない。現在表示中の実在メンバーと
-        // TEKKEN 8 IDが一致する場合に限ってFirebaseへ同期する。
+        // ゴーストメンバーを作らない。統計本体はWorker-owned nodeへ保存され、
+        // ここでは自動名などのメンバー metadataだけを同期する。
         if (!membersRef || !window.currentMembersData) return;
 
         let verifiedKey = null;
@@ -3248,7 +3290,7 @@
           return;
         }
 
-        const memberStatsUpdate = { fetchedStats: structureStatsForFirebase(stats) };
+        const memberStatsUpdate = {};
         const verifiedMember = window.currentMembersData[verifiedKey];
         const fetchedPlayerName = String(stats.playerName || '').trim().slice(0, 50);
         if (verifiedMember && fetchedPlayerName) {
@@ -3267,10 +3309,11 @@
             memberStatsUpdate.nameUpdatedAt = now;
           }
           Object.assign(verifiedMember, memberStatsUpdate);
+          if (!Object.keys(memberStatsUpdate).length) return;
         }
         membersRef.child(verifiedKey).update(memberStatsUpdate)
           .catch(error => {
-            console.warn('Stats Firebase sync failed', error);
+            console.warn('Member metadata Firebase sync failed', error);
           });
       } catch (e) {
         console.error('Stats cache write error', e);
@@ -3358,9 +3401,8 @@
         updateLastUpdateLogBadge(logData);
       } catch (e) {}
 
-      // 更新ログは表示用の端末内データに限定する。取得カードごとの
-      // Firebase書き込みは、旧ルール環境でpermission_deniedを人数分
-      // 連続発生させるため行わない。統計本体はfetchedStatsへ同期される。
+      // 更新ログは表示用の端末内データに限定する。統計本体はWorker-owned
+      // canonical nodeへ保存し、ブラウザは取得結果をFirebaseへ直接公開しない。
     }
 
     function updateLastUpdateLogBadge(logData) {
@@ -4035,7 +4077,7 @@
       if (liveProgress?.stage && FETCH_STAGE_VIEW[liveProgress.stage]) {
         return { ...FETCH_STAGE_VIEW[liveProgress.stage], ...liveProgress };
       }
-      const meta = stats?.fetchMeta || member?.fetchedStats?.fetchMeta || {};
+      const meta = stats?.fetchMeta || member?.workerFetchedStats?.fetchMeta || member?.fetchedStats?.fetchMeta || {};
       const isBackgroundSync = meta.fetchedBy === 'worker-background-10min'
         || stats?.statsSource === '20260801-server-background-sync';
       if (stats?.isError || stats?.refreshFailed || meta.state === 'error') {
@@ -4158,7 +4200,7 @@
       const stats = getLocalStats(gameId, member) || {};
       const live = fetchProgressByMember.get(memberKey);
       const state = acquisitionStateFor(member, stats, live);
-      const meta = stats.fetchMeta || member.fetchedStats?.fetchMeta || {};
+      const meta = stats.fetchMeta || member.workerFetchedStats?.fetchMeta || member.fetchedStats?.fetchMeta || {};
       const sources = live?.sources || {
         ewgf: meta.state === 'ready' ? 'ready' : (meta.state === 'error' ? 'error' : 'unknown'),
         wavu: meta.sourceErrors?.wavu ? 'error' : (meta.state === 'ready' ? 'ready' : 'unknown')
@@ -4173,7 +4215,10 @@
       const localStorageKey = `t8_wanted_ewgf_stats_v3_${gameId}`;
       let hasBrowserSnapshot = false;
       try { hasBrowserSnapshot = Boolean(JSON.parse(localStorage.getItem(localStorageKey) || 'null')); } catch (_) {}
-      const hasFirebaseSnapshot = Boolean(member.fetchedStats && Object.keys(member.fetchedStats).length);
+      const hasFirebaseSnapshot = Boolean(
+        (member.workerFetchedStats && isWorkerCanonicalStats(member.workerFetchedStats))
+        || (member.fetchedStats && Object.keys(member.fetchedStats).length)
+      );
       const profileTime = completedAt ? formatExactDateTime(completedAt) : '保存時刻を確認できません';
       const activityTime = activityCheckedAt ? formatExactDateTime(activityCheckedAt) : 'まだ照会記録がありません';
       const latestBattleTime = latestBattleAt ? formatExactDateTime(latestBattleAt) : '最終対戦は未確認';
@@ -4227,7 +4272,7 @@
             <dl>
               <div><dt>処理状態</dt><dd>${escapeHtml(live?.stage || meta.state || 'unknown')}</dd></div>
               <div><dt>処理時間</dt><dd>${Number.isFinite(Number(meta.durationMs)) ? `${(Number(meta.durationMs) / 1000).toFixed(1)}秒` : '—'}</dd></div>
-              <div><dt>データ形式</dt><dd>${escapeHtml(meta.schema || member.fetchedStats?.schema || 'legacy')}</dd></div>
+              <div><dt>データ形式</dt><dd>${escapeHtml(meta.schema || member.workerFetchedStats?.schema || member.fetchedStats?.schema || 'legacy')}</dd></div>
               <div><dt>共有キャッシュ</dt><dd>${stats.refreshUsedSharedCache ? '使用' : '通常'}</dd></div>
             </dl>
           </details>
@@ -4238,23 +4283,9 @@
       document.body.classList.add('fetch-diagnostics-open');
     }
     window.openFetchDiagnostics = openFetchDiagnostics;
-    window.persistMemberFetchFailureMeta = async (memberKey, gameId, detail = {}) => {
-      const member = window.currentMembersData?.[memberKey];
-      if (!membersRef || !member || cleanTekkenId(member.gameId).toUpperCase() !== cleanTekkenId(gameId).toUpperCase()) return;
-      const now = Date.now();
-      try {
-        await membersRef.child(memberKey).child('fetchedStats/fetchMeta').set({
-          state: 'error',
-          startedAt: Number(detail.startedAt || 0),
-          completedAt: now,
-          durationMs: Number(detail.startedAt || 0) ? now - Number(detail.startedAt) : 0,
-          errorStatus: Number(detail.errorStatus || 0) || null,
-          errorMessage: String(detail.errorMessage || '取得に失敗しました').slice(0, 500),
-          schema: '20260729-acquisition-diagnostics'
-        });
-      } catch (error) {
-        console.warn('Fetch failure diagnostics sync failed', error);
-      }
+    window.persistMemberFetchFailureMeta = async () => {
+      // Fetch diagnostics remain local to this browser until the Worker has a
+      // canonical error/status contract. Never write fetchedStats from here.
     };
 
     window.addEventListener('kentomo:fetch-progress', event => {
@@ -5364,19 +5395,8 @@
             ? `${name} を更新し、同じIDの${syncedCount}件へ反映しました`
             : `${name} を更新しました`);
         } else {
-          // Firebase rules intentionally allow arbitrary fetchedStats children,
-          // while member-level fields are allowlisted. Save the card first and
-          // finish all external lookups after the modal has closed.
-          data.fetchedStats = {
-            initialFetchPending: true,
-            initialFetchPendingAt: Date.now(),
-            cachedAt: 0,
-            fetchMeta: {
-              state: 'saved',
-              savedAt: Date.now(),
-              schema: '20260729-acquisition-pipeline'
-            }
-          };
+          // Save the member first and finish all external lookups after the
+          // modal has closed. Stats are acquired/persisted by the Worker.
           data.order = Date.now();
           const newMemberRef = membersRef.push();
           await newMemberRef.set(data);
@@ -5479,12 +5499,12 @@
 
   </script>
   <script src="html2canvas.min.js?v=1.4.1"></script>
-  <script src="user-lists-prototype.js?v=20260820-background-latest-and-queue-guard"></script>
+  <script src="user-lists-prototype.js?v=20260821-worker-authority-cutover-return-tracking"></script>
   <script src="admin-access-prototype.js?v=20260801-community-entry"></script>
   <script>
     (() => {
       const integrationScript = document.createElement('script');
-      const assetVersion = '20260820-background-latest-and-queue-guard';
+      const assetVersion = '20260821-worker-authority-cutover';
       integrationScript.src = `stats-integration-v4.js?v=${assetVersion}`;
       integrationScript.async = false;
       integrationScript.onload = () => {

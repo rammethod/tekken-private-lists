@@ -350,6 +350,44 @@ function needsMaterializedMigration(current) {
     || !isRecord(current?.activityStats);
 }
 
+function isCanonicalStatsNode(value) {
+  return isRecord(value)
+    && value.schema === STATS_SCHEMA
+    && isRecord(value.sourceSnapshots);
+}
+
+function mergeLegacyCompatibilityNode(canonical, legacy) {
+  if (!isRecord(legacy)) return isRecord(canonical) ? cloneValue(canonical) : {};
+  if (!isRecord(canonical) || !isCanonicalStatsNode(canonical)) return cloneValue(legacy);
+  return {
+    ...cloneValue(legacy),
+    ...cloneValue(canonical),
+    profileStats: mergeDefined(legacy.profileStats, canonical.profileStats),
+    activityStats: mergeDefined(legacy.activityStats, canonical.activityStats),
+  };
+}
+
+function mergeLegacyNodes(left, right) {
+  if (!isRecord(left)) return isRecord(right) ? cloneValue(right) : {};
+  if (!isRecord(right)) return cloneValue(left);
+  if (isCanonicalStatsNode(left)) return mergeLegacyCompatibilityNode(left, right);
+  if (isCanonicalStatsNode(right)) return mergeLegacyCompatibilityNode(right, left);
+  return {
+    ...cloneValue(left),
+    ...cloneValue(right),
+    profileStats: mergeDefined(left.profileStats, right.profileStats),
+    activityStats: mergeDefined(left.activityStats, right.activityStats),
+  };
+}
+
+function stripBrowserOwnedReturnTracking(node) {
+  const result = cloneValue(node);
+  delete result.returnTracking;
+  if (isRecord(result.profileStats)) delete result.profileStats.returnTracking;
+  if (isRecord(result.activityStats)) delete result.activityStats.returnTracking;
+  return result;
+}
+
 export function applySourceSnapshotsToFetchedStats(current, incomingSnapshots, metadata = {}) {
   const currentNode = isRecord(current) ? cloneValue(current) : {};
   const currentSnapshots = isRecord(currentNode.sourceSnapshots) ? currentNode.sourceSnapshots : {};
@@ -423,27 +461,81 @@ export function createFirebaseStatsTransport({ databaseUrl, token, fetchImpl = g
   };
 }
 
-export async function persistStatsWithCas({ transport, path, incomingSnapshots, metadata, maxAttempts = 3 } = {}) {
+export async function persistStatsWithCas({ transport, path, legacyPath = "", legacyPaths = [], incomingSnapshots, metadata, maxAttempts = 3, omitReturnTracking = false } = {}) {
   if (!transport || typeof transport.read !== "function" || typeof transport.write !== "function") {
     throw new TypeError("stats transport must provide read and write functions");
   }
   if (!Number.isInteger(maxAttempts) || maxAttempts < 1) throw new RangeError("maxAttempts must be a positive integer");
 
+  const compatibilityPaths = [...new Set([
+    legacyPath,
+    ...(Array.isArray(legacyPaths) ? legacyPaths : []),
+  ].map(value => String(value || "").trim()).filter(Boolean))];
+
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const remote = await transport.read(path);
-    const applied = applySourceSnapshotsToFetchedStats(remote?.value, incomingSnapshots, metadata);
-    if (!applied.changed) return { status: "noop", attempts: attempt, node: applied.node, decisions: applied.decisions };
+    const legacyValues = !isCanonicalStatsNode(remote?.value) && compatibilityPaths.length
+      ? await Promise.all(compatibilityPaths.map(compatibilityPath => transport.read(compatibilityPath)))
+      : [];
+    const legacy = legacyValues.reduce((merged, value) => mergeLegacyNodes(merged, value?.value), null);
+    const current = mergeLegacyCompatibilityNode(remote?.value, legacy);
+    const applied = applySourceSnapshotsToFetchedStats(current, incomingSnapshots, metadata);
+    const compatibilitySeedRequired = !isCanonicalStatsNode(remote?.value) && isCanonicalStatsNode(current);
+    const nextNodeCandidate = applied.changed
+      ? applied.node
+      : materializeFetchedStats({ current, sourceSnapshots: current.sourceSnapshots, ...metadata });
+    const nextNode = omitReturnTracking
+      ? stripBrowserOwnedReturnTracking(nextNodeCandidate)
+      : nextNodeCandidate;
+    const compatibilityChanged = JSON.stringify(nextNode) !== JSON.stringify(nextNodeCandidate);
+    if (!applied.changed && !compatibilitySeedRequired && !compatibilityChanged) {
+      return { status: "noop", attempts: attempt, node: applied.node, decisions: applied.decisions };
+    }
 
-    const writeResult = await transport.write(path, applied.node, remote?.etag);
+    const writeResult = await transport.write(path, nextNode, remote?.etag);
     if (writeResult?.conflict === true || writeResult?.status === 412) {
       if (attempt === maxAttempts) return { status: "conflict", attempts: attempt, node: remote?.value, decisions: applied.decisions };
       continue;
     }
     if (writeResult?.ok !== true) throw new Error(`Firebase stats CAS write failed at ${path}`);
-    return { status: "written", attempts: attempt, node: applied.node, decisions: applied.decisions };
+    return { status: "written", attempts: attempt, node: nextNode, decisions: applied.decisions };
   }
 
   return { status: "conflict", attempts: maxAttempts };
+}
+
+export async function persistCanonicalStatsAndViews({
+  transport,
+  canonicalPath,
+  compatibilityPaths = [],
+  targetPaths = [],
+  incomingSnapshots,
+  metadata,
+  maxAttempts = 3,
+} = {}) {
+  const canonical = await persistStatsWithCas({
+    transport,
+    path: canonicalPath,
+    legacyPaths: compatibilityPaths,
+    incomingSnapshots,
+    metadata,
+    maxAttempts,
+    omitReturnTracking: true,
+  });
+  if (canonical.status === "conflict") return { status: "conflict", canonical, targets: [] };
+
+  const canonicalSnapshots = isRecord(canonical.node?.sourceSnapshots)
+    ? canonical.node.sourceSnapshots
+    : incomingSnapshots;
+  const targets = await Promise.all((targetPaths || []).map(target => persistStatsWithCas({
+    transport,
+    path: target.path,
+    legacyPath: target.legacyPath,
+    incomingSnapshots: canonicalSnapshots,
+    metadata,
+    maxAttempts,
+  })));
+  return { status: "complete", canonical, targets };
 }
 
 export function dedupeStatsTargetPaths(targets = []) {
@@ -451,9 +543,16 @@ export function dedupeStatsTargetPaths(targets = []) {
   for (const target of targets) {
     const path = String(target?.path || "").trim();
     if (!path) continue;
-    const entry = entries.get(path) || { path, shareIds: [] };
+    const entry = entries.get(path) || {
+      path,
+      shareIds: [],
+      ...(target?.legacyPath ? { legacyPath: String(target.legacyPath) } : {}),
+    };
+    if (!entry.legacyPath && target?.legacyPath) entry.legacyPath = String(target.legacyPath);
     if (target?.shareId && !entry.shareIds.includes(target.shareId)) entry.shareIds.push(target.shareId);
     entries.set(path, entry);
   }
-  return [...entries.values()].sort((left, right) => left.path.localeCompare(right.path));
+  return [...entries.values()]
+    .map(entry => entry.legacyPath ? entry : { path: entry.path, shareIds: entry.shareIds })
+    .sort((left, right) => left.path.localeCompare(right.path));
 }
