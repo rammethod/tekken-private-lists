@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -253,14 +254,15 @@ test("missing Wavu main character falls back to EWGF profile", () => {
 test("split and flat legacy nodes survive the first partial migration", () => {
   const split = applySourceSnapshotsToFetchedStats({
     "20260729-split-fetched-stats": {
-      profileStats: { gameId: "LEGACY", playerMessage: "keep me" },
+      profileStats: { gameId: "LEGACY", playerMessage: "legacy source-owned value", legacyMarker: "keep me" },
       activityStats: { latestBattleType: "PLAYER_BATTLE" },
     },
     returnTracking: { lastSeen: 3 },
   }, { ewgfProfile: buildEwgfProfileSourceSnapshot({ ...profile, playerMessage: "" }, profileObservedAt) }, metadata());
   assert.equal(split.changed, true);
   assert.equal(split.node.returnTracking.lastSeen, 3);
-  assert.equal(split.node.profileStats.playerMessage, "keep me");
+  assert.equal(split.node.profileStats.legacyMarker, "keep me");
+  assert.equal(split.node.profileStats.playerMessage, undefined);
   assert.equal(split.node.activityStats.latestBattleType, "PLAYER_BATTLE");
 
   const flat = applySourceSnapshotsToFetchedStats({ gameId: "LEGACY-FLAT", latestBattleType: "GROUP_BATTLE" }, { wavuRatings: buildWavuSourceSnapshot(wavu, profileObservedAt) }, metadata());
@@ -320,4 +322,74 @@ test("EWGF character selection falls back to an existing source field", () => {
     characterSelectionTop: [{ character: "Kazuya", lifetimeGames: 4 }],
   }, profileObservedAt);
   assert.deepEqual(node.data.characterSelectionTop, [{ character: "Kazuya", lifetimeGames: 4 }]);
+});
+
+test("background characterRanks.rank remains the current rank when highestRank differs", () => {
+  const snapshot = buildEwgfProfileSourceSnapshot({
+    gameId: "PLAYER-001",
+    highestRank: "Tekken God Supreme",
+    characterRanks: { Kazuya: { rank: "Fujin", rankIcon: "fujin.png" } },
+    rankedCharacterStats: { Kazuya: { games: 10, wins: 6, losses: 4, winRate: 0.6 } },
+    totalRankedGames: 10,
+  }, profileObservedAt);
+  assert.equal(snapshot.data.danRank, "Fujin");
+});
+
+test("a newer authoritative Wavu snapshot clears omitted Wavu fields and falls back to EWGF", () => {
+  const current = materializeFetchedStats({
+    current: {},
+    sourceSnapshots: {
+      ewgfProfile: buildEwgfProfileSourceSnapshot(profile, profileObservedAt),
+      wavuRatings: buildWavuSourceSnapshot(wavu, profileObservedAt),
+    },
+    ...metadata(),
+  });
+  const newerNoQualifiedMain = buildWavuSourceSnapshot({
+    ...wavu,
+    mainChar: null,
+    mainCharGames: null,
+    ratingMu: null,
+    charGamesMap: {},
+    charRatingMap: {},
+    qualifiedCharRatingMap: {},
+    latestRankedBattleAt: "2026-08-21T11:00:00.000Z",
+  }, "2026-08-21T12:00:00.000Z");
+  const applied = applySourceSnapshotsToFetchedStats(current, { wavuRatings: newerNoQualifiedMain }, metadata("2026-08-21T12:00:00.000Z"));
+  assert.equal(applied.changed, true);
+  assert.equal(applied.node.profileStats.mainChar, "Kazuya");
+  assert.equal(applied.node.mainChar, "Kazuya");
+  assert.equal(applied.node.profileStats.ratingMu, undefined);
+  assert.equal(applied.node.profileStats.ratingCharacter, undefined);
+  assert.equal(applied.node.profileStats.mainSelectionSource, undefined);
+  assert.equal(applied.node.profileStats.qualifiedCharRatingMap, undefined);
+});
+
+test("a newer authoritative latest snapshot clears omitted character and type fields", () => {
+  const current = materializeFetchedStats({
+    current: {},
+    sourceSnapshots: {
+      latestActivity: buildLatestActivitySourceSnapshot(latest, profileObservedAt),
+    },
+    ...metadata(),
+  });
+  const newerMissingDetails = buildLatestActivitySourceSnapshot({
+    battle: { at: "2026-08-21T12:00:00.000Z" },
+    source: "ewgf-official-battles-api",
+    scope: "all-battle-types",
+  }, "2026-08-21T12:01:00.000Z");
+  const applied = applySourceSnapshotsToFetchedStats(current, { latestActivity: newerMissingDetails }, metadata("2026-08-21T12:01:00.000Z"));
+  assert.equal(applied.changed, true);
+  assert.equal(applied.node.activityStats.latestBattleAt, "2026-08-21T12:00:00.000Z");
+  assert.equal(applied.node.activityStats.latestBattleCharacter, undefined);
+  assert.equal(applied.node.activityStats.latestBattleType, undefined);
+  assert.equal(applied.node.latestBattleCharacter, undefined);
+  assert.equal(applied.node.latestBattleType, undefined);
+});
+
+test("Worker routes retain cache-hit persistence wiring for throttled page-open/manual requests", () => {
+  const workerSource = readFileSync(new URL("../worker/ewgf-worker-with-stat-pentagon.js", import.meta.url), "utf8");
+  assert.match(workerSource, /const cached = await getFreshCachedJson\(cache, cacheKey, WAVU_RATINGS_CACHE_TTL_SECONDS\);[\s\S]*?if \(cached\) \{[\s\S]*?if \(statsPersistRequested\) \{[\s\S]*?scheduleCachedFirebaseSourceSnapshot\(/);
+  assert.match(workerSource, /"wavuRatings",\s*buildWavuSourceSnapshot/);
+  assert.match(workerSource, /const cachedResponse = await getFreshCachedJson\(cache, cacheKey, WORKER_CACHE_TTL_SECONDS\);[\s\S]*?if \(cachedResponse\) \{[\s\S]*?if \(statsPersistRequested\) \{[\s\S]*?scheduleCachedFirebaseSourceSnapshot\(/);
+  assert.match(workerSource, /"ewgfProfile",\s*buildEwgfProfileSourceSnapshot/);
 });

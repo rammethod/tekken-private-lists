@@ -1235,6 +1235,26 @@ function scheduleFirebaseSourceSnapshots(env, ctx, gameId, sourceSnapshots, meta
   return task;
 }
 
+function scheduleCachedFirebaseSourceSnapshot(env, ctx, gameId, cachedResponse, domain, buildSnapshot, fetchedBy) {
+  const task = cachedResponse.clone().json()
+    .then(cachedPayload => {
+      const observedAt = Date.now();
+      return scheduleFirebaseSourceSnapshots(
+        env,
+        null,
+        gameId,
+        { [domain]: buildSnapshot(cachedPayload, observedAt) },
+        statsMetadata(observedAt, fetchedBy),
+      );
+    })
+    .catch(error => {
+      console.warn("Kentomo cached Firebase stats persistence failed", gameId, error instanceof Error ? error.message : String(error));
+      return { targets: 0, shared: 0, error: error instanceof Error ? error.message : String(error) };
+    });
+  if (ctx && typeof ctx.waitUntil === "function") ctx.waitUntil(task);
+  return task;
+}
+
 async function runBackgroundSync(env) {
   if (!env.FIREBASE_SERVICE_ACCOUNT_JSON) return { processed: 0, skipped: "secret-missing" };
   const token = await getFirebaseAccessToken(env);
@@ -1489,7 +1509,20 @@ export default {
       }
       if (!forceRefresh) {
         const cached = await getFreshCachedJson(cache, cacheKey, WAVU_RATINGS_CACHE_TTL_SECONDS);
-        if (cached) return withCacheStatus(cached, "HIT");
+        if (cached) {
+          if (statsPersistRequested) {
+            scheduleCachedFirebaseSourceSnapshot(
+              env,
+              ctx,
+              gameId,
+              cached,
+              "wavuRatings",
+              buildWavuSourceSnapshot,
+              pageOpenRequested ? "worker-page-open-wavu-cache-sync" : "worker-manual-refresh-wavu-cache-sync",
+            );
+          }
+          return withCacheStatus(cached, "HIT");
+        }
       }
       try {
         const ratings = await fetchWavuRatings(gameId);
@@ -1739,7 +1772,20 @@ export default {
 
     if (!forceRefresh) {
       const cachedResponse = await getFreshCachedJson(cache, cacheKey, WORKER_CACHE_TTL_SECONDS);
-      if (cachedResponse) return withCacheStatus(cachedResponse, "HIT");
+      if (cachedResponse) {
+        if (statsPersistRequested) {
+          scheduleCachedFirebaseSourceSnapshot(
+            env,
+            ctx,
+            ewgfId,
+            cachedResponse,
+            "ewgfProfile",
+            buildEwgfProfileSourceSnapshot,
+            pageOpenRequested ? "worker-page-open-profile-cache-sync" : "worker-manual-refresh-profile-cache-sync",
+          );
+        }
+        return withCacheStatus(cachedResponse, "HIT");
+      }
     }
     const profileUrl = `https://ewgf.gg/player/${encodeURIComponent(ewgfId)}`;
 

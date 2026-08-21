@@ -43,6 +43,23 @@ const ACTIVITY_FIELDS = [
   "latestBattleRevisionAt",
 ];
 
+const WAVU_FIELDS = [
+  "mainChar",
+  "mainCharGames",
+  "ratingCharacter",
+  "mainSelectionSource",
+  "ratingMu",
+  "charGamesMap",
+  "charRatingMap",
+  "qualifiedCharRatingMap",
+  "recentRankedGames7d",
+  "recentRankedGames30d",
+  "recentRankedSampleSize",
+  "latestRankedBattleAt",
+];
+
+const EWGF_FIELDS = PROFILE_FIELDS.filter((field) => !WAVU_FIELDS.includes(field));
+
 function cloneValue(value) {
   if (Array.isArray(value)) return value.map(cloneValue);
   if (value instanceof Date) return new Date(value.getTime());
@@ -54,6 +71,10 @@ function cloneValue(value) {
 
 function hasValue(value) {
   return value !== null && value !== undefined;
+}
+
+function hasMeaningfulValue(value) {
+  return hasValue(value) && (typeof value !== "string" || value.trim() !== "");
 }
 
 function isRecord(value) {
@@ -128,7 +149,7 @@ export function buildEwgfProfileSourceSnapshot(profile, observedAt) {
     losses: Number(profile?.losses ?? rankedMain?.losses ?? 0),
     rankedWinRate: Number(rankedMain?.winRate ?? profile?.rankedWinRate ?? (rankedGames ? rankedWins / rankedGames : 0)),
     rankedDataVerified: true,
-    danRank: String(profile?.currentRank || mainCharacter?.currentRank || profile?.highestRank || profile?.danRank || "-"),
+    danRank: String(profile?.currentRank || mainCharacter?.currentRank || mainCharacter?.rank || profile?.highestRank || profile?.danRank || "-"),
     rankIcon: String(profile?.rankIcon || mainCharacter?.rankIcon || ""),
     tekkenPower: Number(profile?.tekkenProwess ?? profile?.tekkenPower ?? 0),
     totalRankedGames,
@@ -248,21 +269,58 @@ function orderedSourceSnapshots(sourceSnapshots) {
   return result;
 }
 
+function clearFields(target, fields) {
+  for (const field of fields) delete target[field];
+  return target;
+}
+
 export function materializeFetchedStats({ current = {}, sourceSnapshots = {}, fetchMeta, cachedAt, updatedAt } = {}) {
   const node = cloneValue(isRecord(current) ? current : {});
   const legacy = legacyViews(node);
-  const ewgfData = sourceSnapshots?.ewgfProfile?.data;
-  const wavuData = sourceSnapshots?.wavuRatings?.data;
-  const activityData = sourceSnapshots?.latestActivity?.data;
+  const effectiveSnapshots = orderedSourceSnapshots({
+    ...(isRecord(node.sourceSnapshots) ? node.sourceSnapshots : {}),
+    ...(isRecord(sourceSnapshots) ? sourceSnapshots : {}),
+  });
+  const ewgfSnapshot = effectiveSnapshots.ewgfProfile;
+  const wavuSnapshot = effectiveSnapshots.wavuRatings;
+  const activitySnapshot = effectiveSnapshots.latestActivity;
+  const hasEwgfAuthority = isRecord(ewgfSnapshot);
+  const hasWavuAuthority = isRecord(wavuSnapshot);
+  const hasActivityAuthority = isRecord(activitySnapshot);
+  const ewgfData = ewgfSnapshot?.data;
+  const wavuData = wavuSnapshot?.data;
+  const activityData = activitySnapshot?.data;
 
-  let profileStats = mergeDefined(legacy.profileStats, ewgfData);
-  profileStats = mergeDefined(profileStats, wavuData);
-  let activityStats = mergeDefined(legacy.activityStats, activityData);
-  const latestObservedAt = sourceSnapshots?.latestActivity?.observedAt;
-  if (hasValue(latestObservedAt)) activityStats.latestBattleCheckedAt = cloneValue(latestObservedAt);
+  let profileStats = cloneValue(legacy.profileStats);
+  if (hasEwgfAuthority) {
+    clearFields(profileStats, EWGF_FIELDS);
+    profileStats = mergeDefined(profileStats, ewgfData);
+  }
+  if (hasWavuAuthority) {
+    clearFields(profileStats, WAVU_FIELDS);
+    profileStats = mergeDefined(profileStats, wavuData);
+    if (!hasMeaningfulValue(wavuData?.mainChar) && hasEwgfAuthority) {
+      if (hasValue(ewgfData?.mainChar)) profileStats.mainChar = cloneValue(ewgfData.mainChar);
+      if (hasValue(ewgfData?.mainCharGames)) profileStats.mainCharGames = cloneValue(ewgfData.mainCharGames);
+    }
+  }
+
+  let activityStats = cloneValue(legacy.activityStats);
+  if (hasActivityAuthority) {
+    clearFields(activityStats, ACTIVITY_FIELDS);
+    activityStats = mergeDefined(activityStats, activityData);
+    const latestObservedAt = activitySnapshot.observedAt;
+    if (hasValue(latestObservedAt)) activityStats.latestBattleCheckedAt = cloneValue(latestObservedAt);
+  }
+
+  const authoritativeRootFields = [];
+  if (hasEwgfAuthority) authoritativeRootFields.push(...EWGF_FIELDS);
+  if (hasWavuAuthority) authoritativeRootFields.push(...WAVU_FIELDS);
+  if (hasActivityAuthority) authoritativeRootFields.push(...ACTIVITY_FIELDS);
+  clearFields(node, [...new Set(authoritativeRootFields)]);
 
   node.schema = STATS_SCHEMA;
-  node.sourceSnapshots = orderedSourceSnapshots(sourceSnapshots);
+  node.sourceSnapshots = effectiveSnapshots;
   node.profileStats = profileStats;
   node.activityStats = activityStats;
   Object.assign(node, profileStats, activityStats);
