@@ -4050,7 +4050,9 @@
         return;
       }
       if (!before) {
-        updates[`sharedLists/${shareId}/members/${memberId}`] = after;
+        Object.entries(after).forEach(([field, value]) => {
+          if (value !== undefined) updates[`sharedLists/${shareId}/members/${memberId}/${field}`] = value;
+        });
         return;
       }
       const fields = new Set([...Object.keys(before), ...Object.keys(after)]);
@@ -4072,9 +4074,20 @@
     const existing = existingSnapshot.val();
     if (!existing) {
       // The initial payload deliberately contains only browser-owned list
-      // metadata. Worker-owned canonical stats are added at member sibling
-      // paths by the Worker and must never be part of this browser set().
-      await db.ref(root).set(payload);
+      // metadata. Use a multi-location update so a concurrent Worker view
+      // cannot be erased by creating the shared list.
+      const updates = {
+        [`${root}/ownerUid`]: payload.ownerUid,
+        [`${root}/name`]: payload.name,
+        [`${root}/createdAt`]: payload.createdAt,
+        [`${root}/updatedAt`]: payload.updatedAt,
+      };
+      Object.entries(payload.members || {}).forEach(([memberId, member]) => {
+        Object.entries(member || {}).forEach(([field, value]) => {
+          if (value !== undefined) updates[`${root}/members/${memberId}/${field}`] = value;
+        });
+      });
+      await db.ref().update(updates);
       return true;
     }
     const previous = comparableSharedPayload(existing);

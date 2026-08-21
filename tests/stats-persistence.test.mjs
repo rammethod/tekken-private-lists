@@ -12,6 +12,7 @@ import {
   createFirebaseStatsTransport,
   dedupeStatsTargetPaths,
   materializeFetchedStats,
+  persistCanonicalStatsAndViews,
   persistStatsWithCas,
 } from "../worker/stats-persistence.mjs";
 
@@ -154,6 +155,100 @@ test("first canonical write seeds from legacy fetchedStats without writing legac
   assert.equal(write.value.profileStats.mainCharGames, 42);
   assert.deepEqual(write.value.returnTracking, { dormantSince: 1 });
   assert.equal(values.legacy.value.schema, undefined);
+});
+
+test("Worker-only canonical authority survives old target removal and rehydrates the view", async () => {
+  const paths = {
+    canonical: "workerStatsByGameId/PLAYER-001",
+    target: "sharedLists/share/members/member/workerFetchedStats",
+    legacy: "sharedLists/share/members/member/fetchedStats",
+  };
+  const store = new Map([
+    [paths.canonical, { value: null, etag: "canonical-0" }],
+    [paths.target, { value: null, etag: "target-0" }],
+    [paths.legacy, { value: null, etag: "legacy-0" }],
+  ]);
+  const transport = {
+    async read(path) {
+      const entry = store.get(path) || { value: null, etag: `${path}-0` };
+      return { value: entry.value, etag: entry.etag };
+    },
+    async write(path, value, etag) {
+      const current = store.get(path) || { value: null, etag: `${path}-0` };
+      assert.equal(etag, current.etag);
+      store.set(path, { value, etag: `${path}-${Date.now()}` });
+      return { ok: true, status: 200 };
+    },
+  };
+
+  const first = await persistCanonicalStatsAndViews({
+    transport,
+    canonicalPath: paths.canonical,
+    legacyPaths: [paths.legacy],
+    targetPaths: [{ path: paths.target, legacyPath: paths.legacy }],
+    incomingSnapshots: sources(),
+    metadata: metadata(),
+  });
+  assert.equal(first.status, "complete");
+  const canonicalBefore = store.get(paths.canonical).value;
+  assert.equal(canonicalBefore.sourceSnapshots.ewgfProfile.revisionAt, sources().ewgfProfile.revisionAt);
+
+  // An old browser parent write can remove the derived target view, but it
+  // cannot reach the Worker-only canonical path.
+  store.set(paths.target, { value: null, etag: "target-erased-by-old-tab" });
+  const second = await persistCanonicalStatsAndViews({
+    transport,
+    canonicalPath: paths.canonical,
+    legacyPaths: [paths.legacy],
+    targetPaths: [{ path: paths.target, legacyPath: paths.legacy }],
+    incomingSnapshots: sources(),
+    metadata: metadata("2026-08-22T00:00:00.000Z"),
+  });
+  assert.equal(second.status, "complete");
+  assert.deepEqual(store.get(paths.canonical).value.sourceSnapshots, canonicalBefore.sourceSnapshots);
+  assert.deepEqual(store.get(paths.target).value.sourceSnapshots, canonicalBefore.sourceSnapshots);
+});
+
+test("older Worker persistence cannot roll canonical or materialized target views backward", async () => {
+  const canonicalPath = "workerStatsByGameId/PLAYER-001";
+  const targetPath = "users/u/lists/l/members/m/workerFetchedStats";
+  const store = new Map([
+    [canonicalPath, { value: null, etag: "canonical-0" }],
+    [targetPath, { value: null, etag: "target-0" }],
+  ]);
+  const transport = {
+    async read(path) { return store.get(path) || { value: null, etag: `${path}-0` }; },
+    async write(path, value, etag) {
+      const current = store.get(path) || { value: null, etag: `${path}-0` };
+      assert.equal(etag, current.etag);
+      store.set(path, { value, etag: `${path}-${Math.random()}` });
+      return { ok: true, status: 200 };
+    },
+  };
+  await persistCanonicalStatsAndViews({
+    transport,
+    canonicalPath,
+    targetPaths: [{ path: targetPath }],
+    incomingSnapshots: sources(),
+    metadata: metadata(),
+  });
+  const olderSources = {
+    ewgfProfile: { ...sources().ewgfProfile, revisionAt: "2026-08-19T00:00:00.000Z" },
+    wavuRatings: { ...sources().wavuRatings, revisionAt: "2026-08-19T00:00:00.000Z" },
+    latestActivity: { ...sources().latestActivity, revisionAt: "2026-08-19T00:00:00.000Z" },
+  };
+  const before = store.get(canonicalPath).value.sourceSnapshots;
+  const result = await persistCanonicalStatsAndViews({
+    transport,
+    canonicalPath,
+    targetPaths: [{ path: targetPath }],
+    incomingSnapshots: olderSources,
+    metadata: metadata("2026-08-22T00:00:00.000Z"),
+  });
+  assert.equal(result.canonical.status, "noop");
+  assert.equal(result.targets[0].status, "noop");
+  assert.deepEqual(store.get(canonicalPath).value.sourceSnapshots, before);
+  assert.deepEqual(store.get(targetPath).value.sourceSnapshots, before);
 });
 
 test("older, unversioned, and equal unchanged sources are no-ops", async (t) => {
@@ -459,9 +554,10 @@ test("Worker routes retain cache-hit persistence wiring for throttled page-open/
 test("Worker persistence targets canonical sibling nodes and keeps legacy fallback paths", () => {
   const workerSource = readFileSync(new URL("../worker/ewgf-worker-with-stat-pentagon.js", import.meta.url), "utf8");
   assert.match(workerSource, /workerFetchedStats/);
+  assert.match(workerSource, /workerStatsByGameId\/\$\{normalizedId\}/);
+  assert.match(workerSource, /persistCanonicalStatsAndViews/);
   assert.match(workerSource, /legacyPath:\s*`\$\{ownerMemberPath\}\/fetchedStats`/);
   assert.match(workerSource, /legacyPath:\s*`\$\{sharedMemberPath\}\/fetchedStats`/);
-  assert.match(workerSource, /legacyPath:\s*entry\.legacyPath/);
 });
 
 test("active browser reads canonical stats and no longer publishes fetchedStats", () => {
@@ -477,6 +573,9 @@ test("active browser reads canonical stats and no longer publishes fetchedStats"
   assert.match(listsSource, /mode=latest&persist=1/);
   assert.match(listsSource, /const existingSnapshot = await db\.ref\(root\)\.once\(['"]value['"]\)/);
   assert.match(listsSource, /await writeSharedListDelta\(shareId, previous, next\)/);
+  assert.doesNotMatch(listsSource, /db\.ref\(root\)\.set\(payload\)/);
+  assert.doesNotMatch(listsSource, /updates\[`sharedLists\/\$\{shareId\}\/members\/\$\{memberId\}`\]\s*=\s*after/);
+  assert.match(listsSource, /Object\.entries\(after\)\.forEach/);
   assert.doesNotMatch(listsSource, /child\(key\)\.child\(['"]fetchedStats['"]\)\.child\(['"]activityStats['"]\)/);
   assert.match(integrationSource, /isManual\s*&&\s*forceRefresh[\s\S]*manualRefresh=1/);
 });

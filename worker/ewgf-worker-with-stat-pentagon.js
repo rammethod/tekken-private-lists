@@ -6,7 +6,7 @@ import {
   buildWavuSourceSnapshot,
   createFirebaseStatsTransport,
   dedupeStatsTargetPaths,
-  persistStatsWithCas,
+  persistCanonicalStatsAndViews,
 } from "./stats-persistence.mjs";
 
 const WORKER_CACHE_TTL_SECONDS = 12 * 60 * 60;
@@ -1128,7 +1128,8 @@ function statsMetadata(observedAt, fetchedBy, state = "ready") {
 }
 
 function normalizedFirebaseGameId(value) {
-  return String(value || "").trim().toUpperCase();
+  const normalized = String(value || "").trim().toUpperCase();
+  return /^[A-Z0-9_-]{3,64}$/.test(normalized) ? normalized : "";
 }
 
 function normalizedFirebaseShareId(value) {
@@ -1174,6 +1175,7 @@ async function publishFirebaseSourceSnapshots(env, gameId, sourceSnapshots, meta
   if (!env.FIREBASE_SERVICE_ACCOUNT_JSON || !sourceSnapshots || !Object.keys(sourceSnapshots).length) {
     return { targets: 0, shared: 0, skipped: "secret-missing-or-empty" };
   }
+  const normalizedId = normalizedFirebaseGameId(gameId);
   const token = existingToken || await getFirebaseAccessToken(env);
   const targets = await collectFirebasePlayerTargets(env, token, gameId);
   if (!targets.length) return { targets: 0, shared: 0 };
@@ -1199,17 +1201,18 @@ async function publishFirebaseSourceSnapshots(env, gameId, sourceSnapshots, meta
     token,
     fetchImpl: fetch,
   });
-  const results = await Promise.all(paths.map(async entry => ({
-    entry,
-      result: await persistStatsWithCas({
-        transport,
-        path: entry.path,
-        legacyPath: entry.legacyPath,
-        incomingSnapshots: sourceSnapshots,
-        metadata,
-        maxAttempts: 3,
-    }),
-  })));
+  const canonicalPath = `workerStatsByGameId/${normalizedId}`;
+  const persistence = await persistCanonicalStatsAndViews({
+    transport,
+    canonicalPath,
+    legacyPaths: paths.map(entry => entry.legacyPath).filter(Boolean),
+    targetPaths: paths,
+    incomingSnapshots: sourceSnapshots,
+    metadata,
+    maxAttempts: 3,
+  });
+  if (persistence.status === "conflict") throw new Error(`Firebase stats CAS conflict at ${canonicalPath}`);
+  const results = paths.map((entry, index) => ({ entry, result: persistence.targets[index] }));
   const changedSharedIds = new Set();
   results.forEach(({ entry, result }) => {
     if (result.status === "conflict") throw new Error(`Firebase stats CAS conflict at ${entry.path}`);

@@ -367,6 +367,17 @@ function mergeLegacyCompatibilityNode(canonical, legacy) {
   };
 }
 
+function mergeLegacyNodes(left, right) {
+  if (!isRecord(left)) return isRecord(right) ? cloneValue(right) : {};
+  if (!isRecord(right)) return cloneValue(left);
+  return {
+    ...cloneValue(left),
+    ...cloneValue(right),
+    profileStats: mergeDefined(left.profileStats, right.profileStats),
+    activityStats: mergeDefined(left.activityStats, right.activityStats),
+  };
+}
+
 export function applySourceSnapshotsToFetchedStats(current, incomingSnapshots, metadata = {}) {
   const currentNode = isRecord(current) ? cloneValue(current) : {};
   const currentSnapshots = isRecord(currentNode.sourceSnapshots) ? currentNode.sourceSnapshots : {};
@@ -440,18 +451,24 @@ export function createFirebaseStatsTransport({ databaseUrl, token, fetchImpl = g
   };
 }
 
-export async function persistStatsWithCas({ transport, path, legacyPath = "", incomingSnapshots, metadata, maxAttempts = 3 } = {}) {
+export async function persistStatsWithCas({ transport, path, legacyPath = "", legacyPaths = [], incomingSnapshots, metadata, maxAttempts = 3 } = {}) {
   if (!transport || typeof transport.read !== "function" || typeof transport.write !== "function") {
     throw new TypeError("stats transport must provide read and write functions");
   }
   if (!Number.isInteger(maxAttempts) || maxAttempts < 1) throw new RangeError("maxAttempts must be a positive integer");
 
+  const compatibilityPaths = [...new Set([
+    legacyPath,
+    ...(Array.isArray(legacyPaths) ? legacyPaths : []),
+  ].map(value => String(value || "").trim()).filter(Boolean))];
+
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const remote = await transport.read(path);
-    const legacy = legacyPath && !isCanonicalStatsNode(remote?.value)
-      ? await transport.read(legacyPath)
-      : null;
-    const current = mergeLegacyCompatibilityNode(remote?.value, legacy?.value);
+    const legacyValues = !isCanonicalStatsNode(remote?.value) && compatibilityPaths.length
+      ? await Promise.all(compatibilityPaths.map(compatibilityPath => transport.read(compatibilityPath)))
+      : [];
+    const legacy = legacyValues.reduce((merged, value) => mergeLegacyNodes(merged, value?.value), null);
+    const current = mergeLegacyCompatibilityNode(remote?.value, legacy);
     const applied = applySourceSnapshotsToFetchedStats(current, incomingSnapshots, metadata);
     if (!applied.changed) return { status: "noop", attempts: attempt, node: applied.node, decisions: applied.decisions };
 
@@ -465,6 +482,39 @@ export async function persistStatsWithCas({ transport, path, legacyPath = "", in
   }
 
   return { status: "conflict", attempts: maxAttempts };
+}
+
+export async function persistCanonicalStatsAndViews({
+  transport,
+  canonicalPath,
+  legacyPaths = [],
+  targetPaths = [],
+  incomingSnapshots,
+  metadata,
+  maxAttempts = 3,
+} = {}) {
+  const canonical = await persistStatsWithCas({
+    transport,
+    path: canonicalPath,
+    legacyPaths,
+    incomingSnapshots,
+    metadata,
+    maxAttempts,
+  });
+  if (canonical.status === "conflict") return { status: "conflict", canonical, targets: [] };
+
+  const canonicalSnapshots = isRecord(canonical.node?.sourceSnapshots)
+    ? canonical.node.sourceSnapshots
+    : incomingSnapshots;
+  const targets = await Promise.all((targetPaths || []).map(target => persistStatsWithCas({
+    transport,
+    path: target.path,
+    legacyPath: target.legacyPath,
+    incomingSnapshots: canonicalSnapshots,
+    metadata,
+    maxAttempts,
+  })));
+  return { status: "complete", canonical, targets };
 }
 
 export function dedupeStatsTargetPaths(targets = []) {
