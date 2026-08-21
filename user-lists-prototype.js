@@ -43,7 +43,7 @@
     Object.entries(members || {}).sort(([a], [b]) => a.localeCompare(b)).map(([key, member]) => [
       key,
       Object.entries(member || {})
-        .filter(([field]) => !['fetchedStats', 'autoName', 'autoNameUpdatedAt'].includes(field))
+        .filter(([field]) => !['fetchedStats', 'workerFetchedStats', 'autoName', 'autoNameUpdatedAt'].includes(field))
         .sort(([a], [b]) => a.localeCompare(b))
     ])
   );
@@ -3959,7 +3959,7 @@
     URL.revokeObjectURL(a.href);
   }
 
-  function sanitizeSharedMembers(members, includeFetchedStats = true) {
+  function sanitizeSharedMembers(members, includeLegacyStats = false, includeWorkerStats = false) {
     const allowed = [
       'name', 'autoName', 'nameMode', 'nameSource', 'nameUpdatedAt', 'autoNameUpdatedAt',
       'gameId', 'subtitle', 'xUrl', 'countryCode', 'photoData', 'color', 'order'
@@ -3967,8 +3967,11 @@
     return Object.fromEntries(Object.entries(members || {}).map(([id, member]) => {
       const clean = {};
       for (const key of allowed) if (member[key] !== undefined) clean[key] = member[key];
-      if (includeFetchedStats && member?.fetchedStats && typeof member.fetchedStats === 'object' && Object.keys(member.fetchedStats).length) {
+      if (includeLegacyStats && member?.fetchedStats && typeof member.fetchedStats === 'object' && Object.keys(member.fetchedStats).length) {
         clean.fetchedStats = member.fetchedStats;
+      }
+      if (includeWorkerStats && member?.workerFetchedStats && typeof member.workerFetchedStats === 'object' && Object.keys(member.workerFetchedStats).length) {
+        clean.workerFetchedStats = member.workerFetchedStats;
       }
       return [id, clean];
     }));
@@ -4022,10 +4025,10 @@
     members: sanitizeSharedMembers(source?.members)
   });
 
-  const sharedListPayload = (source, includeFetchedStats = true) => ({
+  const sharedListPayload = (source, includeLegacyStats = false) => ({
     ownerUid: activeUser.uid,
     name: safeName(source?.name) || 'マイリスト',
-    members: sanitizeSharedMembers(source?.members, includeFetchedStats),
+    members: sanitizeSharedMembers(source?.members, includeLegacyStats, false),
     createdAt: Number(source?.sharedCreatedAt || 0) || firebase.database.ServerValue.TIMESTAMP,
     updatedAt: firebase.database.ServerValue.TIMESTAMP
   });
@@ -4063,21 +4066,27 @@
     await db.ref().update(updates);
     return true;
   }
-  const sharedPayloadHasStats = payload => Object.values(payload?.members || {}).some(member => member?.fetchedStats);
   async function writeSharedListPayload(shareId, payload) {
-    try {
-      await db.ref(`sharedLists/${shareId}`).set(payload);
+    const root = `sharedLists/${shareId}`;
+    const existingSnapshot = await db.ref(root).once('value');
+    const existing = existingSnapshot.val();
+    if (!existing) {
+      // The initial payload deliberately contains only browser-owned list
+      // metadata. Worker-owned canonical stats are added at member sibling
+      // paths by the Worker and must never be part of this browser set().
+      await db.ref(root).set(payload);
       return true;
-    } catch (error) {
-      const permissionDenied = /permission_denied/i.test(String(error?.code || error?.message || error));
-      if (!permissionDenied || !sharedPayloadHasStats(payload)) throw error;
-      await db.ref(`sharedLists/${shareId}`).set({
-        ...payload,
-        members: sanitizeSharedMembers(payload.members, false)
-      });
-      console.warn('Firebase Rules do not allow shared fetchedStats yet; used legacy shared payload');
-      return false;
     }
+    const previous = comparableSharedPayload(existing);
+    const next = comparableSharedPayload(payload);
+    await db.ref(root).update({
+      ownerUid: payload.ownerUid,
+      name: payload.name,
+      createdAt: existing.createdAt || payload.createdAt,
+      updatedAt: payload.updatedAt
+    });
+    await writeSharedListDelta(shareId, previous, next);
+    return true;
   }
 
   const duplicateSharedListIds = entries => {
@@ -4323,7 +4332,7 @@
     const listName = safeName(source.name) || 'マイリスト';
     const payload = {
       format: 'tekken8-shared-list', version: 1, exportedAt: new Date().toISOString(),
-      list: { name: listName, members: sanitizeSharedMembers(source.members) }
+      list: { name: listName, members: sanitizeSharedMembers(source.members, true, false) }
     };
     const filename = `${listName.replace(/[\\/:*?"<>|]/g, '_')}-tekken8-list.json`;
     downloadJson(payload, filename);
@@ -4337,7 +4346,7 @@
       const data = JSON.parse(await file.text());
       if (data.format === 'tekken8-shared-list' && data.version === 1 && data.list) {
         const listName = safeName(data.list.name) || '共有リスト';
-        const members = sanitizeSharedMembers(data.list.members);
+        const members = sanitizeSharedMembers(data.list.members, true, false);
         const memberCount = Object.keys(members).length;
         if (!confirm(`「${listName}」を新しいリストとして取り込みますか？\n登録人数: ${memberCount}人`)) return;
         const ref = listsRef.push();
@@ -4438,7 +4447,7 @@
         name: `${safeName(sharedListView.name) || '共有リスト'} (共有)`,
         order: now,
         createdAt: firebase.database.ServerValue.TIMESTAMP,
-        members: sanitizeSharedMembers(sharedListView.members)
+        members: sanitizeSharedMembers(sharedListView.members, true, false)
       };
       await updateWithOptionalListIndex({
         [`users/${activeUser.uid}/lists/${ref.key}`]: imported,
@@ -5060,7 +5069,7 @@
           firstValue = false;
           return;
         }
-        const sharedMembers = sanitizeSharedMembers(source.members);
+        const sharedMembers = sanitizeSharedMembers(source.members, true, true);
         const nextMemberRenderSignature = createMemberRenderSignature(sharedMembers);
         const isStatsOnlyUpdate = Boolean(memberRenderSignature)
           && nextMemberRenderSignature === memberRenderSignature;
@@ -5429,7 +5438,7 @@
       const timeoutId = setTimeout(() => controller.abort(), 15000);
       try {
         const response = await fetch(
-          `https://tight-bar-55c1.uracil123.workers.dev/?ewgfId=${encodeURIComponent(gameId)}&mode=latest${attempt.force ? '&force=1' : ''}`,
+          `https://tight-bar-55c1.uracil123.workers.dev/?ewgfId=${encodeURIComponent(gameId)}&mode=latest&persist=1${attempt.force ? '&force=1' : ''}`,
           { cache: 'no-store', signal: controller.signal }
         );
         if (!response.ok) throw new Error(`Latest battle HTTP ${response.status}`);
@@ -5439,21 +5448,6 @@
         latestBattleFetchTimes.set(gameId, Date.now());
         clearLatestBattleFailure(gameId);
 
-        // Share the fresh result with the account/list so another device does
-        // not have to wait for its own periodic refresh.
-        const storageKey = `t8_wanted_ewgf_stats_v3_${gameId}`;
-        let latestStats = null;
-        try { latestStats = JSON.parse(localStorage.getItem(storageKey) || 'null'); }
-        catch (_) {}
-        if (latestStats && membersRef) {
-          await membersRef.child(key).child('fetchedStats').child('activityStats').update({
-            lastSeenTimestamp: latestStats.lastSeenTimestamp || null,
-            latestBattleCharacter: latestStats.latestBattleCharacter || '',
-            latestBattleType: latestStats.latestBattleType || '',
-            latestBattleCheckedAt: latestStats.latestBattleCheckedAt || Date.now(),
-            latestBattleRevisionAt: latestStats.latestBattleRevisionAt || Date.now()
-          });
-        }
         return true;
       } catch (error) {
         console.warn('New member latest battle preparation failed', gameId, error);

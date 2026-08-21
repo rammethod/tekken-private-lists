@@ -350,6 +350,23 @@ function needsMaterializedMigration(current) {
     || !isRecord(current?.activityStats);
 }
 
+function isCanonicalStatsNode(value) {
+  return isRecord(value)
+    && value.schema === STATS_SCHEMA
+    && isRecord(value.sourceSnapshots);
+}
+
+function mergeLegacyCompatibilityNode(canonical, legacy) {
+  if (!isRecord(legacy)) return isRecord(canonical) ? cloneValue(canonical) : {};
+  if (!isRecord(canonical) || !isCanonicalStatsNode(canonical)) return cloneValue(legacy);
+  return {
+    ...cloneValue(legacy),
+    ...cloneValue(canonical),
+    profileStats: mergeDefined(legacy.profileStats, canonical.profileStats),
+    activityStats: mergeDefined(legacy.activityStats, canonical.activityStats),
+  };
+}
+
 export function applySourceSnapshotsToFetchedStats(current, incomingSnapshots, metadata = {}) {
   const currentNode = isRecord(current) ? cloneValue(current) : {};
   const currentSnapshots = isRecord(currentNode.sourceSnapshots) ? currentNode.sourceSnapshots : {};
@@ -423,7 +440,7 @@ export function createFirebaseStatsTransport({ databaseUrl, token, fetchImpl = g
   };
 }
 
-export async function persistStatsWithCas({ transport, path, incomingSnapshots, metadata, maxAttempts = 3 } = {}) {
+export async function persistStatsWithCas({ transport, path, legacyPath = "", incomingSnapshots, metadata, maxAttempts = 3 } = {}) {
   if (!transport || typeof transport.read !== "function" || typeof transport.write !== "function") {
     throw new TypeError("stats transport must provide read and write functions");
   }
@@ -431,7 +448,11 @@ export async function persistStatsWithCas({ transport, path, incomingSnapshots, 
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const remote = await transport.read(path);
-    const applied = applySourceSnapshotsToFetchedStats(remote?.value, incomingSnapshots, metadata);
+    const legacy = legacyPath && !isCanonicalStatsNode(remote?.value)
+      ? await transport.read(legacyPath)
+      : null;
+    const current = mergeLegacyCompatibilityNode(remote?.value, legacy?.value);
+    const applied = applySourceSnapshotsToFetchedStats(current, incomingSnapshots, metadata);
     if (!applied.changed) return { status: "noop", attempts: attempt, node: applied.node, decisions: applied.decisions };
 
     const writeResult = await transport.write(path, applied.node, remote?.etag);
@@ -451,9 +472,16 @@ export function dedupeStatsTargetPaths(targets = []) {
   for (const target of targets) {
     const path = String(target?.path || "").trim();
     if (!path) continue;
-    const entry = entries.get(path) || { path, shareIds: [] };
+    const entry = entries.get(path) || {
+      path,
+      shareIds: [],
+      ...(target?.legacyPath ? { legacyPath: String(target.legacyPath) } : {}),
+    };
+    if (!entry.legacyPath && target?.legacyPath) entry.legacyPath = String(target.legacyPath);
     if (target?.shareId && !entry.shareIds.includes(target.shareId)) entry.shareIds.push(target.shareId);
     entries.set(path, entry);
   }
-  return [...entries.values()].sort((left, right) => left.path.localeCompare(right.path));
+  return [...entries.values()]
+    .map(entry => entry.legacyPath ? entry : { path: entry.path, shareIds: entry.shareIds })
+    .sort((left, right) => left.path.localeCompare(right.path));
 }

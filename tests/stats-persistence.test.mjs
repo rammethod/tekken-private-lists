@@ -114,6 +114,48 @@ test("newer source snapshots write a materialized node", async () => {
   assert.equal(calls[0].value.activityStats.latestBattleCharacter, "Jin");
 });
 
+test("first canonical write seeds from legacy fetchedStats without writing legacy", async () => {
+  const calls = [];
+  const values = {
+    canonical: { value: null, etag: "canonical-etag" },
+    legacy: {
+      value: {
+        gameId: "PLAYER-LEGACY",
+        mainChar: "Legacy Kazuya",
+        mainCharGames: 42,
+        returnTracking: { dormantSince: 1 },
+      },
+      etag: "legacy-etag",
+    },
+  };
+  const transport = {
+    async read(path) {
+      calls.push({ method: "GET", path });
+      return values[path];
+    },
+    async write(path, value, etag) {
+      calls.push({ method: "PUT", path, value, etag });
+      return { ok: true, status: 200 };
+    },
+  };
+  const noWavuMain = buildWavuSourceSnapshot({ ...wavu, mainChar: null, mainCharGames: null }, profileObservedAt);
+  const result = await persistStatsWithCas({
+    transport,
+    path: "canonical",
+    legacyPath: "legacy",
+    incomingSnapshots: { wavuRatings: noWavuMain },
+    metadata: metadata(),
+  });
+  assert.equal(result.status, "written");
+  assert.deepEqual(calls.map(call => `${call.method}:${call.path}`), ["GET:canonical", "GET:legacy", "PUT:canonical"]);
+  const write = calls.find(call => call.method === "PUT");
+  assert.equal(write.etag, "canonical-etag");
+  assert.equal(write.value.profileStats.mainChar, "Legacy Kazuya");
+  assert.equal(write.value.profileStats.mainCharGames, 42);
+  assert.deepEqual(write.value.returnTracking, { dormantSince: 1 });
+  assert.equal(values.legacy.value.schema, undefined);
+});
+
 test("older, unversioned, and equal unchanged sources are no-ops", async (t) => {
   const current = materializeFetchedStats({
     current: {},
@@ -412,4 +454,29 @@ test("Worker routes retain cache-hit persistence wiring for throttled page-open/
   assert.match(workerSource, /"wavuRatings",\s*buildWavuSourceSnapshot/);
   assert.match(workerSource, /const cachedResponse = await getFreshCachedJson\(cache, cacheKey, WORKER_CACHE_TTL_SECONDS\);[\s\S]*?if \(cachedResponse\) \{[\s\S]*?if \(statsPersistRequested\) \{[\s\S]*?scheduleCachedFirebaseSourceSnapshot\(/);
   assert.match(workerSource, /"ewgfProfile",\s*buildEwgfProfileSourceSnapshot/);
+});
+
+test("Worker persistence targets canonical sibling nodes and keeps legacy fallback paths", () => {
+  const workerSource = readFileSync(new URL("../worker/ewgf-worker-with-stat-pentagon.js", import.meta.url), "utf8");
+  assert.match(workerSource, /workerFetchedStats/);
+  assert.match(workerSource, /legacyPath:\s*`\$\{ownerMemberPath\}\/fetchedStats`/);
+  assert.match(workerSource, /legacyPath:\s*`\$\{sharedMemberPath\}\/fetchedStats`/);
+  assert.match(workerSource, /legacyPath:\s*entry\.legacyPath/);
+});
+
+test("active browser reads canonical stats and no longer publishes fetchedStats", () => {
+  const browserSource = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const listsSource = readFileSync(new URL("../user-lists-prototype.js", import.meta.url), "utf8");
+  const integrationSource = readFileSync(new URL("../stats-integration-v4.js", import.meta.url), "utf8");
+  assert.match(browserSource, /WORKER_STATS_SCHEMA\s*=\s*['"]20260821-source-snapshots-v1/);
+  assert.match(browserSource, /memberData\.workerFetchedStats/);
+  assert.doesNotMatch(browserSource, /memberStatsUpdate\s*=\s*\{\s*fetchedStats/);
+  assert.doesNotMatch(browserSource, /data\.fetchedStats\s*=/);
+  assert.doesNotMatch(browserSource, /child\(['"]fetchedStats\/activityStats\/returnTracking/);
+  assert.match(listsSource, /workerFetchedStats/);
+  assert.match(listsSource, /mode=latest&persist=1/);
+  assert.match(listsSource, /const existingSnapshot = await db\.ref\(root\)\.once\(['"]value['"]\)/);
+  assert.match(listsSource, /await writeSharedListDelta\(shareId, previous, next\)/);
+  assert.doesNotMatch(listsSource, /child\(key\)\.child\(['"]fetchedStats['"]\)\.child\(['"]activityStats['"]\)/);
+  assert.match(integrationSource, /isManual\s*&&\s*forceRefresh[\s\S]*manualRefresh=1/);
 });

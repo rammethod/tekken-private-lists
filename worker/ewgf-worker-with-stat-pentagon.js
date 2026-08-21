@@ -1179,12 +1179,16 @@ async function publishFirebaseSourceSnapshots(env, gameId, sourceSnapshots, meta
   if (!targets.length) return { targets: 0, shared: 0 };
   const targetPaths = [];
   targets.forEach(target => {
+    const ownerMemberPath = `users/${target.uid}/lists/${target.listId}/members/${target.memberId}`;
     targetPaths.push({
-      path: `users/${target.uid}/lists/${target.listId}/members/${target.memberId}/fetchedStats`,
+      path: `${ownerMemberPath}/workerFetchedStats`,
+      legacyPath: `${ownerMemberPath}/fetchedStats`,
     });
     if (target.shareId) {
+      const sharedMemberPath = `sharedLists/${target.shareId}/members/${target.memberId}`;
       targetPaths.push({
-        path: `sharedLists/${target.shareId}/members/${target.memberId}/fetchedStats`,
+        path: `${sharedMemberPath}/workerFetchedStats`,
+        legacyPath: `${sharedMemberPath}/fetchedStats`,
         shareId: target.shareId,
       });
     }
@@ -1197,12 +1201,13 @@ async function publishFirebaseSourceSnapshots(env, gameId, sourceSnapshots, meta
   });
   const results = await Promise.all(paths.map(async entry => ({
     entry,
-    result: await persistStatsWithCas({
-      transport,
-      path: entry.path,
-      incomingSnapshots: sourceSnapshots,
-      metadata,
-      maxAttempts: 3,
+      result: await persistStatsWithCas({
+        transport,
+        path: entry.path,
+        legacyPath: entry.legacyPath,
+        incomingSnapshots: sourceSnapshots,
+        metadata,
+        maxAttempts: 3,
     }),
   })));
   const changedSharedIds = new Set();
