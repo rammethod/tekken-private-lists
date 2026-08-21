@@ -3811,6 +3811,7 @@
               if (card) fragment.appendChild(card);
             });
             grid.appendChild(fragment);
+            addPerCardListActions();
           });
         }
         return;
@@ -5142,6 +5143,7 @@
                 if (card) fragment.appendChild(card);
               });
               grid.appendChild(fragment);
+              addPerCardListActions();
             });
           }
         } else {
