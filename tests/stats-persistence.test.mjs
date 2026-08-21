@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { runInNewContext } from "node:vm";
 
 import {
   STATS_SCHEMA,
@@ -571,8 +572,13 @@ test("active browser reads canonical stats and no longer publishes fetchedStats"
   assert.match(browserSource, /memberData\.workerFetchedStats/);
   assert.doesNotMatch(browserSource, /memberStatsUpdate\s*=\s*\{\s*fetchedStats/);
   assert.doesNotMatch(browserSource, /data\.fetchedStats\s*=/);
-  assert.doesNotMatch(browserSource, /child\(['"]fetchedStats\/activityStats\/returnTracking/);
+  assert.match(browserSource, /child\(['"]fetchedStats\/activityStats\/returnTracking['"]\)\.set/);
+  assert.doesNotMatch(browserSource, /child\(['"]fetchedStats['"]\)\.child\(['"]activityStats['"]\)/);
+  assert.match(browserSource, /getNewestReturnTracking\(\s*canonicalMemberStats,\s*legacyMemberStats,\s*localStats/);
   assert.match(listsSource, /workerFetchedStats/);
+  assert.match(listsSource, /includeReturnTracking/);
+  assert.match(listsSource, /setSharedBrowserMemberField/);
+  assert.match(listsSource, /fetchedStats\/activityStats\/returnTracking/);
   assert.match(listsSource, /mode=latest&persist=1/);
   assert.match(listsSource, /const existingSnapshot = await db\.ref\(root\)\.once\(['"]value['"]\)/);
   assert.match(listsSource, /await writeSharedListDelta\(shareId, previous, next\)/);
@@ -581,4 +587,83 @@ test("active browser reads canonical stats and no longer publishes fetchedStats"
   assert.match(listsSource, /Object\.entries\(after\)\.forEach/);
   assert.doesNotMatch(listsSource, /child\(key\)\.child\(['"]fetchedStats['"]\)\.child\(['"]activityStats['"]\)/);
   assert.match(integrationSource, /isManual\s*&&\s*forceRefresh[\s\S]*manualRefresh=1/);
+});
+
+test("canonical browser stats preserve and narrowly persist returnTracking", () => {
+  const browserSource = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const start = browserSource.indexOf("    const WORKER_STATS_SCHEMA");
+  const end = browserSource.indexOf("\n    function setLocalStats", start);
+  assert.ok(start >= 0 && end > start, "return-tracking browser contract block must remain discoverable");
+  const context = {
+    console,
+    localStorage: (() => {
+      const values = new Map();
+      return {
+        getItem: key => values.has(key) ? values.get(key) : null,
+        setItem: (key, value) => values.set(key, String(value)),
+      };
+    })(),
+    window: {
+      isDormantStats: stats => Boolean(stats?.rankIsAllTimeHighest)
+        && Number(stats?.recentRankedGames7d || 0) < 3
+        && Number(stats?.recentRankedGames30d || 0) < 10,
+    },
+    cleanTekkenId: value => String(value || "").replace(/[-ー−\s]/g, "").trim(),
+  };
+  context.writes = [];
+  context.membersRef = {
+    child: memberKey => ({
+      child: path => ({
+        set: value => {
+          context.writes.push({ memberKey, path, value });
+          return Promise.resolve();
+        },
+      }),
+    }),
+  };
+  runInNewContext(`
+    const LOCAL_STATS_CACHE_KEY = 'test-stats';
+    const membersRef = globalThis.membersRef;
+    const cleanTekkenId = globalThis.cleanTekkenId;
+    const window = globalThis.window;
+    const localStorage = globalThis.localStorage;
+    ${browserSource.slice(start, end)}
+    globalThis.getCanonicalStats = getLocalStats;
+    globalThis.ensureCanonicalReturnTracking = window.ensureDormantReturnTracking;
+  `, context);
+
+  const previousTracking = {
+    schema: "20260801-return-player",
+    dormantSince: Date.parse("2026-08-01T00:00:00.000Z"),
+    baselineLatestRankedBattleAt: "2026-08-01T00:00:00.000Z",
+    returnReportedAt: 0,
+    returnBadgeUntil: 0,
+    returnedBattleAt: "",
+  };
+  const member = {
+    gameId: "PLAYER-001",
+    workerFetchedStats: {
+      schema: "20260821-source-snapshots-v1",
+      sourceSnapshots: {},
+      profileStats: { mainChar: "Canonical Main", rankIsAllTimeHighest: true },
+      activityStats: { latestRankedBattleAt: "2026-08-20T00:00:00.000Z" },
+    },
+    fetchedStats: {
+      profileStats: { mainChar: "Stale Legacy Main" },
+      activityStats: { returnTracking: previousTracking },
+    },
+  };
+
+  const firstRead = context.getCanonicalStats("PLAYER-001", member);
+  assert.equal(firstRead.mainChar, "Canonical Main");
+  assert.deepEqual(JSON.parse(JSON.stringify(firstRead.returnTracking)), previousTracking);
+
+  const transitioned = context.ensureCanonicalReturnTracking("member-1", member, firstRead);
+  assert.ok(Number(transitioned.returnReportedAt) > 0);
+  assert.equal(context.writes.length, 1);
+  assert.deepEqual(context.writes[0].path, "fetchedStats/activityStats/returnTracking");
+
+  const secondRead = context.getCanonicalStats("PLAYER-001", member);
+  assert.equal(secondRead.mainChar, "Canonical Main");
+  assert.deepEqual(JSON.parse(JSON.stringify(secondRead.returnTracking)), JSON.parse(JSON.stringify(transitioned)));
 });

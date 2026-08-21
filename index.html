@@ -3094,6 +3094,38 @@
       const jstOffset = 9 * 60 * 60 * 1000;
       return Math.max(1, Math.floor((Math.floor((to + jstOffset) / 86400000) - Math.floor((from + jstOffset) / 86400000))));
     };
+    function getReturnTrackingCandidate(stats) {
+      if (!stats || typeof stats !== 'object') return null;
+      const direct = stats.returnTracking;
+      if (direct && typeof direct === 'object' && !Array.isArray(direct)) return direct;
+      const nested = stats.activityStats?.returnTracking;
+      return nested && typeof nested === 'object' && !Array.isArray(nested) ? nested : null;
+    }
+    function getReturnTrackingRevision(tracking) {
+      if (!tracking || typeof tracking !== 'object') return 0;
+      return Math.max(
+        returnTrackingTimestamp(tracking.dormantSince),
+        returnTrackingTimestamp(tracking.returnReportedAt),
+        returnTrackingTimestamp(tracking.returnBadgeUntil),
+        returnTrackingTimestamp(tracking.dormantEndedAt),
+        returnTrackingTimestamp(tracking.baselineLatestRankedBattleAt),
+        returnTrackingTimestamp(tracking.returnedBattleAt)
+      );
+    }
+    function getNewestReturnTracking(...statsList) {
+      let newest = null;
+      let newestRevision = -1;
+      statsList.forEach(stats => {
+        const candidate = getReturnTrackingCandidate(stats);
+        if (!candidate) return;
+        const revision = getReturnTrackingRevision(candidate);
+        if (revision >= newestRevision) {
+          newest = candidate;
+          newestRevision = revision;
+        }
+      });
+      return newest ? JSON.parse(JSON.stringify(newest)) : null;
+    }
     window.ensureDormantReturnTracking = (memberKey, member, stats) => {
       if (!stats || !memberKey || !member) return stats?.returnTracking || null;
       const nextTracking = resolveDormantReturnTracking(stats, stats);
@@ -3104,6 +3136,10 @@
       const gameId = cleanTekkenId(member.gameId || stats.gameId || '');
       if (gameId) {
         try { localStorage.setItem(`${LOCAL_STATS_CACHE_KEY}_${gameId}`, JSON.stringify(stats)); } catch (_) {}
+      }
+      if (membersRef) {
+        membersRef.child(memberKey).child('fetchedStats/activityStats/returnTracking').set(nextTracking || null)
+          .catch(error => console.warn('Return tracking sync failed', error));
       }
       if (member.fetchedStats?.activityStats) member.fetchedStats.activityStats.returnTracking = nextTracking || null;
       return nextTracking;
@@ -3121,12 +3157,29 @@
       const canonicalMemberStats = memberData && isWorkerCanonicalStats(memberData.workerFetchedStats)
         ? normalizeStoredStats(memberData.workerFetchedStats)
         : null;
-      const memberStats = !canonicalMemberStats && memberData && memberData.fetchedStats
+      let legacyMemberStats = memberData && memberData.fetchedStats
         ? normalizeStoredStats(memberData.fetchedStats)
-        : canonicalMemberStats;
+        : null;
+      const legacyReturnTracking = getReturnTrackingCandidate(memberData);
+      if (legacyReturnTracking) {
+        legacyMemberStats = {
+          ...(legacyMemberStats || {}),
+          returnTracking: legacyReturnTracking
+        };
+      }
+      const memberStats = canonicalMemberStats || legacyMemberStats;
       // Once the Worker-owned schema is present, it is the freshness authority.
       // Do not let a stale browser cache or legacy fetchedStats node win.
       if (canonicalMemberStats) {
+        // returnTracking is browser/Kentomo-owned compatibility state, not a
+        // source snapshot. Preserve the newest local/legacy transition while
+        // keeping every other canonical field authoritative.
+        const returnTracking = getNewestReturnTracking(
+          canonicalMemberStats,
+          legacyMemberStats,
+          localStats
+        );
+        if (returnTracking) canonicalMemberStats.returnTracking = returnTracking;
         try {
           localStorage.setItem(`${LOCAL_STATS_CACHE_KEY}_${gameId}`, JSON.stringify(canonicalMemberStats));
         } catch (e) {}
@@ -5449,7 +5502,7 @@
 
   </script>
   <script src="html2canvas.min.js?v=1.4.1"></script>
-  <script src="user-lists-prototype.js?v=20260821-worker-authority-cutover"></script>
+  <script src="user-lists-prototype.js?v=20260821-worker-authority-cutover-return-tracking"></script>
   <script src="admin-access-prototype.js?v=20260801-community-entry"></script>
   <script>
     (() => {

@@ -3959,7 +3959,7 @@
     URL.revokeObjectURL(a.href);
   }
 
-  function sanitizeSharedMembers(members, includeLegacyStats = false, includeWorkerStats = false) {
+  function sanitizeSharedMembers(members, includeLegacyStats = false, includeWorkerStats = false, includeReturnTracking = false) {
     const allowed = [
       'name', 'autoName', 'nameMode', 'nameSource', 'nameUpdatedAt', 'autoNameUpdatedAt',
       'gameId', 'subtitle', 'xUrl', 'countryCode', 'photoData', 'color', 'order'
@@ -3972,6 +3972,12 @@
       }
       if (includeWorkerStats && member?.workerFetchedStats && typeof member.workerFetchedStats === 'object' && Object.keys(member.workerFetchedStats).length) {
         clean.workerFetchedStats = member.workerFetchedStats;
+      }
+      if (includeReturnTracking && !clean.fetchedStats) {
+        const tracking = member?.returnTracking
+          || member?.fetchedStats?.activityStats?.returnTracking
+          || member?.fetchedStats?.returnTracking;
+        if (tracking && typeof tracking === 'object' && Object.keys(tracking).length) clean.returnTracking = tracking;
       }
       return [id, clean];
     }));
@@ -4022,20 +4028,26 @@
 
   const sharedListContentSignature = source => JSON.stringify({
     name: safeName(source?.name) || 'マイリスト',
-    members: sanitizeSharedMembers(source?.members)
+    members: sanitizeSharedMembers(source?.members, false, false, true)
   });
 
   const sharedListPayload = (source, includeLegacyStats = false) => ({
     ownerUid: activeUser.uid,
     name: safeName(source?.name) || 'マイリスト',
-    members: sanitizeSharedMembers(source?.members, includeLegacyStats, false),
+    members: sanitizeSharedMembers(source?.members, includeLegacyStats, false, true),
     createdAt: Number(source?.sharedCreatedAt || 0) || firebase.database.ServerValue.TIMESTAMP,
     updatedAt: firebase.database.ServerValue.TIMESTAMP
   });
   const comparableSharedPayload = source => ({
     name: safeName(source?.name) || 'マイリスト',
-    members: sanitizeSharedMembers(source?.members)
+    members: sanitizeSharedMembers(source?.members, false, false, true)
   });
+  const setSharedBrowserMemberField = (updates, shareId, memberId, field, value) => {
+    const path = field === 'returnTracking'
+      ? `sharedLists/${shareId}/members/${memberId}/fetchedStats/activityStats/returnTracking`
+      : `sharedLists/${shareId}/members/${memberId}/${field}`;
+    updates[path] = value === undefined ? null : value;
+  };
   async function writeSharedListDelta(shareId, previous, next) {
     const updates = {};
     if (previous.name !== next.name) updates[`sharedLists/${shareId}/name`] = next.name;
@@ -4051,15 +4063,14 @@
       }
       if (!before) {
         Object.entries(after).forEach(([field, value]) => {
-          if (value !== undefined) updates[`sharedLists/${shareId}/members/${memberId}/${field}`] = value;
+          setSharedBrowserMemberField(updates, shareId, memberId, field, value);
         });
         return;
       }
       const fields = new Set([...Object.keys(before), ...Object.keys(after)]);
       fields.forEach(field => {
         if (JSON.stringify(before[field]) !== JSON.stringify(after[field])) {
-          updates[`sharedLists/${shareId}/members/${memberId}/${field}`] =
-            after[field] === undefined ? null : after[field];
+          setSharedBrowserMemberField(updates, shareId, memberId, field, after[field]);
         }
       });
     });
@@ -4084,7 +4095,7 @@
       };
       Object.entries(payload.members || {}).forEach(([memberId, member]) => {
         Object.entries(member || {}).forEach(([field, value]) => {
-          if (value !== undefined) updates[`${root}/members/${memberId}/${field}`] = value;
+          setSharedBrowserMemberField(updates, shareId, memberId, field, value);
         });
       });
       await db.ref().update(updates);
@@ -4120,6 +4131,7 @@
     const timestamps = [source?.createdAt, source?.order, source?.sharedCreatedAt];
     Object.values(source?.members || {}).forEach(member => {
       const stats = member?.fetchedStats || {};
+      const tracking = member?.returnTracking || stats.activityStats?.returnTracking || {};
       timestamps.push(
         member?.updatedAt,
         member?.statsUpdatedAt,
@@ -4127,7 +4139,11 @@
         stats.statsUpdatedAt,
         stats.fetchedAt,
         stats.cachedAt,
-        stats.fetchMeta?.completedAt
+        stats.fetchMeta?.completedAt,
+        tracking.dormantSince,
+        tracking.returnReportedAt,
+        tracking.returnBadgeUntil,
+        tracking.dormantEndedAt
       );
     });
     return timestamps.reduce((latest, value) => {
@@ -4157,7 +4173,7 @@
           await writeSharedListPayload(newShareId, {
             ownerUid: activeUser.uid,
             name: safeName(duplicate.source.name) || 'マイリスト',
-            members: sanitizeSharedMembers(duplicate.source.members),
+            members: sanitizeSharedMembers(duplicate.source.members, false, false, true),
             createdAt: sharedCreatedAt,
             updatedAt: firebase.database.ServerValue.TIMESTAMP
           });
@@ -4284,7 +4300,7 @@
       const source = snapshot.val();
       if (!source) return showToast('共有するリストがありません');
       const listName = safeName(source.name) || 'マイリスト';
-      const members = sanitizeSharedMembers(source.members);
+      const members = sanitizeSharedMembers(source.members, false, false, true);
       const existingShareId = validSharedListId(source.shareId);
       const hasDuplicateOwner = existingShareId
         && currentListEntries.some(entry => entry.id !== activeListId && entry.shareId === existingShareId);
@@ -4345,7 +4361,7 @@
     const listName = safeName(source.name) || 'マイリスト';
     const payload = {
       format: 'tekken8-shared-list', version: 1, exportedAt: new Date().toISOString(),
-      list: { name: listName, members: sanitizeSharedMembers(source.members, true, false) }
+      list: { name: listName, members: sanitizeSharedMembers(source.members, true, false, true) }
     };
     const filename = `${listName.replace(/[\\/:*?"<>|]/g, '_')}-tekken8-list.json`;
     downloadJson(payload, filename);
@@ -4359,7 +4375,7 @@
       const data = JSON.parse(await file.text());
       if (data.format === 'tekken8-shared-list' && data.version === 1 && data.list) {
         const listName = safeName(data.list.name) || '共有リスト';
-        const members = sanitizeSharedMembers(data.list.members, true, false);
+        const members = sanitizeSharedMembers(data.list.members, true, false, true);
         const memberCount = Object.keys(members).length;
         if (!confirm(`「${listName}」を新しいリストとして取り込みますか？\n登録人数: ${memberCount}人`)) return;
         const ref = listsRef.push();
@@ -4460,7 +4476,7 @@
         name: `${safeName(sharedListView.name) || '共有リスト'} (共有)`,
         order: now,
         createdAt: firebase.database.ServerValue.TIMESTAMP,
-        members: sanitizeSharedMembers(sharedListView.members, true, false)
+        members: sanitizeSharedMembers(sharedListView.members, true, false, true)
       };
       await updateWithOptionalListIndex({
         [`users/${activeUser.uid}/lists/${ref.key}`]: imported,
@@ -5082,7 +5098,7 @@
           firstValue = false;
           return;
         }
-        const sharedMembers = sanitizeSharedMembers(source.members, true, true);
+        const sharedMembers = sanitizeSharedMembers(source.members, true, true, true);
         const nextMemberRenderSignature = createMemberRenderSignature(sharedMembers);
         const isStatsOnlyUpdate = Boolean(memberRenderSignature)
           && nextMemberRenderSignature === memberRenderSignature;
