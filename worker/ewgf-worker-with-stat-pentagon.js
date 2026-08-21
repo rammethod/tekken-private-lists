@@ -1,3 +1,14 @@
+import {
+  STATS_SCHEMA,
+  buildBackgroundSourceSnapshots,
+  buildEwgfProfileSourceSnapshot,
+  buildLatestActivitySourceSnapshot,
+  buildWavuSourceSnapshot,
+  createFirebaseStatsTransport,
+  dedupeStatsTargetPaths,
+  persistStatsWithCas,
+} from "./stats-persistence.mjs";
+
 const WORKER_CACHE_TTL_SECONDS = 12 * 60 * 60;
 const LATEST_BATTLE_CACHE_TTL_SECONDS = 5 * 60;
 const WAVU_RATINGS_CACHE_TTL_SECONDS = 30 * 60;
@@ -1015,6 +1026,7 @@ async function fetchAwardSnapshot(env, gameId) {
     totalQuickMatchGames: sumCharacterGames(quickCharacterStats),
     totalGroupMatchGames: sumCharacterGames(groupCharacterStats),
     characterRanks,
+    wavuRatings: wavu,
     ratingMu: wavu?.ratingMu ?? null,
     recentRankedGames30d: wavu?.recentRankedGames30d ?? null,
     latestRankedBattleAt: wavu?.latestRankedBattleAt ?? null,
@@ -1074,7 +1086,9 @@ async function captureAwardSnapshotChunk(env, list, previous = {}) {
     const gameId = String(member?.gameId || "").trim();
     if (!/^[A-Za-z0-9_-]{3,64}$/.test(gameId)) return [memberId, { error: "Invalid Tekken ID", capturedAt: new Date().toISOString() }];
     try {
-      return [memberId, await fetchAwardSnapshot(env, gameId)];
+      const capturedSnapshot = await fetchAwardSnapshot(env, gameId);
+      const { wavuRatings: _wavuRatings, ...awardSnapshot } = capturedSnapshot;
+      return [memberId, awardSnapshot];
     } catch (error) {
       return [memberId, { gameId, error: error instanceof Error ? error.message : String(error), capturedAt: new Date().toISOString() }];
     }
@@ -1105,26 +1119,12 @@ function makeAwardResults(start, end) {
   };
 }
 
-function makeBackgroundStats(snapshot) {
-  const rankedEntries = Object.entries(snapshot.rankedCharacterStats || {}).sort(([, a], [, b]) => Number(b.games || 0) - Number(a.games || 0));
-  const [mainChar, ranked] = rankedEntries[0] || ["", {}];
-  const totalRankedGames = Math.max(0, Number(snapshot.totalRankedGames || 0));
-  const totalPlayerMatchGames = Math.max(0, Number(snapshot.totalPlayerMatchGames || 0));
-  const totalQuickMatchGames = Math.max(0, Number(snapshot.totalQuickMatchGames || 0));
-  const totalGroupMatchGames = Math.max(0, Number(snapshot.totalGroupMatchGames || 0));
-  const totalRecordedGames = totalRankedGames + totalPlayerMatchGames + totalQuickMatchGames + totalGroupMatchGames;
-  const characterSelectionTop = rankedEntries.slice(0, 2).map(([character, value]) => ({ character, characterImage: snapshot.characterRanks?.[character]?.characterImage || "", lifetimeGames: Number(value.games || 0), selectionSource: "ewgf-ranked-games" }));
-  const rank = Object.entries(snapshot.characterRanks || {}).find(([character]) => normalizeCharacterKey(character) === normalizeCharacterKey(mainChar))?.[1] || {};
-  const updatedAt = Date.now();
-  const latestBattleTimestamp = Date.parse(snapshot.latestBattleAt || "");
-  const latestActivity = Number.isFinite(latestBattleTimestamp) ? {
-    lastSeenTimestamp: latestBattleTimestamp,
-    latestBattleCharacter: snapshot.latestBattleCharacter || "",
-    latestBattleType: snapshot.latestBattleType || "",
-    latestBattleCheckedAt: updatedAt,
-    latestBattleRevisionAt: updatedAt,
-  } : {};
-  return { gameId: snapshot.gameId, mainChar, mainCharGames: Number(ranked.games || 0), totalRankedGames, totalPlayerMatchGames, totalQuickMatchGames, totalGroupMatchGames, totalRankedAndPlayerGames: totalRankedGames + totalPlayerMatchGames, totalRecordedGames, wins: Number(ranked.wins || 0), losses: Number(ranked.losses || 0), rankedWinRate: ranked.games ? Number(ranked.wins || 0) / Number(ranked.games) : 0, rankedDataVerified: true, danRank: rank.rank || "-", rankIcon: rank.rankIcon || "", tekkenPower: Number(snapshot.tekkenProwess || 0), ratingMu: snapshot.ratingMu ?? null, characterSelectionTop, recentRankedGames30d: Number(snapshot.recentRankedGames30d || 0), latestRankedBattleAt: snapshot.latestRankedBattleAt || "", playerName: snapshot.playerName || "", ...latestActivity, updatedAt, statsSource: "20260801-server-background-sync", fetchMeta: { state: "completed", completedAt: updatedAt, fetchedBy: "worker-background-12h", schema: "20260801-server-background-sync" }, isError: false };
+function statsMetadata(observedAt, fetchedBy, state = "ready") {
+  return {
+    fetchMeta: { state, completedAt: observedAt, fetchedBy, schema: STATS_SCHEMA },
+    cachedAt: observedAt,
+    updatedAt: observedAt,
+  };
 }
 
 function normalizedFirebaseGameId(value) {
@@ -1170,127 +1170,85 @@ async function collectFirebasePlayerTargets(env, token, gameId) {
   return targets;
 }
 
-function profileFirebasePatch(profile, ewgfId, fetchedAt, fetchedBy) {
-  const characters = Array.isArray(profile?.characters) ? profile.characters : [];
-  const rankedEntries = Object.entries(profile?.rankedCharacterStats || {})
-    .sort(([, a], [, b]) => Number(b?.games || 0) - Number(a?.games || 0));
-  const firstCharacter = characters[0] || {};
-  const [rankedMainChar, rankedMain] = rankedEntries[0] || ["", {}];
-  const mainChar = String(profile?.mainCharacter || rankedMainChar || firstCharacter.character || "");
-  const mainCharacter = characters.find(character => normalizeCharacterKey(character?.character) === normalizeCharacterKey(mainChar)) || firstCharacter;
-  const patch = {
-    gameId: String(profile?.ewgfId || ewgfId),
-    mainChar,
-    mainCharGames: Number(profile?.games ?? rankedMain?.games ?? 0),
-    wins: Number(profile?.wins ?? rankedMain?.wins ?? 0),
-    losses: Number(profile?.losses ?? rankedMain?.losses ?? 0),
-    rankedWinRate: Number(rankedMain?.winRate || 0),
-    rankedDataVerified: true,
-    danRank: String(profile?.currentRank || mainCharacter?.currentRank || profile?.highestRank || "-"),
-    rankIcon: String(profile?.rankIcon || mainCharacter?.rankIcon || ""),
-    tekkenPower: Number(profile?.tekkenProwess || 0),
-    totalRankedGames: Number(profile?.totalRankedGames || 0),
-    totalPlayerMatchGames: Number(profile?.totalPlayerMatchGames || 0),
-    totalQuickMatchGames: Number(profile?.totalQuickMatchGames || 0),
-    totalGroupMatchGames: Number(profile?.totalGroupMatchGames || 0),
-    totalRecordedGames: Number(profile?.totalRecordedGames || 0),
-    lastSeenTimestamp: Date.parse(profile?.latestBattleAt || "") || null,
-    updatedAt: fetchedAt,
-    statsSource: fetchedBy,
-    fetchMeta: {
-      state: "ready",
-      completedAt: fetchedAt,
-      fetchedBy,
-      schema: "20260815-page-open-firebase-sync",
-    },
-    isError: false,
-  };
-  const characterSelectionTop = rankedEntries.slice(0, 2).map(([character, value]) => {
-    const row = characters.find(item => normalizeCharacterKey(item?.character) === normalizeCharacterKey(character));
-    return {
-      position: character === rankedMainChar ? 1 : 2,
-      character,
-      characterImage: row?.characterImage || "",
-      selectionSource: "ewgf-ranked-games",
-      lifetimeGames: Number(value?.games || 0),
-      wins: Number(value?.wins || 0),
-      losses: Number(value?.losses || 0),
-    };
-  });
-  if (characterSelectionTop.length) patch.characterSelectionTop = characterSelectionTop;
-  if (profile?.statPentagon && typeof profile.statPentagon === "object") patch.statPentagon = profile.statPentagon;
-  if (String(profile?.playerMessage || "").trim()) patch.playerMessage = String(profile.playerMessage).slice(0, 500);
-  if (profile?.platformProfile && typeof profile.platformProfile === "object") {
-    const platform = profile.platformProfile;
-    if (platform.platform) patch.platform = String(platform.platform);
-    if (platform.platformId) patch.platformId = String(platform.platformId);
-    if (platform.platformProfileUrl) patch.platformProfileUrl = String(platform.platformProfileUrl);
+async function publishFirebaseSourceSnapshots(env, gameId, sourceSnapshots, metadata, existingToken = "") {
+  if (!env.FIREBASE_SERVICE_ACCOUNT_JSON || !sourceSnapshots || !Object.keys(sourceSnapshots).length) {
+    return { targets: 0, shared: 0, skipped: "secret-missing-or-empty" };
   }
-  if (profile?.latestBattle && typeof profile.latestBattle === "object") {
-    if (profile.latestBattle.character) patch.latestBattleCharacter = String(profile.latestBattle.character);
-    if (profile.latestBattle.battleType) patch.latestBattleType = String(profile.latestBattle.battleType);
-  }
-  return patch;
-}
-
-function wavuFirebasePatch(ratings, fetchedAt, fetchedBy) {
-  const patch = { updatedAt: fetchedAt, statsSource: fetchedBy };
-  if (ratings?.mainChar) {
-    patch.mainChar = String(ratings.mainChar);
-    if (ratings.mainCharGames !== null && ratings.mainCharGames !== undefined) patch.mainCharGames = Number(ratings.mainCharGames);
-    patch.ratingCharacter = String(ratings.mainChar);
-    if (ratings.selectionSource) patch.mainSelectionSource = String(ratings.selectionSource);
-  }
-  if (ratings?.ratingMu !== null && ratings?.ratingMu !== undefined) patch.ratingMu = Number(ratings.ratingMu);
-  if (ratings?.charGamesMap && Object.keys(ratings.charGamesMap).length) patch.charGamesMap = ratings.charGamesMap;
-  if (ratings?.charRatingMap && Object.keys(ratings.charRatingMap).length) patch.charRatingMap = ratings.charRatingMap;
-  if (ratings?.qualifiedCharRatingMap && Object.keys(ratings.qualifiedCharRatingMap).length) patch.qualifiedCharRatingMap = ratings.qualifiedCharRatingMap;
-  if (ratings?.recentRankedGames7d !== undefined) patch.recentRankedGames7d = Number(ratings.recentRankedGames7d || 0);
-  if (ratings?.recentRankedGames30d !== undefined) patch.recentRankedGames30d = Number(ratings.recentRankedGames30d || 0);
-  if (ratings?.recentRankedSampleSize !== undefined) patch.recentRankedSampleSize = Number(ratings.recentRankedSampleSize || 0);
-  if (ratings?.latestRankedBattleAt) patch.latestRankedBattleAt = String(ratings.latestRankedBattleAt);
-  return patch;
-}
-
-function appendFirebaseStatsUpdates(updates, basePath, patch) {
-  Object.entries(patch || {}).forEach(([field, value]) => {
-    if (value !== undefined) updates[`${basePath}/${field}`] = value;
-  });
-}
-
-async function publishFirebasePlayerPatch(env, gameId, patch) {
-  if (!env.FIREBASE_SERVICE_ACCOUNT_JSON || !patch || !Object.keys(patch).length) return { targets: 0, shared: 0, skipped: "secret-missing-or-empty" };
-  const token = await getFirebaseAccessToken(env);
+  const token = existingToken || await getFirebaseAccessToken(env);
   const targets = await collectFirebasePlayerTargets(env, token, gameId);
   if (!targets.length) return { targets: 0, shared: 0 };
-  const updates = {};
-  const sharedIds = new Set();
+  const targetPaths = [];
   targets.forEach(target => {
-    appendFirebaseStatsUpdates(
-      updates,
-      `users/${target.uid}/lists/${target.listId}/members/${target.memberId}/fetchedStats`,
-      patch,
-    );
+    targetPaths.push({
+      path: `users/${target.uid}/lists/${target.listId}/members/${target.memberId}/fetchedStats`,
+    });
     if (target.shareId) {
-      appendFirebaseStatsUpdates(
-        updates,
-        `sharedLists/${target.shareId}/members/${target.memberId}/fetchedStats`,
-        patch,
-      );
-      sharedIds.add(target.shareId);
+      targetPaths.push({
+        path: `sharedLists/${target.shareId}/members/${target.memberId}/fetchedStats`,
+        shareId: target.shareId,
+      });
     }
   });
-  sharedIds.forEach(shareId => {
-    updates[`sharedLists/${shareId}/updatedAt`] = Date.now();
+  const paths = dedupeStatsTargetPaths(targetPaths);
+  const transport = createFirebaseStatsTransport({
+    databaseUrl: firebaseDatabaseUrl(env),
+    token,
+    fetchImpl: fetch,
   });
-  await firebaseRequest(env, token, "", { method: "PATCH", body: updates });
-  return { targets: targets.length, shared: sharedIds.size };
+  const results = await Promise.all(paths.map(async entry => ({
+    entry,
+    result: await persistStatsWithCas({
+      transport,
+      path: entry.path,
+      incomingSnapshots: sourceSnapshots,
+      metadata,
+      maxAttempts: 3,
+    }),
+  })));
+  const changedSharedIds = new Set();
+  results.forEach(({ entry, result }) => {
+    if (result.status === "conflict") throw new Error(`Firebase stats CAS conflict at ${entry.path}`);
+    if (result.status === "written") entry.shareIds.forEach(shareId => changedSharedIds.add(shareId));
+  });
+  await Promise.all([...changedSharedIds].map(shareId => firebaseRequest(
+    env,
+    token,
+    `sharedLists/${shareId}/updatedAt`,
+    { method: "PUT", body: metadata.updatedAt },
+  )));
+  return {
+    targets: targets.length,
+    paths: paths.length,
+    shared: changedSharedIds.size,
+    written: results.filter(({ result }) => result.status === "written").length,
+    noops: results.filter(({ result }) => result.status === "noop").length,
+  };
 }
 
-function scheduleFirebasePlayerPatch(env, ctx, gameId, patch) {
-  const task = publishFirebasePlayerPatch(env, gameId, patch)
+function scheduleFirebaseSourceSnapshots(env, ctx, gameId, sourceSnapshots, metadata) {
+  const task = publishFirebaseSourceSnapshots(env, gameId, sourceSnapshots, metadata)
     .catch(error => {
-      console.warn("Kentomo Firebase player publish failed", gameId, error instanceof Error ? error.message : String(error));
+      console.warn("Kentomo Firebase stats publish failed", gameId, error instanceof Error ? error.message : String(error));
+      return { targets: 0, shared: 0, error: error instanceof Error ? error.message : String(error) };
+    });
+  if (ctx && typeof ctx.waitUntil === "function") ctx.waitUntil(task);
+  return task;
+}
+
+function scheduleCachedFirebaseSourceSnapshot(env, ctx, gameId, cachedResponse, domain, buildSnapshot, fetchedBy) {
+  const task = cachedResponse.clone().json()
+    .then(cachedPayload => {
+      const observedAt = Date.now();
+      return scheduleFirebaseSourceSnapshots(
+        env,
+        null,
+        gameId,
+        { [domain]: buildSnapshot(cachedPayload, observedAt) },
+        statsMetadata(observedAt, fetchedBy),
+      );
+    })
+    .catch(error => {
+      console.warn("Kentomo cached Firebase stats persistence failed", gameId, error instanceof Error ? error.message : String(error));
       return { targets: 0, shared: 0, error: error instanceof Error ? error.message : String(error) };
     });
   if (ctx && typeof ctx.waitUntil === "function") ctx.waitUntil(task);
@@ -1332,23 +1290,8 @@ async function runBackgroundSync(env) {
   let processed = 0; let failures = 0;
   for (const [key, entry] of due) {
     try {
-      const stats = makeBackgroundStats(await fetchAwardSnapshot(env, entry.gameId));
-      const sharedIds = new Set();
-      await Promise.all(entry.targets.map(target => {
-        if (target.shareId) sharedIds.add(target.shareId);
-        return firebaseRequest(env, token, `users/${target.uid}/lists/${target.listId}/members/${target.memberId}/fetchedStats`, { method: "PATCH", body: stats });
-      }));
-      const sharedUpdates = {};
-      entry.targets.forEach(target => {
-        if (!target.shareId) return;
-        appendFirebaseStatsUpdates(
-          sharedUpdates,
-          `sharedLists/${target.shareId}/members/${target.memberId}/fetchedStats`,
-          stats,
-        );
-      });
-      sharedIds.forEach(shareId => { sharedUpdates[`sharedLists/${shareId}/updatedAt`] = now; });
-      if (Object.keys(sharedUpdates).length) await firebaseRequest(env, token, "", { method: "PATCH", body: sharedUpdates });
+      const sourceSnapshots = buildBackgroundSourceSnapshots(await fetchAwardSnapshot(env, entry.gameId), now);
+      await publishFirebaseSourceSnapshots(env, entry.gameId, sourceSnapshots, statsMetadata(now, "worker-background-12h", "completed"), token);
       await firebaseRequest(env, token, `backgroundSyncState/${key}`, { method: "PUT", body: { lastSyncedAt: now, lastAttemptAt: now, nextRetryAt: 0, failureCount: 0, lastError: "", gameId: entry.gameId, targetCount: entry.targets.length, schema: BACKGROUND_SYNC_SCHEMA } });
       processed += 1;
     } catch (error) {
@@ -1541,6 +1484,8 @@ export default {
       }
       let forceRefresh = requestUrl.searchParams.get("force") === "1";
       const pageOpenRequested = forceRefresh && requestUrl.searchParams.get("pageOpen") === "1";
+      const manualRefreshRequested = forceRefresh && requestUrl.searchParams.get("manualRefresh") === "1";
+      const statsPersistRequested = pageOpenRequested || manualRefreshRequested;
       const cache = caches.default;
       const canonicalUrl = new URL(requestUrl.origin + requestUrl.pathname);
       canonicalUrl.searchParams.set("mode", "wavu-ratings");
@@ -1564,7 +1509,20 @@ export default {
       }
       if (!forceRefresh) {
         const cached = await getFreshCachedJson(cache, cacheKey, WAVU_RATINGS_CACHE_TTL_SECONDS);
-        if (cached) return withCacheStatus(cached, "HIT");
+        if (cached) {
+          if (statsPersistRequested) {
+            scheduleCachedFirebaseSourceSnapshot(
+              env,
+              ctx,
+              gameId,
+              cached,
+              "wavuRatings",
+              buildWavuSourceSnapshot,
+              pageOpenRequested ? "worker-page-open-wavu-cache-sync" : "worker-manual-refresh-wavu-cache-sync",
+            );
+          }
+          return withCacheStatus(cached, "HIT");
+        }
       }
       try {
         const ratings = await fetchWavuRatings(gameId);
@@ -1588,12 +1546,14 @@ export default {
           if (ctx && typeof ctx.waitUntil === "function") ctx.waitUntil(throttleWrite);
           else await throttleWrite;
         }
-        if (pageOpenRequested) {
-          scheduleFirebasePlayerPatch(
+        if (statsPersistRequested) {
+          const fetchedAt = Date.now();
+          scheduleFirebaseSourceSnapshots(
             env,
             ctx,
             gameId,
-            wavuFirebasePatch(ratings, Date.now(), "worker-page-open-wavu-sync"),
+            { wavuRatings: buildWavuSourceSnapshot(ratings, fetchedAt) },
+            statsMetadata(fetchedAt, pageOpenRequested ? "worker-page-open-wavu-sync" : "worker-manual-refresh-wavu-sync"),
           );
         }
         return withCacheStatus(response, forceRefresh ? "REFRESH" : "MISS");
@@ -1654,6 +1614,8 @@ export default {
 
     let forceRefresh = requestUrl.searchParams.get("force") === "1";
     const pageOpenRequested = forceRefresh && requestUrl.searchParams.get("pageOpen") === "1";
+    const manualRefreshRequested = forceRefresh && requestUrl.searchParams.get("manualRefresh") === "1";
+    const statsPersistRequested = pageOpenRequested || manualRefreshRequested;
     const cache = caches.default;
     if (requestUrl.searchParams.get("mode") === "matchups") {
       // Matchup data contains every played character's opponent table and is
@@ -1704,12 +1666,13 @@ export default {
       }
     }
     if (requestUrl.searchParams.get("mode") === "latest") {
+      const latestPersistRequested = requestUrl.searchParams.get("persist") === "1";
       const latestCanonicalUrl = new URL(requestUrl.origin + requestUrl.pathname);
       latestCanonicalUrl.searchParams.set("ewgfId", ewgfId);
       latestCanonicalUrl.searchParams.set("mode", "latest");
       latestCanonicalUrl.searchParams.set("schema", "latest-20260728-html-primary-v2");
       const latestCacheKey = new Request(latestCanonicalUrl.toString(), { method: "GET" });
-      if (!forceRefresh) {
+      if (!forceRefresh && !latestPersistRequested) {
         const latestCachedResponse = await getFreshCachedJson(cache, latestCacheKey, LATEST_BATTLE_CACHE_TTL_SECONDS);
         if (latestCachedResponse) return withCacheStatus(latestCachedResponse, "HIT");
       }
@@ -1765,6 +1728,16 @@ export default {
         const latestCacheWrite = cache.put(latestCacheKey, latestResponse.clone());
         if (ctx && typeof ctx.waitUntil === "function") ctx.waitUntil(latestCacheWrite);
         else await latestCacheWrite;
+        if (latestPersistRequested) {
+          const fetchedAt = Date.now();
+          scheduleFirebaseSourceSnapshots(
+            env,
+            ctx,
+            ewgfId,
+            { latestActivity: buildLatestActivitySourceSnapshot(selectedLatest, fetchedAt) },
+            statsMetadata(fetchedAt, "worker-explicit-latest-persist"),
+          );
+        }
         return withCacheStatus(latestResponse, forceRefresh ? "REFRESH" : "MISS");
       } catch (error) {
         return json({
@@ -1799,7 +1772,20 @@ export default {
 
     if (!forceRefresh) {
       const cachedResponse = await getFreshCachedJson(cache, cacheKey, WORKER_CACHE_TTL_SECONDS);
-      if (cachedResponse) return withCacheStatus(cachedResponse, "HIT");
+      if (cachedResponse) {
+        if (statsPersistRequested) {
+          scheduleCachedFirebaseSourceSnapshot(
+            env,
+            ctx,
+            ewgfId,
+            cachedResponse,
+            "ewgfProfile",
+            buildEwgfProfileSourceSnapshot,
+            pageOpenRequested ? "worker-page-open-profile-cache-sync" : "worker-manual-refresh-profile-cache-sync",
+          );
+        }
+        return withCacheStatus(cachedResponse, "HIT");
+      }
     }
     const profileUrl = `https://ewgf.gg/player/${encodeURIComponent(ewgfId)}`;
 
@@ -1921,12 +1907,25 @@ export default {
         if (ctx && typeof ctx.waitUntil === "function") ctx.waitUntil(throttleWrite);
           else await throttleWrite;
       }
-      if (pageOpenRequested) {
-        scheduleFirebasePlayerPatch(
+      if (statsPersistRequested) {
+        const fetchedAt = Date.now();
+        const sourceSnapshots = {
+          ewgfProfile: buildEwgfProfileSourceSnapshot(profileSnapshot, fetchedAt),
+        };
+        if (profileSnapshot.latestBattle || profileSnapshot.latestBattleAt) {
+          sourceSnapshots.latestActivity = buildLatestActivitySourceSnapshot({
+            battle: profileSnapshot.latestBattle,
+            latestBattleAt: profileSnapshot.latestBattleAt,
+            source: profileSnapshot.latestSource,
+            scope: profileSnapshot.latestScope,
+          }, fetchedAt);
+        }
+        scheduleFirebaseSourceSnapshots(
           env,
           ctx,
           ewgfId,
-          profileFirebasePatch(profileSnapshot, ewgfId, Date.now(), "worker-page-open-profile-sync"),
+          sourceSnapshots,
+          statsMetadata(fetchedAt, pageOpenRequested ? "worker-page-open-profile-sync" : "worker-manual-refresh-profile-sync"),
         );
       }
       return withCacheStatus(successResponse, forceRefresh ? "REFRESH" : "MISS");
