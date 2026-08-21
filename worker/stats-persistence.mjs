@@ -102,6 +102,15 @@ function mergeMissingDefined(target, source) {
   return result;
 }
 
+function newestObservedAt(current, incoming) {
+  const currentRevision = normalizeSourceRevision(current);
+  const incomingRevision = normalizeSourceRevision(incoming);
+  if (incomingRevision !== null && (currentRevision === null || incomingRevision > currentRevision)) {
+    return cloneValue(incoming);
+  }
+  return cloneValue(current);
+}
+
 function normalizeCharacterKey(value) {
   return String(value || "").normalize("NFKD").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
@@ -404,12 +413,38 @@ function repairIncompleteEwgfProfileSnapshot(current, incoming, decision) {
 
   const snapshot = cloneValue(current);
   snapshot.data = mergeMissingDefined(current.data, incoming.data);
+  snapshot.observedAt = newestObservedAt(current.observedAt, incoming.observedAt);
   return {
     accepted: true,
     action: "repair",
     comparison: decision.comparison,
     snapshot,
   };
+}
+
+function expectedHistoricalWavuMaterialization(sourceSnapshots) {
+  const ewgfData = sourceSnapshots?.ewgfProfile?.data;
+  const wavuData = sourceSnapshots?.wavuRatings?.data;
+  if (!isRecord(ewgfData) || !isRecord(wavuData) || hasMeaningfulValue(wavuData.mainChar)) return null;
+  const ratingMu = findFiniteCharacterMapValue(wavuData.charRatingMap, ewgfData.mainChar);
+  if (!hasMeaningfulValue(ewgfData.mainChar) || ratingMu === null) return null;
+  return { ratingMu, ratingCharacter: cloneValue(ewgfData.mainChar) };
+}
+
+function hasExpectedHistoricalWavuMaterialization(stats, expected) {
+  return Number.isFinite(Number(stats?.ratingMu))
+    && Number(stats.ratingMu) === expected.ratingMu
+    && normalizeCharacterKey(stats?.ratingCharacter) === normalizeCharacterKey(expected.ratingCharacter)
+    && stats?.ratingIsHistorical === true;
+}
+
+function needsDerivedMaterializationRepair(currentNode, sourceSnapshots, incomingSnapshots) {
+  if (!Object.prototype.hasOwnProperty.call(incomingSnapshots || {}, "wavuRatings")) return false;
+  if (!sameSourceContent(currentNode?.sourceSnapshots?.wavuRatings, incomingSnapshots.wavuRatings)) return false;
+  const expected = expectedHistoricalWavuMaterialization(sourceSnapshots);
+  if (!expected) return false;
+  return !hasExpectedHistoricalWavuMaterialization(currentNode?.profileStats, expected)
+    || !hasExpectedHistoricalWavuMaterialization(currentNode, expected);
 }
 
 function needsMaterializedMigration(current) {
@@ -479,7 +514,8 @@ export function applySourceSnapshotsToFetchedStats(current, incomingSnapshots, m
     }
   }
 
-  const changed = sourceChanged || needsMaterializedMigration(currentNode);
+  const derivedMaterializationRepair = needsDerivedMaterializationRepair(currentNode, nextSnapshots, incomingSnapshots);
+  const changed = sourceChanged || derivedMaterializationRepair || needsMaterializedMigration(currentNode);
   if (!changed) {
     return { changed: false, node: currentNode, decisions };
   }

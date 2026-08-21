@@ -553,6 +553,7 @@ test("complete EWGF refresh repairs a legacy contaminated revision without rollb
   assert.equal(applied.changed, true);
   assert.equal(applied.decisions.ewgfProfile.action, "repair");
   assert.equal(applied.node.sourceSnapshots.ewgfProfile.revisionAt, Date.parse("2026-08-22T12:00:00.000Z"));
+  assert.equal(applied.node.sourceSnapshots.ewgfProfile.observedAt, "2026-08-22T12:05:00.000Z");
   assert.equal(applied.node.profileStats.tekkenPower, 999999);
   assert.deepEqual(applied.node.profileStats.statPentagon, completeIncoming.data.statPentagon);
 });
@@ -631,6 +632,65 @@ test("canonical materialization restores historical Wavu mu only for a matching 
   assert.equal(qualifiedNode.profileStats.ratingMu, wavu.ratingMu);
   assert.equal(qualifiedNode.profileStats.ratingCharacter, wavu.mainChar);
   assert.notEqual(qualifiedNode.profileStats.ratingIsHistorical, true);
+});
+
+test("identical Wavu source repairs missing historical mu once and then becomes a noop", async () => {
+  const ewgf = buildEwgfProfileSourceSnapshot(profile, profileObservedAt);
+  const historicalWavu = buildWavuSourceSnapshot({
+    ...wavu,
+    mainChar: null,
+    mainCharGames: null,
+    ratingMu: null,
+    selectionSource: "no-qualified-character",
+    charGamesMap: { Kazuya: 99 },
+    charRatingMap: { Kazuya: 77.25 },
+    qualifiedCharRatingMap: {},
+  }, profileObservedAt);
+  const canonical = materializeFetchedStats({
+    current: {},
+    sourceSnapshots: { ewgfProfile: ewgf, wavuRatings: historicalWavu },
+    ...metadata(),
+  });
+  const damaged = JSON.parse(JSON.stringify(canonical));
+  delete damaged.profileStats.ratingMu;
+  delete damaged.profileStats.ratingCharacter;
+  delete damaged.profileStats.ratingIsHistorical;
+  delete damaged.ratingMu;
+  delete damaged.ratingCharacter;
+  delete damaged.ratingIsHistorical;
+  const sourceSnapshotsBefore = JSON.parse(JSON.stringify(damaged.sourceSnapshots));
+  let stored = damaged;
+  let writes = 0;
+  const transport = {
+    async read() { return { value: stored, etag: `etag-${writes}` }; },
+    async write(path, value) {
+      writes += 1;
+      stored = value;
+      return { ok: true, status: 200 };
+    },
+  };
+
+  const first = await persistStatsWithCas({
+    transport,
+    path: "stats",
+    incomingSnapshots: { wavuRatings: historicalWavu },
+    metadata: metadata("2026-08-22T12:05:00.000Z"),
+  });
+  assert.equal(first.status, "written");
+  assert.equal(writes, 1);
+  assert.equal(stored.profileStats.ratingMu, 77.25);
+  assert.equal(stored.profileStats.ratingCharacter, "Kazuya");
+  assert.equal(stored.profileStats.ratingIsHistorical, true);
+  assert.deepEqual(stored.sourceSnapshots, sourceSnapshotsBefore);
+
+  const second = await persistStatsWithCas({
+    transport,
+    path: "stats",
+    incomingSnapshots: { wavuRatings: historicalWavu },
+    metadata: metadata("2026-08-22T12:06:00.000Z"),
+  });
+  assert.equal(second.status, "noop");
+  assert.equal(writes, 1);
 });
 
 test("background profile snapshots retain complete EWGF fields and omit unavailable Wavu authority", () => {
