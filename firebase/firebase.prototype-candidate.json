@@ -1,0 +1,5 @@
+{
+  "database": {
+    "rules": "candidates/firebase-user-lists-rules-prototype.json"
+  }
+}

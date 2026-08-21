@@ -1,0 +1,4 @@
+# Canonical source path only. Production target settings remain unresolved
+# until Lead Engineer review confirms the Worker name, compatibility date, and
+# scheduled trigger. Do not add secrets or account credentials here.
+main = "worker/ewgf-worker-with-stat-pentagon.js"

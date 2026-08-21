@@ -1,0 +1,9 @@
+{
+  "name": "tekken-private-lists",
+  "private": true,
+  "scripts": {
+    "check": "node tools/check-repo.mjs",
+    "deploy:worker": "node tools/deploy-worker.mjs",
+    "deploy:rules": "node tools/deploy-rules.mjs"
+  }
+}
