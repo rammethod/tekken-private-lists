@@ -31,8 +31,10 @@
 ## Stable invariants
 
 - Firebase Realtime Database and Firebase compat Auth are the application backend.
-- User data is scoped under `users/{uid}`. Shared-list views are read-only to viewers.
-- `listIndex` is the lightweight list catalog; full member data remains under owner lists.
+- Anonymous Auth is the normal guest path; Google login links/signs into an account for cross-device/account use.
+- User data is scoped under `users/{uid}`. `listIndex` is the lightweight list catalog; full member data remains under owner lists.
+- The admin panel checks `admins/{uid} === true` and must not expose individual users' private list contents. Account/diagnostic nodes remain separate from ordinary user lists.
+- Shared-list views are read-only to viewers. Do not add an owner-list mutation path to public-view code.
 - EWGF profile, Wavu ratings, and latest battle/activity are separate freshness domains. Do not collapse them into one player-wide freshness timestamp.
 - Browser `Date.now()`, `cachedAt`, `updatedAt`, request start/completion time, and Worker cache timestamps are not source-data freshness authority.
 - Late older source payloads must not be allowed to roll newer persisted stats backward.
@@ -81,7 +83,7 @@
 
 - Install pinned tooling with `npm ci` when dependencies are needed.
 - Run `npm run check` for repository/static checks.
-- Run scoped deterministic tests required by the mission, such as `npm run test:freshness` when the freshness contract is involved.
+- Run scoped deterministic tests required by the active mission when the corresponding script exists on that branch (for example `npm run test:freshness`).
 - Run `node --check` on changed standalone JavaScript where applicable.
 - Run `git diff --check` before commit/push.
 - Static checks do not prove browser interaction, Firebase permissions, or production runtime behavior; use bounded provider/runtime evidence for those boundaries.
