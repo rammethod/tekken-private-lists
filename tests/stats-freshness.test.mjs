@@ -82,6 +82,31 @@ test("empty current accepts first unversioned snapshot without inventing revisio
   assert.deepEqual(result.snapshot.data, { games: 10 });
 });
 
+test("legacy unversioned current is not erased by another unversioned snapshot", () => {
+  const current = snapshot(null, { wins: 7, rank: "A" }, "2026-08-01T00:00:00.000Z");
+  const incoming = snapshot(null, { wins: 1, rating: 1800 }, "2026-08-02T00:00:00.000Z");
+  const result = applyMonotonicSourceSnapshot(current, incoming);
+
+  assert.equal(result.accepted, true);
+  assert.equal(result.action, "merged");
+  assert.equal(result.comparison, "unversioned");
+  assert.equal(result.snapshot.revisionAt, null);
+  assert.deepEqual(result.snapshot.data, { wins: 7, rank: "A", rating: 1800 });
+  assert.equal(result.snapshot.observedAt, "2026-08-01T00:00:00.000Z");
+});
+
+test("versioned incoming supersedes legacy unversioned current", () => {
+  const current = snapshot(null, { wins: 7, legacyOnly: true });
+  const incoming = snapshot(newerRevision, { wins: 9, rank: "S" });
+  const result = applyMonotonicSourceSnapshot(current, incoming);
+
+  assert.equal(result.accepted, true);
+  assert.equal(result.action, "applied");
+  assert.equal(result.comparison, "unversioned");
+  assert.equal(result.snapshot.revisionAt, normalizeSourceRevision(newerRevision));
+  assert.deepEqual(result.snapshot.data, { wins: 9, rank: "S" });
+});
+
 test("observedAt newer but revision older is rejected", () => {
   const current = snapshot(newerRevision, { value: "new" }, "2026-08-03T01:00:00.000Z");
   const result = applyMonotonicSourceSnapshot(
