@@ -11,13 +11,12 @@ copy of the Cloudflare Worker used by the data-refresh path.
 - `FIREBASE RULES CANONICALITY: UNRESOLVED`. The candidate files must not be
   treated as proof of the currently published Firebase Rules.
 
-The current production Worker was confirmed read-only before recording the
-Wrangler target: name `tight-bar-55c1`, compatibility date `2026-07-23`, no
-compatibility flags, `workers.dev` enabled, Preview URLs disabled, no routes,
-no custom domains, no non-secret vars, and cron `*/5 * * * *`. The remote secret
-binding currently visible by name is `FIREBASE_SERVICE_ACCOUNT_JSON`;
-`EWGF_PUBLIC_API_KEY` is a required migration binding and must be provisioned
-separately before deploy.
+The production Worker settings confirmed during canonical cutover are: name
+`tight-bar-55c1`, compatibility date `2026-07-23`, no compatibility flags,
+`workers.dev` enabled, Preview URLs disabled, no routes, no custom domains, no
+non-secret vars, and cron `*/5 * * * *`. The required runtime secret binding
+names `EWGF_PUBLIC_API_KEY` and `FIREBASE_SERVICE_ACCOUNT_JSON` were both
+confirmed present after cutover. Secret values were not read or recorded.
 
 The parent checkout copies of the Worker and Rules are retained as provenance
 outside this repository. The original Worker is not the sanitized deploy source.
