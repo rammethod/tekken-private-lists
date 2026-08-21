@@ -22,5 +22,5 @@ test("medal rank and value remain derived from the recalculated member maps", ()
 });
 
 test("the frontend script cache-buster identifies the medal-sync fix", () => {
-  assert.match(index, /user-lists-prototype\.js\?v=20260821-live-sort-medal-sync/);
+  assert.match(index, /user-lists-prototype\.js\?v=20260821-latest-activity-persistence/);
 });
