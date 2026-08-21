@@ -102,12 +102,40 @@ export function applyMonotonicSourceSnapshot(current, incoming) {
   const currentRevision = normalizeSourceRevision(current?.revisionAt);
   const incomingRevision = normalizeSourceRevision(incoming.revisionAt);
 
-  if (!hasCurrent || currentRevision === null) {
+  if (!hasCurrent) {
     const snapshot = cloneSnapshot(incoming);
     snapshot.revisionAt = incomingRevision;
     return {
       accepted: true,
       action: "applied",
+      comparison: "unversioned",
+      snapshot,
+    };
+  }
+
+  if (currentRevision === null) {
+    if (incomingRevision !== null) {
+      const snapshot = cloneSnapshot(incoming);
+      snapshot.revisionAt = incomingRevision;
+      return {
+        accepted: true,
+        action: "applied",
+        comparison: "unversioned",
+        snapshot,
+      };
+    }
+
+    // Neither side has source authority. Preserve legacy data and only fill
+    // missing fields until a genuinely versioned source snapshot arrives.
+    const snapshot = cloneSnapshot(current);
+    snapshot.revisionAt = null;
+    snapshot.data = mergeEqualRevisionData(current?.data, incoming.data);
+    if (!hasValue(snapshot.observedAt) && hasValue(incoming.observedAt)) {
+      snapshot.observedAt = cloneValue(incoming.observedAt);
+    }
+    return {
+      accepted: true,
+      action: "merged",
       comparison: "unversioned",
       snapshot,
     };
