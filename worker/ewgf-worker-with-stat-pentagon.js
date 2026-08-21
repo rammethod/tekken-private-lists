@@ -998,9 +998,10 @@ async function fetchAwardSnapshot(env, gameId) {
   const html = await profileResult.value.text();
   const characters = extractCharacters(html);
   if (!characters.length) throw new Error("EWGF character table was not detected");
-  let latestBattle = extractLatestBattle(html, gameId);
-  if (!latestBattle) {
-    try { latestBattle = await fetchOfficialLatestBattle(env, gameId); }
+  const profileLatest = extractLatestBattle(html, gameId);
+  let officialLatest = null;
+  if (!profileLatest) {
+    try { officialLatest = await fetchOfficialLatestBattle(env, gameId); }
     catch (error) { console.warn("Kentomo background latest battle fallback failed", gameId, error instanceof Error ? error.message : String(error)); }
   }
   const modeStats = extractCharacterModeStatsBatch(html, ["RANKED_BATTLE", "PLAYER_BATTLE", "QUICK_BATTLE", "GROUP_BATTLE"]);
@@ -1014,6 +1015,19 @@ async function fetchAwardSnapshot(env, gameId) {
     characterImage: character.characterImage || "",
   }]));
   const wavu = wavuResult.status === "fulfilled" ? wavuResult.value : null;
+  const latestCandidates = [
+    { battle: officialLatest, source: "ewgf-official-battles-api", scope: "all-battle-types" },
+    { battle: profileLatest, source: "ewgf-profile-recent-battles", scope: "all-battle-types" },
+    {
+      battle: wavu?.latestRankedBattleAt
+        ? { at: wavu.latestRankedBattleAt, battleType: "", character: "" }
+        : null,
+      source: "wavu-latest-ranked-fallback",
+      scope: "ranked-only-fallback",
+    },
+  ];
+  const selectedLatest = selectLatestBattle(latestCandidates);
+  const latestBattle = selectedLatest?.battle || null;
   return {
     gameId,
     capturedAt: new Date().toISOString(),
@@ -1033,6 +1047,8 @@ async function fetchAwardSnapshot(env, gameId) {
     latestBattleAt: latestBattle?.at || null,
     latestBattleCharacter: latestBattle?.character || "",
     latestBattleType: latestBattle?.battleType || "",
+    latestBattleSource: selectedLatest?.source || "",
+    latestBattleScope: selectedLatest?.scope || "",
     source: wavu ? "ewgf-profile+wavu" : "ewgf-profile",
   };
 }
@@ -1680,9 +1696,22 @@ export default {
       latestCanonicalUrl.searchParams.set("mode", "latest");
       latestCanonicalUrl.searchParams.set("schema", "latest-20260728-html-primary-v2");
       const latestCacheKey = new Request(latestCanonicalUrl.toString(), { method: "GET" });
-      if (!forceRefresh && !latestPersistRequested) {
+      if (!forceRefresh) {
         const latestCachedResponse = await getFreshCachedJson(cache, latestCacheKey, LATEST_BATTLE_CACHE_TTL_SECONDS);
-        if (latestCachedResponse) return withCacheStatus(latestCachedResponse, "HIT");
+        if (latestCachedResponse) {
+          if (latestPersistRequested) {
+            scheduleCachedFirebaseSourceSnapshot(
+              env,
+              ctx,
+              ewgfId,
+              latestCachedResponse,
+              "latestActivity",
+              buildLatestActivitySourceSnapshot,
+              "worker-explicit-latest-cache-sync",
+            );
+          }
+          return withCacheStatus(latestCachedResponse, "HIT");
+        }
       }
       try {
         const [profileHtmlResult, wavuResult] = await Promise.allSettled([
