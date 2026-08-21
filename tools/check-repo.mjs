@@ -89,6 +89,7 @@ const requiredWranglerLines = [
   [/^\s*compatibility_date\s*=\s*["']2026-07-23["']\s*$/m, "wrangler.toml compatibility_date does not match read-only production settings"],
   [/^\s*compatibility_flags\s*=\s*\[\]\s*$/m, "wrangler.toml compatibility_flags must remain empty"],
   [/^\s*workers_dev\s*=\s*true\s*$/m, "wrangler.toml workers_dev must remain enabled"],
+  [/^\s*preview_urls\s*=\s*false\s*$/m, "wrangler.toml preview_urls must preserve the confirmed disabled production state"],
   [/^\s*keep_vars\s*=\s*true\s*$/m, "wrangler.toml keep_vars must protect dashboard vars during migration"],
   [/^\s*crons\s*=\s*\["\*\/5 \* \* \* \*"\]\s*$/m, "wrangler.toml must record the confirmed cron trigger"],
   [/^\s*required\s*=\s*\["EWGF_PUBLIC_API_KEY",\s*"FIREBASE_SERVICE_ACCOUNT_JSON"\]\s*$/m, "wrangler.toml must declare both required secret names"],

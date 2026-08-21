@@ -13,10 +13,11 @@ copy of the Cloudflare Worker used by the data-refresh path.
 
 The current production Worker was confirmed read-only before recording the
 Wrangler target: name `tight-bar-55c1`, compatibility date `2026-07-23`, no
-compatibility flags, `workers.dev` enabled, no routes, no custom domains, no
-non-secret vars, and cron `*/5 * * * *`. The remote secret binding currently
-visible by name is `FIREBASE_SERVICE_ACCOUNT_JSON`; `EWGF_PUBLIC_API_KEY` is a
-required migration binding and must be provisioned separately before deploy.
+compatibility flags, `workers.dev` enabled, Preview URLs disabled, no routes,
+no custom domains, no non-secret vars, and cron `*/5 * * * *`. The remote secret
+binding currently visible by name is `FIREBASE_SERVICE_ACCOUNT_JSON`;
+`EWGF_PUBLIC_API_KEY` is a required migration binding and must be provisioned
+separately before deploy.
 
 The parent checkout copies of the Worker and Rules are retained as provenance
 outside this repository. The original Worker is not the sanitized deploy source.
@@ -57,8 +58,9 @@ npm run deploy:worker
 ```
 
 It uses the pinned local Wrangler CLI with `--strict` and `--keep-vars`, and
-rechecks the remote settings and requires both pre-existing Cloudflare secret
-bindings. It does not run `wrangler secret put`.
+rechecks the remote settings, including the disabled Preview URLs state, and
+requires both pre-existing Cloudflare secret bindings. It does not run
+`wrangler secret put`.
 
 Rules deployment requires an explicit candidate and Firebase project:
 

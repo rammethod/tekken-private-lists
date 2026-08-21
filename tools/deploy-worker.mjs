@@ -20,6 +20,7 @@ const requiredConfig = [
   [/^\s*compatibility_date\s*=\s*["']2026-07-23["']\s*$/m, "confirmed compatibility_date is missing"],
   [/^\s*compatibility_flags\s*=\s*\[\]\s*$/m, "confirmed compatibility_flags are missing"],
   [/^\s*workers_dev\s*=\s*true\s*$/m, "confirmed workers_dev setting is missing"],
+  [/^\s*preview_urls\s*=\s*false\s*$/m, "confirmed preview_urls setting is missing"],
   [/^\s*keep_vars\s*=\s*true\s*$/m, "keep_vars must be enabled for dashboard variable preservation"],
   [/^\s*crons\s*=\s*\["\*\/5 \* \* \* \*"\]\s*$/m, "confirmed cron trigger is missing"],
   [/^\s*required\s*=\s*\["EWGF_PUBLIC_API_KEY",\s*"FIREBASE_SERVICE_ACCOUNT_JSON"\]\s*$/m, "both required secret names are missing"],
@@ -51,6 +52,7 @@ if (remoteState.account_id !== "d81e9284c64cedb0660c9c7d2a3610a0") remoteFailure
 if (remoteState.compatibility_date !== "2026-07-23") remoteFailures.push("remote compatibility date differs from canonical config");
 if (remoteState.compatibility_flags.length !== 0) remoteFailures.push("remote compatibility flags are not empty");
 if (!remoteState.workers_dev_enabled) remoteFailures.push("remote workers.dev is not enabled");
+if (remoteState.workers_dev_previews_enabled !== false) remoteFailures.push("remote Preview URLs are enabled but canonical config requires them disabled");
 if (remoteState.routes.length !== 0) remoteFailures.push("remote routes exist but are not represented in canonical config");
 if (remoteState.custom_domains.length !== 0) remoteFailures.push("remote custom domains exist but are not represented in canonical config");
 if (remoteState.cron_triggers.length !== 1 || remoteState.cron_triggers[0] !== "*/5 * * * *") remoteFailures.push("remote cron triggers differ from canonical config");

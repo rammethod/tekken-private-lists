@@ -6,6 +6,7 @@ main = "worker/ewgf-worker-with-stat-pentagon.js"
 compatibility_date = "2026-07-23"
 compatibility_flags = []
 workers_dev = true
+preview_urls = false
 keep_vars = true
 
 [triggers]
