@@ -165,7 +165,10 @@ test("Worker-only canonical authority survives old target removal and rehydrates
   };
   const store = new Map([
     [paths.canonical, { value: null, etag: "canonical-0" }],
-    [paths.target, { value: null, etag: "target-0" }],
+    [paths.target, {
+      value: materializeFetchedStats({ current: {}, sourceSnapshots: sources(), ...metadata() }),
+      etag: "target-0",
+    }],
     [paths.legacy, { value: null, etag: "legacy-0" }],
   ]);
   const transport = {
@@ -184,7 +187,7 @@ test("Worker-only canonical authority survives old target removal and rehydrates
   const first = await persistCanonicalStatsAndViews({
     transport,
     canonicalPath: paths.canonical,
-    legacyPaths: [paths.legacy],
+    compatibilityPaths: [paths.target, paths.legacy],
     targetPaths: [{ path: paths.target, legacyPath: paths.legacy }],
     incomingSnapshots: sources(),
     metadata: metadata(),
@@ -199,7 +202,7 @@ test("Worker-only canonical authority survives old target removal and rehydrates
   const second = await persistCanonicalStatsAndViews({
     transport,
     canonicalPath: paths.canonical,
-    legacyPaths: [paths.legacy],
+    compatibilityPaths: [paths.target, paths.legacy],
     targetPaths: [{ path: paths.target, legacyPath: paths.legacy }],
     incomingSnapshots: sources(),
     metadata: metadata("2026-08-22T00:00:00.000Z"),

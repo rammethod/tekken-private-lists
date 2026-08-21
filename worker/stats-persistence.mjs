@@ -370,6 +370,8 @@ function mergeLegacyCompatibilityNode(canonical, legacy) {
 function mergeLegacyNodes(left, right) {
   if (!isRecord(left)) return isRecord(right) ? cloneValue(right) : {};
   if (!isRecord(right)) return cloneValue(left);
+  if (isCanonicalStatsNode(left)) return mergeLegacyCompatibilityNode(left, right);
+  if (isCanonicalStatsNode(right)) return mergeLegacyCompatibilityNode(right, left);
   return {
     ...cloneValue(left),
     ...cloneValue(right),
@@ -470,15 +472,21 @@ export async function persistStatsWithCas({ transport, path, legacyPath = "", le
     const legacy = legacyValues.reduce((merged, value) => mergeLegacyNodes(merged, value?.value), null);
     const current = mergeLegacyCompatibilityNode(remote?.value, legacy);
     const applied = applySourceSnapshotsToFetchedStats(current, incomingSnapshots, metadata);
-    if (!applied.changed) return { status: "noop", attempts: attempt, node: applied.node, decisions: applied.decisions };
+    const compatibilitySeedRequired = !isCanonicalStatsNode(remote?.value) && isCanonicalStatsNode(current);
+    if (!applied.changed && !compatibilitySeedRequired) {
+      return { status: "noop", attempts: attempt, node: applied.node, decisions: applied.decisions };
+    }
+    const nextNode = applied.changed
+      ? applied.node
+      : materializeFetchedStats({ current, sourceSnapshots: current.sourceSnapshots, ...metadata });
 
-    const writeResult = await transport.write(path, applied.node, remote?.etag);
+    const writeResult = await transport.write(path, nextNode, remote?.etag);
     if (writeResult?.conflict === true || writeResult?.status === 412) {
       if (attempt === maxAttempts) return { status: "conflict", attempts: attempt, node: remote?.value, decisions: applied.decisions };
       continue;
     }
     if (writeResult?.ok !== true) throw new Error(`Firebase stats CAS write failed at ${path}`);
-    return { status: "written", attempts: attempt, node: applied.node, decisions: applied.decisions };
+    return { status: "written", attempts: attempt, node: nextNode, decisions: applied.decisions };
   }
 
   return { status: "conflict", attempts: maxAttempts };
@@ -487,7 +495,7 @@ export async function persistStatsWithCas({ transport, path, legacyPath = "", le
 export async function persistCanonicalStatsAndViews({
   transport,
   canonicalPath,
-  legacyPaths = [],
+  compatibilityPaths = [],
   targetPaths = [],
   incomingSnapshots,
   metadata,
@@ -496,7 +504,7 @@ export async function persistCanonicalStatsAndViews({
   const canonical = await persistStatsWithCas({
     transport,
     path: canonicalPath,
-    legacyPaths,
+    legacyPaths: compatibilityPaths,
     incomingSnapshots,
     metadata,
     maxAttempts,

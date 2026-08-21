@@ -1205,7 +1205,7 @@ async function publishFirebaseSourceSnapshots(env, gameId, sourceSnapshots, meta
   const persistence = await persistCanonicalStatsAndViews({
     transport,
     canonicalPath,
-    legacyPaths: paths.map(entry => entry.legacyPath).filter(Boolean),
+    compatibilityPaths: paths.flatMap(entry => [entry.path, entry.legacyPath]).filter(Boolean),
     targetPaths: paths,
     incomingSnapshots: sourceSnapshots,
     metadata,
