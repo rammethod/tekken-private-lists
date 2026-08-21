@@ -1031,6 +1031,7 @@ async function fetchAwardSnapshot(env, gameId) {
   ];
   const selectedLatest = selectLatestBattle(latestCandidates);
   const latestBattle = selectedLatest?.battle || null;
+  const ewgfProfileRevisionAt = profileLatest?.at || officialLatest?.at || null;
   return {
     gameId,
     capturedAt: new Date().toISOString(),
@@ -1047,6 +1048,7 @@ async function fetchAwardSnapshot(env, gameId) {
     totalGroupMatchGames: sumCharacterGames(groupCharacterStats),
     characterRanks,
     wavuRatings: wavu,
+    ewgfProfileRevisionAt,
     ratingMu: wavu?.ratingMu ?? null,
     recentRankedGames30d: wavu?.recentRankedGames30d ?? null,
     latestRankedBattleAt: wavu?.latestRankedBattleAt ?? null,
@@ -1928,6 +1930,7 @@ export default {
         totalRecordedGames,
         playerMessage,
         platformProfile,
+        ewgfProfileRevisionAt: htmlLatestBattle?.at || officialLatestBattle?.at || null,
         latestBattleAt: latestBattle?.at || null,
         latestBattle,
         latestSource: selectedLatest?.source || null,
@@ -1953,7 +1956,7 @@ export default {
       if (statsPersistRequested) {
         const fetchedAt = Date.now();
         const sourceSnapshots = {
-          ewgfProfile: buildEwgfProfileSourceSnapshot(profileSnapshot, fetchedAt),
+          ewgfProfile: buildEwgfProfileSourceSnapshot(profileSnapshot, fetchedAt, profileSnapshot.ewgfProfileRevisionAt),
         };
         if (profileSnapshot.latestBattle || profileSnapshot.latestBattleAt) {
           sourceSnapshots.latestActivity = buildLatestActivitySourceSnapshot({

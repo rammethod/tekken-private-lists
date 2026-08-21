@@ -37,12 +37,12 @@ test("page-open freshness requires a complete canonical profile before using the
 
 test("canonical profile freshness follows EWGF observedAt rather than latestActivity metadata", () => {
   const helperStart = source.indexOf("const canonicalWorkerStatsSchema =");
-  const helperEnd = source.indexOf("\n  const hasCompleteCanonicalProfileSnapshot", helperStart);
+  const helperEnd = source.indexOf("\n  const clearPageOpenProfileRetryTimers", helperStart);
   assert.ok(helperStart >= 0 && helperEnd > helperStart, "canonical freshness helpers must remain discoverable");
   const helperBlock = source.slice(helperStart, helperEnd);
-  const { profileSnapshotTimestamp } = runInNewContext(
-    `(() => { ${helperBlock}; return { profileSnapshotTimestamp }; })()`,
-    { memberStats: member => member.workerFetchedStats },
+  const { profileSnapshotTimestamp, hasFreshProfileSnapshot } = runInNewContext(
+    `(() => { ${helperBlock}; return { profileSnapshotTimestamp, hasFreshProfileSnapshot }; })()`,
+    { memberStats: member => member.workerFetchedStats, PAGE_OPEN_PROFILE_FRESHNESS_MS: 24 * 60 * 60 * 1000 },
   );
   const member = {
     workerFetchedStats: {
@@ -67,6 +67,7 @@ test("canonical profile freshness follows EWGF observedAt rather than latestActi
   const ewgfAdvanced = JSON.parse(JSON.stringify(member));
   ewgfAdvanced.workerFetchedStats.sourceSnapshots.ewgfProfile.observedAt = "2026-08-22T00:00:00.000Z";
   assert.equal(profileSnapshotTimestamp(ewgfAdvanced), Date.parse("2026-08-22T00:00:00.000Z"));
+  assert.equal(hasFreshProfileSnapshot(ewgfAdvanced, Date.parse("2026-08-22T23:00:00.000Z")), true);
 });
 
 test("all visible rating paths reject undefined, null, and non-finite values", () => {

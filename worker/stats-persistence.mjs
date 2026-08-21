@@ -90,6 +90,42 @@ function mergeDefined(target, source) {
   return result;
 }
 
+function mergeMissingDefined(target, source) {
+  const result = isRecord(target) ? cloneValue(target) : {};
+  if (!isRecord(source)) return result;
+  for (const [key, value] of Object.entries(source)) {
+    if (!hasMeaningfulValue(value)) continue;
+    const currentValue = result[key];
+    if (!hasMeaningfulValue(currentValue)) result[key] = cloneValue(value);
+    else if (isRecord(currentValue) && isRecord(value)) result[key] = mergeMissingDefined(currentValue, value);
+  }
+  return result;
+}
+
+function newestObservedAt(current, incoming) {
+  const currentRevision = normalizeSourceRevision(current);
+  const incomingRevision = normalizeSourceRevision(incoming);
+  if (incomingRevision !== null && (currentRevision === null || incomingRevision > currentRevision)) {
+    return cloneValue(incoming);
+  }
+  return cloneValue(current);
+}
+
+function normalizeCharacterKey(value) {
+  return String(value || "").normalize("NFKD").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function findFiniteCharacterMapValue(map, character) {
+  const target = normalizeCharacterKey(character);
+  if (!target || !isRecord(map)) return null;
+  for (const [name, value] of Object.entries(map)) {
+    if (normalizeCharacterKey(name) !== target) continue;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+  return null;
+}
+
 function pickFields(source, fields) {
   const result = {};
   for (const field of fields) {
@@ -125,7 +161,7 @@ function sourceSnapshot(revisionAt, observedAt, data) {
   };
 }
 
-export function buildEwgfProfileSourceSnapshot(profile, observedAt) {
+export function buildEwgfProfileSourceSnapshot(profile, observedAt, revisionAt) {
   const entries = rankedEntries(profile);
   const characters = Array.isArray(profile?.characters)
     ? profile.characters
@@ -186,7 +222,10 @@ export function buildEwgfProfileSourceSnapshot(profile, observedAt) {
     if (profile.platformProfile.platformProfileUrl) data.platformProfileUrl = String(profile.platformProfile.platformProfileUrl);
   }
 
-  return sourceSnapshot(profile?.latestBattleAt || profile?.latestBattle?.at, observedAt, data);
+  const sourceRevisionAt = revisionAt === undefined
+    ? profile?.latestBattleAt || profile?.latestBattle?.at
+    : revisionAt;
+  return sourceSnapshot(sourceRevisionAt, observedAt, data);
 }
 
 export function buildWavuSourceSnapshot(ratings, observedAt) {
@@ -228,6 +267,9 @@ export function buildLatestActivitySourceSnapshot(selectedLatest, observedAt) {
 export function buildBackgroundSourceSnapshots(snapshot, observedAt) {
   const hasWavuRatings = Object.prototype.hasOwnProperty.call(snapshot || {}, "wavuRatings");
   const wavuRatings = hasWavuRatings ? snapshot.wavuRatings : null;
+  const ewgfProfileRevisionAt = Object.prototype.hasOwnProperty.call(snapshot || {}, "ewgfProfileRevisionAt")
+    ? snapshot.ewgfProfileRevisionAt
+    : null;
   const result = {
     latestActivity: buildLatestActivitySourceSnapshot({
       battle: snapshot?.latestBattleAt
@@ -243,7 +285,7 @@ export function buildBackgroundSourceSnapshots(snapshot, observedAt) {
   };
   const statPentagon = snapshot?.statPentagon;
   if (isRecord(statPentagon) && Object.keys(statPentagon).length) {
-    result.ewgfProfile = buildEwgfProfileSourceSnapshot(snapshot, observedAt);
+    result.ewgfProfile = buildEwgfProfileSourceSnapshot(snapshot, observedAt, ewgfProfileRevisionAt);
   }
   if (wavuRatings !== null && wavuRatings !== undefined) {
     result.wavuRatings = buildWavuSourceSnapshot(wavuRatings, observedAt);
@@ -309,11 +351,19 @@ export function materializeFetchedStats({ current = {}, sourceSnapshots = {}, fe
     profileStats = mergeDefined(profileStats, ewgfData);
   }
   if (hasWavuAuthority) {
-    clearFields(profileStats, wavuFieldsToClear);
+    clearFields(profileStats, [...wavuFieldsToClear, "ratingIsHistorical"]);
     profileStats = mergeDefined(profileStats, wavuData);
     if (!wavuHasQualifiedMain && hasEwgfAuthority) {
       if (hasValue(ewgfData?.mainChar)) profileStats.mainChar = cloneValue(ewgfData.mainChar);
       if (hasValue(ewgfData?.mainCharGames)) profileStats.mainCharGames = cloneValue(ewgfData.mainCharGames);
+      const historicalRating = findFiniteCharacterMapValue(wavuData?.charRatingMap, ewgfData?.mainChar);
+      if (historicalRating !== null) {
+        profileStats.ratingMu = historicalRating;
+        profileStats.ratingCharacter = cloneValue(ewgfData.mainChar);
+        profileStats.ratingIsHistorical = true;
+      }
+    } else if (wavuHasQualifiedMain) {
+      profileStats.ratingIsHistorical = false;
     }
   }
 
@@ -327,7 +377,7 @@ export function materializeFetchedStats({ current = {}, sourceSnapshots = {}, fe
 
   const authoritativeRootFields = [];
   if (hasEwgfAuthority) authoritativeRootFields.push(...EWGF_FIELDS);
-  if (hasWavuAuthority) authoritativeRootFields.push(...wavuFieldsToClear);
+  if (hasWavuAuthority) authoritativeRootFields.push(...wavuFieldsToClear, "ratingIsHistorical");
   if (hasActivityAuthority) authoritativeRootFields.push(...ACTIVITY_FIELDS);
   clearFields(node, [...new Set(authoritativeRootFields)]);
 
@@ -349,6 +399,52 @@ function sourceContent(snapshot) {
 
 function sameSourceContent(left, right) {
   return JSON.stringify(sourceContent(left)) === JSON.stringify(sourceContent(right));
+}
+
+function isCompleteEwgfProfileSnapshot(snapshot) {
+  const statPentagon = snapshot?.data?.statPentagon;
+  return isRecord(statPentagon) && Object.keys(statPentagon).length > 0;
+}
+
+function repairIncompleteEwgfProfileSnapshot(current, incoming, decision) {
+  if (decision.comparison !== "older") return null;
+  if (!isRecord(current) || !isRecord(incoming)) return null;
+  if (isCompleteEwgfProfileSnapshot(current) || !isCompleteEwgfProfileSnapshot(incoming)) return null;
+
+  const snapshot = cloneValue(current);
+  snapshot.data = mergeMissingDefined(current.data, incoming.data);
+  snapshot.observedAt = newestObservedAt(current.observedAt, incoming.observedAt);
+  return {
+    accepted: true,
+    action: "repair",
+    comparison: decision.comparison,
+    snapshot,
+  };
+}
+
+function expectedHistoricalWavuMaterialization(sourceSnapshots) {
+  const ewgfData = sourceSnapshots?.ewgfProfile?.data;
+  const wavuData = sourceSnapshots?.wavuRatings?.data;
+  if (!isRecord(ewgfData) || !isRecord(wavuData) || hasMeaningfulValue(wavuData.mainChar)) return null;
+  const ratingMu = findFiniteCharacterMapValue(wavuData.charRatingMap, ewgfData.mainChar);
+  if (!hasMeaningfulValue(ewgfData.mainChar) || ratingMu === null) return null;
+  return { ratingMu, ratingCharacter: cloneValue(ewgfData.mainChar) };
+}
+
+function hasExpectedHistoricalWavuMaterialization(stats, expected) {
+  return Number.isFinite(Number(stats?.ratingMu))
+    && Number(stats.ratingMu) === expected.ratingMu
+    && normalizeCharacterKey(stats?.ratingCharacter) === normalizeCharacterKey(expected.ratingCharacter)
+    && stats?.ratingIsHistorical === true;
+}
+
+function needsDerivedMaterializationRepair(currentNode, sourceSnapshots, incomingSnapshots) {
+  if (!Object.prototype.hasOwnProperty.call(incomingSnapshots || {}, "wavuRatings")) return false;
+  if (!sameSourceContent(currentNode?.sourceSnapshots?.wavuRatings, incomingSnapshots.wavuRatings)) return false;
+  const expected = expectedHistoricalWavuMaterialization(sourceSnapshots);
+  if (!expected) return false;
+  return !hasExpectedHistoricalWavuMaterialization(currentNode?.profileStats, expected)
+    || !hasExpectedHistoricalWavuMaterialization(currentNode, expected);
 }
 
 function needsMaterializedMigration(current) {
@@ -405,7 +501,10 @@ export function applySourceSnapshotsToFetchedStats(current, incomingSnapshots, m
 
   for (const domain of SOURCE_DOMAINS) {
     if (!Object.prototype.hasOwnProperty.call(incomingSnapshots || {}, domain)) continue;
-    const decision = applyMonotonicSourceSnapshot(currentSnapshots[domain] || null, incomingSnapshots[domain]);
+    const monotonicDecision = applyMonotonicSourceSnapshot(currentSnapshots[domain] || null, incomingSnapshots[domain]);
+    const decision = domain === "ewgfProfile"
+      ? (repairIncompleteEwgfProfileSnapshot(currentSnapshots[domain], incomingSnapshots[domain], monotonicDecision) || monotonicDecision)
+      : monotonicDecision;
     decisions[domain] = decision;
     if (!sameSourceContent(currentSnapshots[domain], decision.snapshot)) {
       nextSnapshots[domain] = cloneValue(decision.snapshot);
@@ -415,7 +514,8 @@ export function applySourceSnapshotsToFetchedStats(current, incomingSnapshots, m
     }
   }
 
-  const changed = sourceChanged || needsMaterializedMigration(currentNode);
+  const derivedMaterializationRepair = needsDerivedMaterializationRepair(currentNode, nextSnapshots, incomingSnapshots);
+  const changed = sourceChanged || derivedMaterializationRepair || needsMaterializedMigration(currentNode);
   if (!changed) {
     return { changed: false, node: currentNode, decisions };
   }
