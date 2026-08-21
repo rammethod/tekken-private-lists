@@ -3174,12 +3174,9 @@
         // returnTracking is browser/Kentomo-owned compatibility state, not a
         // source snapshot. Preserve the newest local/legacy transition while
         // keeping every other canonical field authoritative.
-        const returnTracking = getNewestReturnTracking(
-          canonicalMemberStats,
-          legacyMemberStats,
-          localStats
-        );
+        const returnTracking = getNewestReturnTracking(legacyMemberStats, localStats);
         if (returnTracking) canonicalMemberStats.returnTracking = returnTracking;
+        else delete canonicalMemberStats.returnTracking;
         try {
           localStorage.setItem(`${LOCAL_STATS_CACHE_KEY}_${gameId}`, JSON.stringify(canonicalMemberStats));
         } catch (e) {}

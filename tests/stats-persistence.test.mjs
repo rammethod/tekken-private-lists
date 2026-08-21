@@ -213,6 +213,62 @@ test("Worker-only canonical authority survives old target removal and rehydrates
   assert.deepEqual(store.get(paths.target).value.sourceSnapshots, canonicalBefore.sourceSnapshots);
 });
 
+test("Worker-only canonical seeds exclude browser returnTracking while compatibility views retain it", async () => {
+  const paths = {
+    canonical: "workerStatsByGameId/PLAYER-002",
+    target: "sharedLists/share/members/member/workerFetchedStats",
+    legacy: "sharedLists/share/members/member/fetchedStats",
+  };
+  const browserTracking = {
+    schema: "20260801-return-player",
+    dormantSince: Date.parse("2026-08-01T00:00:00.000Z"),
+    baselineLatestRankedBattleAt: "2026-08-01T00:00:00.000Z",
+    returnReportedAt: Date.parse("2026-08-02T00:00:00.000Z"),
+    returnBadgeUntil: Date.parse("2026-08-05T00:00:00.000Z"),
+    returnedBattleAt: "2026-08-02T12:00:00.000Z",
+  };
+  const store = new Map([
+    [paths.canonical, { value: null, etag: "canonical-0" }],
+    [paths.target, { value: null, etag: "target-0" }],
+    [paths.legacy, {
+      value: {
+        returnTracking: browserTracking,
+        activityStats: { returnTracking: browserTracking },
+      },
+      etag: "legacy-0",
+    }],
+  ]);
+  const transport = {
+    async read(path) {
+      const entry = store.get(path) || { value: null, etag: `${path}-0` };
+      return { value: entry.value, etag: entry.etag };
+    },
+    async write(path, value, etag) {
+      const current = store.get(path) || { value: null, etag: `${path}-0` };
+      assert.equal(etag, current.etag);
+      store.set(path, { value, etag: `${path}-written` });
+      return { ok: true, status: 200 };
+    },
+  };
+
+  const result = await persistCanonicalStatsAndViews({
+    transport,
+    canonicalPath: paths.canonical,
+    compatibilityPaths: [paths.legacy],
+    targetPaths: [{ path: paths.target, legacyPath: paths.legacy }],
+    incomingSnapshots: sources(),
+    metadata: metadata(),
+  });
+  assert.equal(result.status, "complete");
+  const canonical = store.get(paths.canonical).value;
+  const target = store.get(paths.target).value;
+  assert.equal(canonical.returnTracking, undefined);
+  assert.equal(canonical.profileStats.returnTracking, undefined);
+  assert.equal(canonical.activityStats.returnTracking, undefined);
+  assert.deepEqual(target.returnTracking, browserTracking);
+  assert.deepEqual(target.activityStats.returnTracking, browserTracking);
+});
+
 test("older Worker persistence cannot roll canonical or materialized target views backward", async () => {
   const canonicalPath = "workerStatsByGameId/PLAYER-001";
   const targetPath = "users/u/lists/l/members/m/workerFetchedStats";
@@ -574,7 +630,7 @@ test("active browser reads canonical stats and no longer publishes fetchedStats"
   assert.doesNotMatch(browserSource, /data\.fetchedStats\s*=/);
   assert.match(browserSource, /child\(['"]fetchedStats\/activityStats\/returnTracking['"]\)\.set/);
   assert.doesNotMatch(browserSource, /child\(['"]fetchedStats['"]\)\.child\(['"]activityStats['"]\)/);
-  assert.match(browserSource, /getNewestReturnTracking\(\s*canonicalMemberStats,\s*legacyMemberStats,\s*localStats/);
+  assert.match(browserSource, /getNewestReturnTracking\(legacyMemberStats,\s*localStats/);
   assert.match(listsSource, /workerFetchedStats/);
   assert.match(listsSource, /includeReturnTracking/);
   assert.match(listsSource, /setSharedBrowserMemberField/);
@@ -666,4 +722,100 @@ test("canonical browser stats preserve and narrowly persist returnTracking", () 
   const secondRead = context.getCanonicalStats("PLAYER-001", member);
   assert.equal(secondRead.mainChar, "Canonical Main");
   assert.deepEqual(JSON.parse(JSON.stringify(secondRead.returnTracking)), JSON.parse(JSON.stringify(transitioned)));
+});
+
+test("expired returnTracking null-clear is not resurrected from stale canonical stats", () => {
+  const browserSource = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const start = browserSource.indexOf("    const WORKER_STATS_SCHEMA");
+  const end = browserSource.indexOf("\n    function setLocalStats", start);
+  assert.ok(start >= 0 && end > start, "return-tracking browser contract block must remain discoverable");
+  const context = {
+    console,
+    localStorage: (() => {
+      const values = new Map();
+      return {
+        getItem: key => values.has(key) ? values.get(key) : null,
+        setItem: (key, value) => values.set(key, String(value)),
+      };
+    })(),
+    window: {
+      isDormantStats: stats => Boolean(stats?.rankIsAllTimeHighest)
+        && Number(stats?.recentRankedGames7d || 0) < 3
+        && Number(stats?.recentRankedGames30d || 0) < 10,
+    },
+    cleanTekkenId: value => String(value || "").replace(/[-ー−\s]/g, "").trim(),
+  };
+  context.writes = [];
+  context.membersRef = {
+    child: memberKey => ({
+      child: path => ({
+        set: value => {
+          context.writes.push({ memberKey, path, value });
+          return Promise.resolve();
+        },
+      }),
+    }),
+  };
+  runInNewContext(`
+    const LOCAL_STATS_CACHE_KEY = 'test-stats';
+    const membersRef = globalThis.membersRef;
+    const cleanTekkenId = globalThis.cleanTekkenId;
+    const window = globalThis.window;
+    const localStorage = globalThis.localStorage;
+    ${browserSource.slice(start, end)}
+    globalThis.getCanonicalStats = getLocalStats;
+    globalThis.ensureCanonicalReturnTracking = window.ensureDormantReturnTracking;
+  `, context);
+
+  const staleTracking = {
+    schema: "20260801-return-player",
+    dormantSince: Date.parse("2026-08-01T00:00:00.000Z"),
+    baselineLatestRankedBattleAt: "2026-08-01T00:00:00.000Z",
+    returnReportedAt: Date.parse("2026-08-02T00:00:00.000Z"),
+    returnBadgeUntil: Date.parse("2026-08-05T00:00:00.000Z"),
+    returnedBattleAt: "2026-08-02T12:00:00.000Z",
+  };
+  const member = {
+    gameId: "PLAYER002",
+    workerFetchedStats: {
+      schema: "20260821-source-snapshots-v1",
+      sourceSnapshots: {},
+      profileStats: {
+        mainChar: "Canonical Main",
+        rankIsAllTimeHighest: false,
+        recentRankedGames7d: 3,
+        returnTracking: staleTracking,
+      },
+      activityStats: {
+        latestRankedBattleAt: "2026-08-20T00:00:00.000Z",
+        returnTracking: staleTracking,
+      },
+      returnTracking: staleTracking,
+    },
+    fetchedStats: {
+      profileStats: { mainChar: "Stale Legacy Main" },
+      activityStats: { returnTracking: staleTracking },
+    },
+  };
+
+  const firstRead = context.getCanonicalStats("PLAYER002", member);
+  assert.equal(firstRead.mainChar, "Canonical Main");
+  assert.equal(firstRead.latestRankedBattleAt, "2026-08-20T00:00:00.000Z");
+  assert.deepEqual(JSON.parse(JSON.stringify(firstRead.returnTracking)), staleTracking);
+
+  const cleared = context.ensureCanonicalReturnTracking("member-2", member, firstRead);
+  assert.equal(cleared, null);
+  assert.equal(context.writes.length, 1);
+  assert.deepEqual(context.writes[0], {
+    memberKey: "member-2",
+    path: "fetchedStats/activityStats/returnTracking",
+    value: null,
+  });
+
+  const secondRead = context.getCanonicalStats("PLAYER002", member);
+  assert.equal(secondRead.mainChar, "Canonical Main");
+  assert.equal(secondRead.latestRankedBattleAt, "2026-08-20T00:00:00.000Z");
+  assert.equal(secondRead.returnTracking, undefined);
+  assert.equal(secondRead.profileStats, undefined);
+  assert.equal(secondRead.activityStats, undefined);
 });

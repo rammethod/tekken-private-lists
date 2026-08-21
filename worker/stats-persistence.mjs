@@ -380,6 +380,14 @@ function mergeLegacyNodes(left, right) {
   };
 }
 
+function stripBrowserOwnedReturnTracking(node) {
+  const result = cloneValue(node);
+  delete result.returnTracking;
+  if (isRecord(result.profileStats)) delete result.profileStats.returnTracking;
+  if (isRecord(result.activityStats)) delete result.activityStats.returnTracking;
+  return result;
+}
+
 export function applySourceSnapshotsToFetchedStats(current, incomingSnapshots, metadata = {}) {
   const currentNode = isRecord(current) ? cloneValue(current) : {};
   const currentSnapshots = isRecord(currentNode.sourceSnapshots) ? currentNode.sourceSnapshots : {};
@@ -453,7 +461,7 @@ export function createFirebaseStatsTransport({ databaseUrl, token, fetchImpl = g
   };
 }
 
-export async function persistStatsWithCas({ transport, path, legacyPath = "", legacyPaths = [], incomingSnapshots, metadata, maxAttempts = 3 } = {}) {
+export async function persistStatsWithCas({ transport, path, legacyPath = "", legacyPaths = [], incomingSnapshots, metadata, maxAttempts = 3, omitReturnTracking = false } = {}) {
   if (!transport || typeof transport.read !== "function" || typeof transport.write !== "function") {
     throw new TypeError("stats transport must provide read and write functions");
   }
@@ -473,12 +481,16 @@ export async function persistStatsWithCas({ transport, path, legacyPath = "", le
     const current = mergeLegacyCompatibilityNode(remote?.value, legacy);
     const applied = applySourceSnapshotsToFetchedStats(current, incomingSnapshots, metadata);
     const compatibilitySeedRequired = !isCanonicalStatsNode(remote?.value) && isCanonicalStatsNode(current);
-    if (!applied.changed && !compatibilitySeedRequired) {
-      return { status: "noop", attempts: attempt, node: applied.node, decisions: applied.decisions };
-    }
-    const nextNode = applied.changed
+    const nextNodeCandidate = applied.changed
       ? applied.node
       : materializeFetchedStats({ current, sourceSnapshots: current.sourceSnapshots, ...metadata });
+    const nextNode = omitReturnTracking
+      ? stripBrowserOwnedReturnTracking(nextNodeCandidate)
+      : nextNodeCandidate;
+    const compatibilityChanged = JSON.stringify(nextNode) !== JSON.stringify(nextNodeCandidate);
+    if (!applied.changed && !compatibilitySeedRequired && !compatibilityChanged) {
+      return { status: "noop", attempts: attempt, node: applied.node, decisions: applied.decisions };
+    }
 
     const writeResult = await transport.write(path, nextNode, remote?.etag);
     if (writeResult?.conflict === true || writeResult?.status === 412) {
@@ -508,6 +520,7 @@ export async function persistCanonicalStatsAndViews({
     incomingSnapshots,
     metadata,
     maxAttempts,
+    omitReturnTracking: true,
   });
   if (canonical.status === "conflict") return { status: "conflict", canonical, targets: [] };
 
