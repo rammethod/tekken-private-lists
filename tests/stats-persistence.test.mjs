@@ -514,6 +514,55 @@ test("background snapshots contain three independent domains", () => {
   assert.equal(background.latestActivity.data.latestBattleRevisionAt, Date.parse(latest.battle.at));
 });
 
+test("background profile snapshots retain complete EWGF fields and omit unavailable Wavu authority", () => {
+  const current = materializeFetchedStats({
+    current: {},
+    sourceSnapshots: sources(),
+    ...metadata(),
+  });
+  const incompleteWavuBackground = buildBackgroundSourceSnapshots({
+    ...profile,
+    latestBattleAt: "2026-08-21T12:00:00.000Z",
+    wavuRatings: null,
+  }, "2026-08-21T12:05:00.000Z");
+
+  assert.deepEqual(incompleteWavuBackground.ewgfProfile.data.statPentagon, profile.statPentagon);
+  assert.equal(incompleteWavuBackground.ewgfProfile.data.playerMessage, profile.playerMessage);
+  assert.equal(incompleteWavuBackground.ewgfProfile.data.platform, profile.platformProfile.platform);
+  assert.equal(incompleteWavuBackground.wavuRatings, undefined);
+
+  const applied = applySourceSnapshotsToFetchedStats(current, incompleteWavuBackground, metadata("2026-08-21T12:05:00.000Z"));
+  assert.deepEqual(applied.node.profileStats.statPentagon, profile.statPentagon);
+  assert.equal(applied.node.profileStats.playerMessage, profile.playerMessage);
+  assert.equal(applied.node.profileStats.platformProfileUrl, profile.platformProfile.platformProfileUrl);
+  assert.equal(applied.node.profileStats.ratingMu, wavu.ratingMu);
+
+  const validWavuBackground = buildBackgroundSourceSnapshots({
+    ...profile,
+    latestBattleAt: "2026-08-21T13:00:00.000Z",
+    wavuRatings: { ...wavu, ratingMu: 91.5, latestRankedBattleAt: "2026-08-21T13:00:00.000Z" },
+  }, "2026-08-21T13:05:00.000Z");
+  assert.equal(validWavuBackground.wavuRatings.data.ratingMu, 91.5);
+  const updated = applySourceSnapshotsToFetchedStats(applied.node, validWavuBackground, metadata("2026-08-21T13:05:00.000Z"));
+  assert.equal(updated.node.profileStats.ratingMu, 91.5);
+});
+
+test("background capture carries the complete profile contract and only bumps the existing sync marker", () => {
+  const workerSource = readFileSync(new URL("../worker/ewgf-worker-with-stat-pentagon.js", import.meta.url), "utf8");
+  const backgroundStart = workerSource.indexOf("async function fetchAwardSnapshot");
+  const backgroundEnd = workerSource.indexOf("\nfunction normalizeCharacterKey", backgroundStart);
+  assert.ok(backgroundStart >= 0 && backgroundEnd > backgroundStart, "background snapshot function must remain discoverable");
+  const backgroundSource = workerSource.slice(backgroundStart, backgroundEnd);
+  assert.match(backgroundSource, /const statPentagon = extractStatPentagon\(html\)/);
+  assert.match(backgroundSource, /const playerMessage = extractPlayerMessage\(html\)/);
+  assert.match(backgroundSource, /const platformProfile = extractPlatformProfile\(html\)/);
+  assert.match(backgroundSource, /statPentagon,/);
+  assert.match(backgroundSource, /playerMessage,/);
+  assert.match(backgroundSource, /platformProfile,/);
+  assert.match(workerSource, /const BACKGROUND_SYNC_SCHEMA = "20260821-canonical-profile-completeness"/);
+  assert.match(workerSource, /const BACKGROUND_SYNC_PER_TICK = 1/);
+});
+
 test("background latest selection considers Wavu timestamp without stale profile details", () => {
   const workerSource = readFileSync(new URL("../worker/ewgf-worker-with-stat-pentagon.js", import.meta.url), "utf8");
   const selectionStart = workerSource.indexOf("function selectLatestBattle");

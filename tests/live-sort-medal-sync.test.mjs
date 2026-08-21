@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 const repoRoot = fileURLToPath(new URL("../", import.meta.url));
 const source = readFileSync(`${repoRoot}/user-lists-prototype.js`, "utf8");
 const index = readFileSync(`${repoRoot}/index.html`, "utf8");
+const integration = readFileSync(`${repoRoot}/stats-integration-v4.js`, "utf8");
 
 test("both stats-only reorder paths resync medals after moving cards", () => {
   const reorderStatements = [...source.matchAll(/grid\.appendChild\(fragment\);/g)];
@@ -23,4 +24,22 @@ test("medal rank and value remain derived from the recalculated member maps", ()
 
 test("the frontend script cache-buster identifies the medal-sync fix", () => {
   assert.match(index, /user-lists-prototype\.js\?v=20260821-latest-activity-persistence/);
+});
+
+test("page-open freshness requires a complete canonical profile before using the existing bounded repair path", () => {
+  assert.match(source, /const hasCompleteCanonicalProfileSnapshot =/);
+  assert.match(source, /hasFreshProfileSnapshot = \(member, now = Date\.now\(\)\) => \{\s*if \(!hasCompleteCanonicalProfileSnapshot\(member\)\) return false;/);
+  assert.match(source, /PAGE_OPEN_PROFILE_FRESHNESS_MS = 24 \* 60 \* 60 \* 1000/);
+  assert.match(source, /\.filter\(\(\{ member \}\) => !hasFreshProfileSnapshot\(member, now\)\)/);
+  assert.match(source, /window\.refreshCardStats\(gameId, key, \{[\s\S]*force: true/);
+});
+
+test("all visible rating paths reject undefined, null, and non-finite values", () => {
+  const liveCardStart = index.indexOf("const ratingEl = container.querySelector('.val-rating');");
+  const liveCardEnd = index.indexOf("const powerEl = container.querySelector('.val-power');", liveCardStart);
+  assert.ok(liveCardStart >= 0 && liveCardEnd > liveCardStart);
+  assert.match(index.slice(liveCardStart, liveCardEnd), /Number\.isFinite\(ratingValue\)/);
+  assert.match(index, /stats-preview-rating val-rating[^\n]*Number\.isFinite\(Number\(cachedStats\.ratingMu\)\)/);
+  assert.match(index, /const rating = stats\.ratingMu !== null && stats\.ratingMu !== undefined && stats\.ratingMu !== '' && Number\.isFinite\(Number\(stats\.ratingMu\)\)/);
+  assert.match(integration, /const hasRating = stats\.ratingMu !== null && stats\.ratingMu !== undefined && stats\.ratingMu !== '' && Number\.isFinite\(numericRating\)/);
 });

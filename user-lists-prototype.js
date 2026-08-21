@@ -5647,7 +5647,25 @@
       .filter(value => Number.isFinite(value) && value > 0);
     return candidates.length ? Math.max(...candidates) : 0;
   };
+  const hasCompleteCanonicalProfileSnapshot = member => {
+    const canonical = member?.workerFetchedStats;
+    if (!canonical || typeof canonical !== 'object' || canonical.schema !== '20260821-source-snapshots-v1') return true;
+    const snapshots = canonical.sourceSnapshots;
+    if (!snapshots || typeof snapshots !== 'object' || Array.isArray(snapshots)) return false;
+    const ewgfData = snapshots.ewgfProfile?.data;
+    const statPentagon = ewgfData?.statPentagon;
+    if (!statPentagon || typeof statPentagon !== 'object' || Array.isArray(statPentagon) || !Object.keys(statPentagon).length) return false;
+    const wavuSnapshot = snapshots.wavuRatings;
+    const wavuData = wavuSnapshot?.data;
+    if (
+      wavuSnapshot
+      && (wavuSnapshot.revisionAt === null || wavuSnapshot.revisionAt === undefined)
+      && (!wavuData || typeof wavuData !== 'object' || !Object.keys(wavuData).length)
+    ) return false;
+    return true;
+  };
   const hasFreshProfileSnapshot = (member, now = Date.now()) => {
+    if (!hasCompleteCanonicalProfileSnapshot(member)) return false;
     const timestamp = profileSnapshotTimestamp(member);
     return timestamp > 0 && now - timestamp >= 0 && now - timestamp < PAGE_OPEN_PROFILE_FRESHNESS_MS;
   };

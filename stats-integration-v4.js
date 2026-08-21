@@ -902,12 +902,12 @@
     }
     const ratingValue = box.querySelector('.val-rating');
     if (ratingValue) {
-      const ratingText = stats.ratingMu !== null ? 'μ ' + stats.ratingMu : '-';
+      const numericRating = Number(stats.ratingMu);
+      const hasRating = stats.ratingMu !== null && stats.ratingMu !== undefined && stats.ratingMu !== '' && Number.isFinite(numericRating);
+      const ratingText = hasRating ? 'μ ' + numericRating : '-';
       if (ratingValue.textContent !== ratingText) ratingValue.textContent = ratingText;
       const showHistoricalRating = Boolean(stats.ratingIsHistorical && dormant);
       ratingValue.classList.toggle('is-historical-rating', showHistoricalRating);
-      const numericRating = Number(stats.ratingMu);
-      const hasRating = Number.isFinite(numericRating);
       ratingValue.classList.toggle('is-rating-low', hasRating && numericRating < 1700);
       ratingValue.classList.toggle('is-rating-mid', hasRating && numericRating >= 1700 && numericRating < 2000);
       ratingValue.classList.toggle('is-rating-elite', hasRating && numericRating >= 2000);

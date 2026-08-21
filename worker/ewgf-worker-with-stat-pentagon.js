@@ -910,7 +910,7 @@ const AWARD_SNAPSHOT_MEMBERS_PER_TICK = 1;
 const BACKGROUND_SYNC_INTERVAL_MS = 12 * 60 * 60 * 1000;
 const BACKGROUND_SYNC_PER_TICK = 1;
 const BACKGROUND_SYNC_FAILURE_BACKOFF_MS = [15 * 60 * 1000, 60 * 60 * 1000, 6 * 60 * 60 * 1000, 12 * 60 * 60 * 1000];
-const BACKGROUND_SYNC_SCHEMA = "20260801-all-match-totals";
+const BACKGROUND_SYNC_SCHEMA = "20260821-canonical-profile-completeness";
 const WORKER_BUILD = "20260820-background-latest-and-queue-guard";
 
 function base64Url(bytes) {
@@ -998,6 +998,9 @@ async function fetchAwardSnapshot(env, gameId) {
   const html = await profileResult.value.text();
   const characters = extractCharacters(html);
   if (!characters.length) throw new Error("EWGF character table was not detected");
+  const statPentagon = extractStatPentagon(html);
+  const playerMessage = extractPlayerMessage(html);
+  const platformProfile = extractPlatformProfile(html);
   const profileLatest = extractLatestBattle(html, gameId);
   let officialLatest = null;
   if (!profileLatest) {
@@ -1032,6 +1035,9 @@ async function fetchAwardSnapshot(env, gameId) {
     gameId,
     capturedAt: new Date().toISOString(),
     playerName: extractEwgfPlayerName(html, gameId),
+    statPentagon,
+    playerMessage,
+    platformProfile,
     tekkenProwess: extractTekkenProwess(html),
     highestRank: extractHighestRankProfile(html).rank || null,
     rankedCharacterStats,
