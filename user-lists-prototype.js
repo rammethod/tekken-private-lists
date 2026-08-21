@@ -5606,10 +5606,10 @@
   // several full runs.
   const PAGE_OPEN_PROFILE_LIST_COOLDOWN_MS = 30 * 60 * 1000;
   const PAGE_OPEN_PROFILE_GLOBAL_COOLDOWN_MS = 5 * 60 * 1000;
-  // The server sweep is a 12-hour safety net. An actively opened list should
-  // feel fresher, so only profiles updated within the last three hours skip
-  // the on-open sequential pass.
-  const PAGE_OPEN_PROFILE_FRESHNESS_MS = 3 * 60 * 60 * 1000;
+  // The Worker keeps full profiles warm independently. A list open only needs
+  // the heavier EWGF/Wavu sweep when the saved profile has not been checked
+  // within the last day; latest-battle polling above remains near-real-time.
+  const PAGE_OPEN_PROFILE_FRESHNESS_MS = 24 * 60 * 60 * 1000;
   const PAGE_OPEN_PROFILE_SETTLE_MS = 1800;
   const PAGE_OPEN_PROFILE_GAP_MS = 900;
   const PAGE_OPEN_PROFILE_RETRY_DELAYS_MS = [65 * 1000, 5 * 60 * 1000, 15 * 60 * 1000];
@@ -5632,6 +5632,8 @@
     try { localStorage.setItem(pageOpenProfileStorageKey(listId), String(timestamp)); }
     catch (_) {}
   };
+  // These timestamps are cadence markers only; source revision ordering is
+  // enforced separately by the Worker's monotonic source-snapshot contract.
   const profileSnapshotTimestamp = member => {
     const stats = memberStats(member || {});
     const meta = stats.fetchMeta || member?.fetchedStats?.fetchMeta || {};
