@@ -547,6 +547,36 @@ test("background profile snapshots retain complete EWGF fields and omit unavaila
   assert.equal(updated.node.profileStats.ratingMu, 91.5);
 });
 
+test("partial background EWGF capture preserves existing authority while independent domains advance", () => {
+  const current = materializeFetchedStats({
+    current: {},
+    sourceSnapshots: sources(),
+    ...metadata(),
+  });
+  const partial = buildBackgroundSourceSnapshots({
+    ...profile,
+    statPentagon: null,
+    latestBattleAt: "2026-08-22T12:00:00.000Z",
+    wavuRatings: { ...wavu, ratingMu: 91.5, latestRankedBattleAt: "2026-08-22T12:00:00.000Z" },
+  }, "2026-08-22T12:05:00.000Z");
+
+  assert.equal(partial.ewgfProfile, undefined);
+  assert.equal(partial.wavuRatings.data.ratingMu, 91.5);
+  assert.equal(partial.latestActivity.revisionAt, Date.parse("2026-08-22T12:00:00.000Z"));
+
+  const applied = applySourceSnapshotsToFetchedStats(current, partial, metadata("2026-08-22T12:05:00.000Z"));
+  assert.deepEqual(applied.node.profileStats.statPentagon, profile.statPentagon);
+  assert.equal(applied.node.profileStats.ratingMu, 91.5);
+  assert.equal(applied.node.activityStats.latestBattleAt, "2026-08-22T12:00:00.000Z");
+
+  const invalid = buildBackgroundSourceSnapshots({
+    ...profile,
+    statPentagon: {},
+    wavuRatings: null,
+  }, "2026-08-22T12:10:00.000Z");
+  assert.equal(invalid.ewgfProfile, undefined);
+});
+
 test("background capture carries the complete profile contract and only bumps the existing sync marker", () => {
   const workerSource = readFileSync(new URL("../worker/ewgf-worker-with-stat-pentagon.js", import.meta.url), "utf8");
   const backgroundStart = workerSource.indexOf("async function fetchAwardSnapshot");

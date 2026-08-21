@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import { runInNewContext } from "node:vm";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = fileURLToPath(new URL("../", import.meta.url));
@@ -32,6 +33,40 @@ test("page-open freshness requires a complete canonical profile before using the
   assert.match(source, /PAGE_OPEN_PROFILE_FRESHNESS_MS = 24 \* 60 \* 60 \* 1000/);
   assert.match(source, /\.filter\(\(\{ member \}\) => !hasFreshProfileSnapshot\(member, now\)\)/);
   assert.match(source, /window\.refreshCardStats\(gameId, key, \{[\s\S]*force: true/);
+});
+
+test("canonical profile freshness follows EWGF observedAt rather than latestActivity metadata", () => {
+  const helperStart = source.indexOf("const canonicalWorkerStatsSchema =");
+  const helperEnd = source.indexOf("\n  const hasCompleteCanonicalProfileSnapshot", helperStart);
+  assert.ok(helperStart >= 0 && helperEnd > helperStart, "canonical freshness helpers must remain discoverable");
+  const helperBlock = source.slice(helperStart, helperEnd);
+  const { profileSnapshotTimestamp } = runInNewContext(
+    `(() => { ${helperBlock}; return { profileSnapshotTimestamp }; })()`,
+    { memberStats: member => member.workerFetchedStats },
+  );
+  const member = {
+    workerFetchedStats: {
+      schema: "20260821-source-snapshots-v1",
+      updatedAt: "2026-08-22T12:00:00.000Z",
+      fetchMeta: { completedAt: "2026-08-22T12:00:00.000Z" },
+      sourceSnapshots: {
+        ewgfProfile: { observedAt: "2026-08-20T00:00:00.000Z", data: { statPentagon: { offense: 80 } } },
+        latestActivity: { observedAt: "2026-08-22T12:00:00.000Z", data: { latestBattleAt: "2026-08-22T12:00:00.000Z" } },
+      },
+    },
+  };
+  const ewgfTimestamp = Date.parse("2026-08-20T00:00:00.000Z");
+  assert.equal(profileSnapshotTimestamp(member), ewgfTimestamp);
+
+  const activityAdvanced = JSON.parse(JSON.stringify(member));
+  activityAdvanced.workerFetchedStats.updatedAt = "2026-08-23T12:00:00.000Z";
+  activityAdvanced.workerFetchedStats.fetchMeta.completedAt = "2026-08-23T12:00:00.000Z";
+  activityAdvanced.workerFetchedStats.sourceSnapshots.latestActivity.observedAt = "2026-08-23T12:00:00.000Z";
+  assert.equal(profileSnapshotTimestamp(activityAdvanced), ewgfTimestamp);
+
+  const ewgfAdvanced = JSON.parse(JSON.stringify(member));
+  ewgfAdvanced.workerFetchedStats.sourceSnapshots.ewgfProfile.observedAt = "2026-08-22T00:00:00.000Z";
+  assert.equal(profileSnapshotTimestamp(ewgfAdvanced), Date.parse("2026-08-22T00:00:00.000Z"));
 });
 
 test("all visible rating paths reject undefined, null, and non-finite values", () => {

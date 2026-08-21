@@ -229,7 +229,6 @@ export function buildBackgroundSourceSnapshots(snapshot, observedAt) {
   const hasWavuRatings = Object.prototype.hasOwnProperty.call(snapshot || {}, "wavuRatings");
   const wavuRatings = hasWavuRatings ? snapshot.wavuRatings : null;
   const result = {
-    ewgfProfile: buildEwgfProfileSourceSnapshot(snapshot, observedAt),
     latestActivity: buildLatestActivitySourceSnapshot({
       battle: snapshot?.latestBattleAt
         ? {
@@ -242,6 +241,10 @@ export function buildBackgroundSourceSnapshots(snapshot, observedAt) {
       scope: snapshot?.latestBattleScope,
     }, observedAt),
   };
+  const statPentagon = snapshot?.statPentagon;
+  if (isRecord(statPentagon) && Object.keys(statPentagon).length) {
+    result.ewgfProfile = buildEwgfProfileSourceSnapshot(snapshot, observedAt);
+  }
   if (wavuRatings !== null && wavuRatings !== undefined) {
     result.wavuRatings = buildWavuSourceSnapshot(wavuRatings, observedAt);
   }
