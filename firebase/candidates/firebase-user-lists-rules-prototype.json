@@ -1,0 +1,79 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "access": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": false,
+        ".validate": "newData.isBoolean()"
+      }
+    },
+    "pendingAccess": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid && root.child('access').child(auth.uid).val() !== true",
+        ".validate": "newData.hasChildren(['email', 'requestedAt'])"
+      }
+    },
+    "accountUsers": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).val() === true",
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid && auth.token.email != null",
+        "displayName": { ".validate": "newData.isString() && newData.val().length <= 100" },
+        "email": { ".validate": "newData.isString() && newData.val().length <= 254" },
+        "lastLoginAt": { ".validate": "newData.isNumber()" },
+        "$other": { ".validate": false }
+      }
+    },
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        "profile": {
+          "displayName": { ".validate": "newData.isString() && newData.val().length <= 100" },
+          "email": { ".validate": "newData.isString() && newData.val().length <= 254" },
+          "photoURL": { ".validate": "newData.isString() && newData.val().length <= 2000" },
+          "lastLoginAt": { ".validate": "newData.isNumber()" },
+          "$other": { ".validate": false }
+        },
+        "lists": {
+          "$listId": {
+            "name": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 40" },
+            "order": { ".validate": "newData.isNumber()" },
+            "createdAt": { ".validate": "newData.isNumber()" },
+            "memberSort": {
+              ".validate": "!newData.exists() || (newData.hasChildren(['mode', 'direction']) && newData.child('mode').isString() && newData.child('direction').isString())",
+              "mode": { ".validate": "newData.isString() && (newData.val() === 'manual' || newData.val() === 'name' || newData.val() === 'rank' || newData.val() === 'games' || newData.val() === 'rating' || newData.val() === 'winrate' || newData.val() === 'power' || newData.val() === 'pentagon_attack' || newData.val() === 'pentagon_technique' || newData.val() === 'pentagon_appeal' || newData.val() === 'pentagon_spirit' || newData.val() === 'pentagon_defense')" },
+              "direction": { ".validate": "newData.isString() && (newData.val() === 'asc' || newData.val() === 'desc')" },
+              "excludeHistorical": { ".validate": "newData.isBoolean()" },
+              "$other": { ".validate": false }
+            },
+            "members": {
+              "$memberId": {
+                "name": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 50" },
+                "nameMode": { ".validate": "!newData.exists() || (newData.isString() && (newData.val() === 'manual' || newData.val() === 'auto'))" },
+                "nameSource": { ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 40)" },
+                "nameUpdatedAt": { ".validate": "!newData.exists() || newData.isNumber()" },
+                "autoNameUpdatedAt": { ".validate": "!newData.exists() || newData.isNumber()" },
+                "gameId": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 60" },
+                "subtitle": { ".validate": "!newData.exists() || newData.isString()" },
+                "xUrl": { ".validate": "!newData.exists() || newData.isString()" },
+                "countryCode": { ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 2)" },
+                "photoData": { ".validate": "!newData.exists() || newData.isString()" },
+                "color": { ".validate": "!newData.exists() || newData.isString()" },
+                "order": { ".validate": "!newData.exists() || newData.isNumber()" },
+                "updatedAt": { ".validate": "!newData.exists() || newData.isNumber()" },
+                "fetchedStats": { ".validate": "!newData.exists() || newData.hasChildren()" },
+                "$other": { ".validate": false }
+              }
+            },
+            "$other": { ".validate": false }
+          }
+        },
+        "$other": { ".validate": false }
+      }
+    }
+  }
+}
