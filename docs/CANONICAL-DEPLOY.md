@@ -8,8 +8,12 @@ copy of the Cloudflare Worker used by the data-refresh path.
 - Frontend source is the repository root and its `assets/` directory.
 - Worker source is `worker/ewgf-worker-with-stat-pentagon.js`.
 - Firebase Rules are preserved as named candidates under `firebase/candidates/`.
-- `FIREBASE RULES CANONICALITY: UNRESOLVED`. The candidate files must not be
-  treated as proof of the currently published Firebase Rules.
+- `FIREBASE RULES CANONICALITY: RESOLVED`. A read-only authenticated Rules GET
+  for project `tekken-private-lists` and its `asia-southeast1` Realtime Database
+  instance matched `firebase/candidates/firebase-user-lists-admin-rules.json`
+  exactly after normalized structural comparison. The prototype candidate did
+  not match. Future Rules changes must start from the matched admin candidate
+  and still require Lead Engineer review before any deploy.
 
 The production Worker settings confirmed during canonical cutover are: name
 `tight-bar-55c1`, compatibility date `2026-07-23`, no compatibility flags,
