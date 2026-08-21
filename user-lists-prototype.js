@@ -5618,6 +5618,7 @@
   const PAGE_OPEN_PROFILE_SETTLE_MS = 1800;
   const PAGE_OPEN_PROFILE_GAP_MS = 900;
   const PAGE_OPEN_PROFILE_RETRY_DELAYS_MS = [65 * 1000, 5 * 60 * 1000, 15 * 60 * 1000];
+  const canonicalWorkerStatsSchema = '20260821-source-snapshots-v1';
   let pageOpenProfileRunSerial = 0;
   let pageOpenProfileTimer = null;
   let pageOpenProfileStartedAt = 0;
@@ -5639,15 +5640,41 @@
   };
   // These timestamps are cadence markers only; source revision ordering is
   // enforced separately by the Worker's monotonic source-snapshot contract.
+  const parseProfileSnapshotTimestamp = value => {
+    const timestamp = typeof value === 'string' ? Date.parse(value) : Number(value);
+    return Number.isFinite(timestamp) && timestamp > 0 ? timestamp : 0;
+  };
   const profileSnapshotTimestamp = member => {
+    const canonical = member?.workerFetchedStats;
+    if (canonical && typeof canonical === 'object' && canonical.schema === canonicalWorkerStatsSchema) {
+      return parseProfileSnapshotTimestamp(canonical.sourceSnapshots?.ewgfProfile?.observedAt);
+    }
     const stats = memberStats(member || {});
     const meta = stats.fetchMeta || member?.fetchedStats?.fetchMeta || {};
     const candidates = [meta.completedAt, meta.updatedAt, stats.updatedAt, member?.fetchedStats?.updatedAt]
-      .map(value => typeof value === 'string' ? Date.parse(value) : Number(value))
-      .filter(value => Number.isFinite(value) && value > 0);
+      .map(parseProfileSnapshotTimestamp)
+      .filter(Boolean);
     return candidates.length ? Math.max(...candidates) : 0;
   };
+  const hasCompleteCanonicalProfileSnapshot = member => {
+    const canonical = member?.workerFetchedStats;
+    if (!canonical || typeof canonical !== 'object' || canonical.schema !== canonicalWorkerStatsSchema) return true;
+    const snapshots = canonical.sourceSnapshots;
+    if (!snapshots || typeof snapshots !== 'object' || Array.isArray(snapshots)) return false;
+    const ewgfData = snapshots.ewgfProfile?.data;
+    const statPentagon = ewgfData?.statPentagon;
+    if (!statPentagon || typeof statPentagon !== 'object' || Array.isArray(statPentagon) || !Object.keys(statPentagon).length) return false;
+    const wavuSnapshot = snapshots.wavuRatings;
+    const wavuData = wavuSnapshot?.data;
+    if (
+      wavuSnapshot
+      && (wavuSnapshot.revisionAt === null || wavuSnapshot.revisionAt === undefined)
+      && (!wavuData || typeof wavuData !== 'object' || !Object.keys(wavuData).length)
+    ) return false;
+    return true;
+  };
   const hasFreshProfileSnapshot = (member, now = Date.now()) => {
+    if (!hasCompleteCanonicalProfileSnapshot(member)) return false;
     const timestamp = profileSnapshotTimestamp(member);
     return timestamp > 0 && now - timestamp >= 0 && now - timestamp < PAGE_OPEN_PROFILE_FRESHNESS_MS;
   };

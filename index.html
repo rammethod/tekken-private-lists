@@ -2439,7 +2439,7 @@
   <script>
     // Change this fixed feature version only when integration UI assets change.
     (() => {
-      const assetVersion = '20260821-worker-authority-cutover';
+      const assetVersion = '20260821-canonical-profile-completeness';
       const stylesheet = document.createElement('link');
       stylesheet.rel = 'stylesheet';
       stylesheet.href = `stats-integration-v4.css?v=${assetVersion}`;
@@ -4008,7 +4008,9 @@
         if (rankEl) rankEl.textContent = stats.danRank || '-';
         const ratingEl = container.querySelector('.val-rating');
         if (ratingEl) {
-          ratingEl.textContent = stats.isError ? '取得失敗' : (stats.ratingMu !== null ? `μ ${stats.ratingMu}` : '-');
+          const ratingValue = Number(stats.ratingMu);
+          const hasRating = stats.ratingMu !== null && stats.ratingMu !== undefined && stats.ratingMu !== '' && Number.isFinite(ratingValue);
+          ratingEl.textContent = stats.isError ? '取得失敗' : (hasRating ? `μ ${ratingValue}` : '-');
         }
         const powerEl = container.querySelector('.val-power');
         if (powerEl) {
@@ -4405,9 +4407,9 @@
         const landscapeNameMode = m.nameMode === 'auto' ? '<span class="landscape-name-mode" aria-label="自動取得名を追従中" title="自動取得名を追従中">↻</span>' : '<span class="landscape-name-mode" aria-label="ユーザーが入力した固定名" title="ユーザーが入力した固定名">⌕</span>';
         const landscapeMain = initialFetchPending ? '準備中' : (cachedStats?.mainChar || '取得中');
         const landscapeRank = initialFetchPending ? '準備中' : (cachedStats?.danRank || '-');
-        const landscapeRating = initialFetchPending ? '取得中' : (cachedStats?.ratingMu !== null && cachedStats?.ratingMu !== undefined ? `μ ${cachedStats.ratingMu}` : '-');
-        const landscapePower = initialFetchPending ? '取得中' : (cachedStats?.tekkenPower ? Number(cachedStats.tekkenPower).toLocaleString() : '-');
         const landscapeRatingValue = Number(cachedStats?.ratingMu);
+        const landscapeRating = initialFetchPending ? '取得中' : (cachedStats?.ratingMu !== null && cachedStats?.ratingMu !== undefined && cachedStats?.ratingMu !== '' && Number.isFinite(landscapeRatingValue) ? `μ ${landscapeRatingValue}` : '-');
+        const landscapePower = initialFetchPending ? '取得中' : (cachedStats?.tekkenPower ? Number(cachedStats.tekkenPower).toLocaleString() : '-');
         const landscapeRatingTone = Number.isFinite(landscapeRatingValue)
           ? (landscapeRatingValue >= 2000 ? 'rating-elite' : (landscapeRatingValue >= 1700 ? 'rating-mid' : 'rating-low'))
           : '';
@@ -4471,7 +4473,7 @@
               </div>
               <div class="stats-preview-metric">
                 <span class="stats-preview-label">μ Rating</span>
-                <span class="stats-preview-value stats-preview-rating val-rating">${initialFetchPending ? '自動取得中' : (cachedStats && cachedStats.isError ? '取得失敗' : (cachedStats && cachedStats.ratingMu !== null ? `μ ${cachedStats.ratingMu}` : 'データ取得中'))}</span>
+                <span class="stats-preview-value stats-preview-rating val-rating">${initialFetchPending ? '自動取得中' : (cachedStats && cachedStats.isError ? '取得失敗' : (cachedStats && cachedStats.ratingMu !== null && cachedStats.ratingMu !== undefined && cachedStats.ratingMu !== '' && Number.isFinite(Number(cachedStats.ratingMu)) ? `μ ${Number(cachedStats.ratingMu)}` : 'データ取得中'))}</span>
               </div>
               <div class="stats-preview-metric">
                 <span class="stats-preview-label">Power</span>
@@ -4682,7 +4684,7 @@
       const image = String(stats.mainCharImage || member.photoData || '').trim();
       const imageHtml = image ? `<img class="compact-player-avatar" src="${escapeHtml(image)}" alt="${escapeHtml(stats.mainChar || name)}">` : `<span class="avatar-initials compact-player-avatar">${escapeHtml(getInitials(name))}</span>`;
       const rank = stats.danRank || 'データ取得中';
-      const rating = stats.ratingMu !== null && stats.ratingMu !== undefined ? `μ ${stats.ratingMu}` : 'データ取得中';
+      const rating = stats.ratingMu !== null && stats.ratingMu !== undefined && stats.ratingMu !== '' && Number.isFinite(Number(stats.ratingMu)) ? `μ ${Number(stats.ratingMu)}` : 'データ取得中';
       const power = stats.tekkenPower ? Number(stats.tekkenPower).toLocaleString() : 'データ取得中';
       const lifetimeGames = Number(stats.totalRecordedGames);
       const lifetimeGamesHtml = Number.isFinite(lifetimeGames)
@@ -5504,7 +5506,7 @@
   <script>
     (() => {
       const integrationScript = document.createElement('script');
-      const assetVersion = '20260821-worker-authority-cutover';
+      const assetVersion = '20260821-canonical-profile-completeness';
       integrationScript.src = `stats-integration-v4.js?v=${assetVersion}`;
       integrationScript.async = false;
       integrationScript.onload = () => {

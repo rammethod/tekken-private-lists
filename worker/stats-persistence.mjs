@@ -226,9 +226,9 @@ export function buildLatestActivitySourceSnapshot(selectedLatest, observedAt) {
 }
 
 export function buildBackgroundSourceSnapshots(snapshot, observedAt) {
-  return {
-    ewgfProfile: buildEwgfProfileSourceSnapshot(snapshot, observedAt),
-    wavuRatings: buildWavuSourceSnapshot(snapshot?.wavuRatings || snapshot, observedAt),
+  const hasWavuRatings = Object.prototype.hasOwnProperty.call(snapshot || {}, "wavuRatings");
+  const wavuRatings = hasWavuRatings ? snapshot.wavuRatings : null;
+  const result = {
     latestActivity: buildLatestActivitySourceSnapshot({
       battle: snapshot?.latestBattleAt
         ? {
@@ -241,6 +241,14 @@ export function buildBackgroundSourceSnapshots(snapshot, observedAt) {
       scope: snapshot?.latestBattleScope,
     }, observedAt),
   };
+  const statPentagon = snapshot?.statPentagon;
+  if (isRecord(statPentagon) && Object.keys(statPentagon).length) {
+    result.ewgfProfile = buildEwgfProfileSourceSnapshot(snapshot, observedAt);
+  }
+  if (wavuRatings !== null && wavuRatings !== undefined) {
+    result.wavuRatings = buildWavuSourceSnapshot(wavuRatings, observedAt);
+  }
+  return result;
 }
 
 function legacyViews(current) {
