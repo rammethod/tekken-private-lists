@@ -503,15 +503,134 @@ test("background snapshots contain three independent domains", () => {
   const background = buildBackgroundSourceSnapshots({
     ...profile,
     latestBattleAt: latest.battle.at,
+    ewgfProfileRevisionAt: profile.latestBattleAt,
     latestBattleCharacter: latest.battle.character,
     latestBattleType: latest.battle.battleType,
     wavuRatings: wavu,
   }, profileObservedAt);
   assert.deepEqual(Object.keys(background).sort(), ["ewgfProfile", "latestActivity", "wavuRatings"]);
-  assert.equal(background.ewgfProfile.revisionAt, Date.parse(latest.battle.at));
+  assert.equal(background.ewgfProfile.revisionAt, Date.parse(profile.latestBattleAt));
   assert.equal(background.wavuRatings.revisionAt, Date.parse(wavu.latestRankedBattleAt));
   assert.equal(background.latestActivity.revisionAt, Date.parse(latest.battle.at));
   assert.equal(background.latestActivity.data.latestBattleRevisionAt, Date.parse(latest.battle.at));
+});
+
+test("Wavu latest activity cannot advance the EWGF profile revision", () => {
+  const background = buildBackgroundSourceSnapshots({
+    ...profile,
+    latestBattleAt: "2026-08-22T12:00:00.000Z",
+    ewgfProfileRevisionAt: "2026-08-20T10:00:00.000Z",
+    latestBattleSource: "wavu-latest-ranked-fallback",
+    latestBattleScope: "ranked-only-fallback",
+    wavuRatings: { ...wavu, latestRankedBattleAt: "2026-08-22T12:00:00.000Z" },
+  }, "2026-08-22T12:05:00.000Z");
+
+  assert.equal(background.latestActivity.revisionAt, Date.parse("2026-08-22T12:00:00.000Z"));
+  assert.equal(background.wavuRatings.revisionAt, Date.parse("2026-08-22T12:00:00.000Z"));
+  assert.equal(background.ewgfProfile.revisionAt, Date.parse("2026-08-20T10:00:00.000Z"));
+});
+
+test("complete EWGF refresh repairs a legacy contaminated revision without rollback", () => {
+  const contaminatedCurrent = buildEwgfProfileSourceSnapshot({
+    ...profile,
+    latestBattleAt: "2026-08-22T12:00:00.000Z",
+    tekkenProwess: 999999,
+    statPentagon: null,
+  }, profileObservedAt);
+  const current = materializeFetchedStats({
+    current: {},
+    sourceSnapshots: { ewgfProfile: contaminatedCurrent },
+    ...metadata(),
+  });
+  const completeIncoming = buildEwgfProfileSourceSnapshot({
+    ...profile,
+    latestBattleAt: "2026-08-20T10:00:00.000Z",
+    tekkenProwess: 111111,
+    statPentagon: { offense: 90, defense: 88, technique: 86, spirit: 84, stamina: 82 },
+  }, "2026-08-22T12:05:00.000Z");
+
+  const applied = applySourceSnapshotsToFetchedStats(current, { ewgfProfile: completeIncoming }, metadata("2026-08-22T12:05:00.000Z"));
+  assert.equal(applied.changed, true);
+  assert.equal(applied.decisions.ewgfProfile.action, "repair");
+  assert.equal(applied.node.sourceSnapshots.ewgfProfile.revisionAt, Date.parse("2026-08-22T12:00:00.000Z"));
+  assert.equal(applied.node.profileStats.tekkenPower, 999999);
+  assert.deepEqual(applied.node.profileStats.statPentagon, completeIncoming.data.statPentagon);
+});
+
+test("newer complete EWGF refresh still replaces an older profile normally", () => {
+  const current = materializeFetchedStats({
+    current: {},
+    sourceSnapshots: {
+      ewgfProfile: buildEwgfProfileSourceSnapshot({
+        ...profile,
+        latestBattleAt: "2026-08-20T10:00:00.000Z",
+      }, profileObservedAt),
+    },
+    ...metadata(),
+  });
+  const newer = buildEwgfProfileSourceSnapshot({
+    ...profile,
+    latestBattleAt: "2026-08-23T10:00:00.000Z",
+    tekkenProwess: 888888,
+    statPentagon: { offense: 91, defense: 89, technique: 87, spirit: 85, stamina: 83 },
+  }, "2026-08-23T10:05:00.000Z");
+
+  const applied = applySourceSnapshotsToFetchedStats(current, { ewgfProfile: newer }, metadata("2026-08-23T10:05:00.000Z"));
+  assert.equal(applied.decisions.ewgfProfile.action, "applied");
+  assert.equal(applied.node.sourceSnapshots.ewgfProfile.revisionAt, Date.parse("2026-08-23T10:00:00.000Z"));
+  assert.equal(applied.node.profileStats.tekkenPower, 888888);
+  assert.deepEqual(applied.node.profileStats.statPentagon, newer.data.statPentagon);
+});
+
+test("canonical materialization restores historical Wavu mu only for a matching EWGF main", () => {
+  const ewgf = buildEwgfProfileSourceSnapshot(profile, profileObservedAt);
+  const matchingHistorical = buildWavuSourceSnapshot({
+    ...wavu,
+    mainChar: null,
+    mainCharGames: null,
+    ratingMu: null,
+    selectionSource: "no-qualified-character",
+    charGamesMap: { Kazuya: 99 },
+    charRatingMap: { Kazuya: 77.25 },
+    qualifiedCharRatingMap: {},
+  }, profileObservedAt);
+  const matchingNode = materializeFetchedStats({
+    current: {},
+    sourceSnapshots: { ewgfProfile: ewgf, wavuRatings: matchingHistorical },
+    ...metadata(),
+  });
+  assert.equal(matchingNode.profileStats.mainChar, "Kazuya");
+  assert.equal(matchingNode.profileStats.ratingMu, 77.25);
+  assert.equal(matchingNode.profileStats.ratingCharacter, "Kazuya");
+  assert.equal(matchingNode.profileStats.ratingIsHistorical, true);
+
+  const noMatchingRating = buildWavuSourceSnapshot({
+    ...wavu,
+    mainChar: null,
+    mainCharGames: null,
+    ratingMu: null,
+    selectionSource: "no-qualified-character",
+    charGamesMap: { Jin: 99 },
+    charRatingMap: { Jin: 88.5 },
+    qualifiedCharRatingMap: {},
+  }, profileObservedAt);
+  const missingNode = materializeFetchedStats({
+    current: {},
+    sourceSnapshots: { ewgfProfile: ewgf, wavuRatings: noMatchingRating },
+    ...metadata(),
+  });
+  assert.equal(missingNode.profileStats.ratingMu, undefined);
+  assert.equal(missingNode.profileStats.ratingCharacter, undefined);
+  assert.notEqual(missingNode.profileStats.ratingIsHistorical, true);
+
+  const qualifiedNode = materializeFetchedStats({
+    current: {},
+    sourceSnapshots: { ewgfProfile: ewgf, wavuRatings: buildWavuSourceSnapshot(wavu, profileObservedAt) },
+    ...metadata(),
+  });
+  assert.equal(qualifiedNode.profileStats.ratingMu, wavu.ratingMu);
+  assert.equal(qualifiedNode.profileStats.ratingCharacter, wavu.mainChar);
+  assert.notEqual(qualifiedNode.profileStats.ratingIsHistorical, true);
 });
 
 test("background profile snapshots retain complete EWGF fields and omit unavailable Wavu authority", () => {
@@ -586,9 +705,11 @@ test("background capture carries the complete profile contract and only bumps th
   assert.match(backgroundSource, /const statPentagon = extractStatPentagon\(html\)/);
   assert.match(backgroundSource, /const playerMessage = extractPlayerMessage\(html\)/);
   assert.match(backgroundSource, /const platformProfile = extractPlatformProfile\(html\)/);
+  assert.match(backgroundSource, /const ewgfProfileRevisionAt = profileLatest\?\.at \|\| officialLatest\?\.at \|\| null/);
   assert.match(backgroundSource, /statPentagon,/);
   assert.match(backgroundSource, /playerMessage,/);
   assert.match(backgroundSource, /platformProfile,/);
+  assert.match(backgroundSource, /ewgfProfileRevisionAt,/);
   assert.match(workerSource, /const BACKGROUND_SYNC_SCHEMA = "20260821-canonical-profile-completeness"/);
   assert.match(workerSource, /const BACKGROUND_SYNC_PER_TICK = 1/);
 });
