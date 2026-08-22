@@ -763,14 +763,16 @@ test("background capture carries the complete profile contract and only bumps th
   assert.ok(backgroundStart >= 0 && backgroundEnd > backgroundStart, "background snapshot function must remain discoverable");
   const backgroundSource = workerSource.slice(backgroundStart, backgroundEnd);
   assert.match(backgroundSource, /const statPentagon = extractStatPentagon\(html\)/);
+  assert.match(backgroundSource, /const highestRankProfile = extractHighestRankProfile\(html\)/);
   assert.match(backgroundSource, /const playerMessage = extractPlayerMessage\(html\)/);
   assert.match(backgroundSource, /const platformProfile = extractPlatformProfile\(html\)/);
   assert.match(backgroundSource, /const ewgfProfileRevisionAt = profileLatest\?\.at \|\| officialLatest\?\.at \|\| null/);
   assert.match(backgroundSource, /statPentagon,/);
   assert.match(backgroundSource, /playerMessage,/);
   assert.match(backgroundSource, /platformProfile,/);
+  assert.match(backgroundSource, /highestRankIcon: highestRankProfile\.rankIcon \|\| null/);
   assert.match(backgroundSource, /ewgfProfileRevisionAt,/);
-  assert.match(workerSource, /const BACKGROUND_SYNC_SCHEMA = "20260821-canonical-profile-completeness"/);
+  assert.match(workerSource, /const BACKGROUND_SYNC_SCHEMA = "20260822-dormant-all-time-highest-rank"/);
   assert.match(workerSource, /const BACKGROUND_SYNC_PER_TICK = 1/);
 });
 
@@ -837,11 +839,144 @@ test("background characterRanks.rank remains the current rank when highestRank d
   const snapshot = buildEwgfProfileSourceSnapshot({
     gameId: "PLAYER-001",
     highestRank: "Tekken God Supreme",
+    highestRankIcon: "supreme.png",
     characterRanks: { Kazuya: { rank: "Fujin", rankIcon: "fujin.png" } },
     rankedCharacterStats: { Kazuya: { games: 10, wins: 6, losses: 4, winRate: 0.6 } },
     totalRankedGames: 10,
   }, profileObservedAt);
   assert.equal(snapshot.data.danRank, "Fujin");
+  assert.equal(snapshot.data.rankIcon, "fujin.png");
+  assert.equal(snapshot.data.highestRankIcon, "supreme.png");
+  assert.equal(snapshot.data.rankIsAllTimeHighest, false);
+});
+
+test("canonical EWGF rank presentation uses current icon before all-time-highest fallback", () => {
+  const currentRank = buildEwgfProfileSourceSnapshot({
+    ...profile,
+    highestRank: "Tekken God Supreme",
+    highestRankIcon: "supreme.png",
+  }, profileObservedAt);
+  assert.equal(currentRank.data.danRank, "Fujin");
+  assert.equal(currentRank.data.rankIcon, "kazuya.png");
+  assert.equal(currentRank.data.highestRankIcon, "supreme.png");
+  assert.equal(currentRank.data.rankIsAllTimeHighest, false);
+
+  const fallbackRank = buildEwgfProfileSourceSnapshot({
+    ...profile,
+    rankIcon: "",
+    highestRank: "Tekken God Supreme",
+    highestRankIcon: "supreme.png",
+    characters: [{ ...profile.characters[0], rankIcon: "" }, profile.characters[1]],
+  }, profileObservedAt);
+  assert.equal(fallbackRank.data.danRank, "Tekken God Supreme");
+  assert.equal(fallbackRank.data.rankIcon, "supreme.png");
+  assert.equal(fallbackRank.data.highestRankIcon, "supreme.png");
+  assert.equal(fallbackRank.data.rankIsAllTimeHighest, true);
+  const materialized = materializeFetchedStats({
+    current: {},
+    sourceSnapshots: { ewgfProfile: fallbackRank },
+    ...metadata(),
+  });
+  assert.equal(materialized.profileStats.rankIcon, "supreme.png");
+  assert.equal(materialized.profileStats.highestRankIcon, "supreme.png");
+  assert.equal(materialized.profileStats.rankIsAllTimeHighest, true);
+  assert.equal(materialized.rankIcon, "supreme.png");
+  assert.equal(materialized.rankIsAllTimeHighest, true);
+
+  const noHistoricalIcon = buildEwgfProfileSourceSnapshot({
+    ...profile,
+    rankIcon: "",
+    highestRank: "Tekken God Supreme",
+    highestRankIcon: "",
+    characters: [{ ...profile.characters[0], rankIcon: "" }, profile.characters[1]],
+  }, profileObservedAt);
+  assert.equal(noHistoricalIcon.data.danRank, "Fujin");
+  assert.equal(noHistoricalIcon.data.rankIcon, "");
+  assert.equal(noHistoricalIcon.data.rankIsAllTimeHighest, false);
+});
+
+test("damaged canonical EWGF rank presentation repairs without rollback and then becomes a noop", async () => {
+  const currentSource = buildEwgfProfileSourceSnapshot({
+    ...profile,
+    latestBattleAt: "2026-08-22T12:00:00.000Z",
+    rankIcon: "",
+    highestRank: "Tekken God Supreme",
+    highestRankIcon: "supreme.png",
+    characters: [{ ...profile.characters[0], rankIcon: "" }, profile.characters[1]],
+  }, "2026-08-22T12:05:00.000Z");
+  const canonical = materializeFetchedStats({
+    current: {},
+    sourceSnapshots: { ewgfProfile: currentSource },
+    ...metadata("2026-08-22T12:05:00.000Z"),
+  });
+  const damaged = JSON.parse(JSON.stringify(canonical));
+  for (const target of [damaged.sourceSnapshots.ewgfProfile.data, damaged.profileStats, damaged]) {
+    target.rankIcon = "";
+    target.highestRankIcon = "";
+    target.rankIsAllTimeHighest = false;
+    target.danRank = "-";
+  }
+  damaged.sourceSnapshots.ewgfProfile.data.tekkenPower = 999999;
+  damaged.profileStats.tekkenPower = 999999;
+  damaged.tekkenPower = 999999;
+
+  const incoming = buildEwgfProfileSourceSnapshot({
+    ...profile,
+    latestBattleAt: "2026-08-20T10:00:00.000Z",
+    rankIcon: "",
+    highestRank: "Tekken God Supreme",
+    highestRankIcon: "supreme.png",
+    characters: [{ ...profile.characters[0], rankIcon: "" }, profile.characters[1]],
+  }, "2026-08-23T12:05:00.000Z");
+  let stored = damaged;
+  let writes = 0;
+  const transport = {
+    async read() { return { value: stored, etag: `etag-${writes}` }; },
+    async write(path, value) {
+      writes += 1;
+      stored = value;
+      return { ok: true, status: 200 };
+    },
+  };
+
+  const first = await persistStatsWithCas({
+    transport,
+    path: "stats",
+    incomingSnapshots: { ewgfProfile: incoming },
+    metadata: metadata("2026-08-23T12:05:00.000Z"),
+  });
+  assert.equal(first.status, "written");
+  assert.equal(writes, 1);
+  assert.equal(stored.sourceSnapshots.ewgfProfile.revisionAt, Date.parse("2026-08-22T12:00:00.000Z"));
+  assert.equal(stored.sourceSnapshots.ewgfProfile.observedAt, "2026-08-23T12:05:00.000Z");
+  assert.equal(stored.profileStats.rankIcon, "supreme.png");
+  assert.equal(stored.profileStats.highestRankIcon, "supreme.png");
+  assert.equal(stored.profileStats.rankIsAllTimeHighest, true);
+  assert.equal(stored.profileStats.danRank, "Tekken God Supreme");
+  assert.equal(stored.profileStats.tekkenPower, 999999);
+
+  const second = await persistStatsWithCas({
+    transport,
+    path: "stats",
+    incomingSnapshots: { ewgfProfile: incoming },
+    metadata: metadata("2026-08-23T12:06:00.000Z"),
+  });
+  assert.equal(second.status, "noop");
+  assert.equal(writes, 1);
+});
+
+test("background source snapshots carry the highest-rank icon and fallback flag", () => {
+  const background = buildBackgroundSourceSnapshots({
+    ...profile,
+    rankIcon: "",
+    highestRank: "Tekken God Supreme",
+    highestRankIcon: "supreme.png",
+    characters: [{ ...profile.characters[0], rankIcon: "" }, profile.characters[1]],
+    wavuRatings: null,
+  }, profileObservedAt);
+  assert.equal(background.ewgfProfile.data.highestRankIcon, "supreme.png");
+  assert.equal(background.ewgfProfile.data.rankIcon, "supreme.png");
+  assert.equal(background.ewgfProfile.data.rankIsAllTimeHighest, true);
 });
 
 test("a newer authoritative Wavu snapshot clears omitted Wavu fields and falls back to EWGF", () => {

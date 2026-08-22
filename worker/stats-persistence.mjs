@@ -16,6 +16,8 @@ const PROFILE_FIELDS = [
   "rankedDataVerified",
   "danRank",
   "rankIcon",
+  "highestRankIcon",
+  "rankIsAllTimeHighest",
   "tekkenPower",
   "totalRankedGames",
   "totalPlayerMatchGames",
@@ -177,6 +179,11 @@ export function buildEwgfProfileSourceSnapshot(profile, observedAt, revisionAt) 
   const totalPlayerMatchGames = Number(profile?.totalPlayerMatchGames || 0);
   const totalQuickMatchGames = Number(profile?.totalQuickMatchGames || 0);
   const totalGroupMatchGames = Number(profile?.totalGroupMatchGames || 0);
+  const currentRank = String(profile?.currentRank || mainCharacter?.currentRank || mainCharacter?.rank || "").trim();
+  const currentRankIcon = String(profile?.rankIcon || mainCharacter?.rankIcon || "").trim();
+  const highestRank = String(profile?.highestRank || profile?.danRank || "").trim();
+  const highestRankIcon = String(profile?.highestRankIcon || "").trim();
+  const rankIsAllTimeHighest = !currentRankIcon && Boolean(highestRank && highestRankIcon);
   const data = {
     gameId: String(profile?.ewgfId || profile?.gameId || ""),
     mainChar,
@@ -185,8 +192,10 @@ export function buildEwgfProfileSourceSnapshot(profile, observedAt, revisionAt) 
     losses: Number(profile?.losses ?? rankedMain?.losses ?? 0),
     rankedWinRate: Number(rankedMain?.winRate ?? profile?.rankedWinRate ?? (rankedGames ? rankedWins / rankedGames : 0)),
     rankedDataVerified: true,
-    danRank: String(profile?.currentRank || mainCharacter?.currentRank || mainCharacter?.rank || profile?.highestRank || profile?.danRank || "-"),
-    rankIcon: String(profile?.rankIcon || mainCharacter?.rankIcon || ""),
+    danRank: rankIsAllTimeHighest ? highestRank : (currentRank || "-"),
+    rankIcon: rankIsAllTimeHighest ? highestRankIcon : currentRankIcon,
+    highestRankIcon,
+    rankIsAllTimeHighest,
     tekkenPower: Number(profile?.tekkenProwess ?? profile?.tekkenPower ?? 0),
     totalRankedGames,
     totalPlayerMatchGames,
@@ -406,13 +415,44 @@ function isCompleteEwgfProfileSnapshot(snapshot) {
   return isRecord(statPentagon) && Object.keys(statPentagon).length > 0;
 }
 
-function repairIncompleteEwgfProfileSnapshot(current, incoming, decision) {
-  if (decision.comparison !== "older") return null;
+function repairEwgfProfileSnapshot(current, incoming, decision) {
   if (!isRecord(current) || !isRecord(incoming)) return null;
-  if (isCompleteEwgfProfileSnapshot(current) || !isCompleteEwgfProfileSnapshot(incoming)) return null;
 
-  const snapshot = cloneValue(current);
-  snapshot.data = mergeMissingDefined(current.data, incoming.data);
+  const canRepairRankPresentation = ["older", "equal", "unversioned"].includes(decision.comparison);
+  const incomingData = isRecord(incoming.data) ? incoming.data : {};
+  const currentData = isRecord(current.data) ? current.data : {};
+  const incomingRankIcon = hasMeaningfulValue(incomingData.rankIcon) ? String(incomingData.rankIcon).trim() : "";
+  const currentRankIcon = hasMeaningfulValue(currentData.rankIcon) ? String(currentData.rankIcon).trim() : "";
+  const incomingHighestRankIcon = hasMeaningfulValue(incomingData.highestRankIcon)
+    ? String(incomingData.highestRankIcon).trim()
+    : "";
+  const currentHighestRankIcon = hasMeaningfulValue(currentData.highestRankIcon)
+    ? String(currentData.highestRankIcon).trim()
+    : "";
+  const needsRankPresentationRepair = canRepairRankPresentation && Boolean(
+    (!currentRankIcon && incomingRankIcon)
+      || (!currentHighestRankIcon && incomingHighestRankIcon)
+      || (!currentRankIcon && incomingRankIcon && typeof incomingData.rankIsAllTimeHighest === "boolean" && currentData.rankIsAllTimeHighest !== incomingData.rankIsAllTimeHighest)
+      || ((!hasMeaningfulValue(currentData.danRank) || currentData.danRank === "-") && hasMeaningfulValue(incomingData.danRank)),
+  );
+  const needsPentagonRepair = decision.comparison === "older"
+    && !isCompleteEwgfProfileSnapshot(current)
+    && isCompleteEwgfProfileSnapshot(incoming);
+  if (!needsRankPresentationRepair && !needsPentagonRepair) return null;
+
+  const snapshot = cloneValue(decision.snapshot || current);
+  snapshot.data = needsPentagonRepair
+    ? mergeMissingDefined(snapshot.data, incoming.data)
+    : (isRecord(snapshot.data) ? cloneValue(snapshot.data) : {});
+
+  if (!currentRankIcon && incomingRankIcon) snapshot.data.rankIcon = incomingRankIcon;
+  if (!currentHighestRankIcon && incomingHighestRankIcon) snapshot.data.highestRankIcon = incomingHighestRankIcon;
+  if (!currentRankIcon && incomingRankIcon && typeof incomingData.rankIsAllTimeHighest === "boolean") {
+    snapshot.data.rankIsAllTimeHighest = incomingData.rankIsAllTimeHighest;
+  }
+  if ((!hasMeaningfulValue(currentData.danRank) || currentData.danRank === "-") && hasMeaningfulValue(incomingData.danRank)) {
+    snapshot.data.danRank = cloneValue(incomingData.danRank);
+  }
   snapshot.observedAt = newestObservedAt(current.observedAt, incoming.observedAt);
   return {
     accepted: true,
@@ -503,7 +543,7 @@ export function applySourceSnapshotsToFetchedStats(current, incomingSnapshots, m
     if (!Object.prototype.hasOwnProperty.call(incomingSnapshots || {}, domain)) continue;
     const monotonicDecision = applyMonotonicSourceSnapshot(currentSnapshots[domain] || null, incomingSnapshots[domain]);
     const decision = domain === "ewgfProfile"
-      ? (repairIncompleteEwgfProfileSnapshot(currentSnapshots[domain], incomingSnapshots[domain], monotonicDecision) || monotonicDecision)
+      ? (repairEwgfProfileSnapshot(currentSnapshots[domain], incomingSnapshots[domain], monotonicDecision) || monotonicDecision)
       : monotonicDecision;
     decisions[domain] = decision;
     if (!sameSourceContent(currentSnapshots[domain], decision.snapshot)) {
