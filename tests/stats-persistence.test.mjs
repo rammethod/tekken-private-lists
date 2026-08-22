@@ -965,6 +965,116 @@ test("damaged canonical EWGF rank presentation repairs without rollback and then
   assert.equal(writes, 1);
 });
 
+test("historical icon with a damaged flag repairs once and then becomes a noop", async () => {
+  const historicalSource = buildEwgfProfileSourceSnapshot({
+    ...profile,
+    highestRank: "Tekken God Supreme",
+    highestRankIcon: "supreme.png",
+    rankIcon: "",
+    characters: [{ ...profile.characters[0], rankIcon: "" }, profile.characters[1]],
+  }, profileObservedAt);
+  const damaged = materializeFetchedStats({
+    current: {},
+    sourceSnapshots: { ewgfProfile: historicalSource },
+    ...metadata(),
+  });
+  for (const target of [damaged.sourceSnapshots.ewgfProfile.data, damaged.profileStats, damaged]) {
+    target.rankIsAllTimeHighest = false;
+  }
+  const incoming = buildEwgfProfileSourceSnapshot({
+    ...profile,
+    highestRank: "Tekken God Supreme",
+    highestRankIcon: "supreme.png",
+    rankIcon: "",
+    characters: [{ ...profile.characters[0], rankIcon: "" }, profile.characters[1]],
+  }, "2026-08-23T12:05:00.000Z");
+  let stored = damaged;
+  let writes = 0;
+  const transport = {
+    async read() { return { value: stored, etag: `etag-${writes}` }; },
+    async write(path, value) {
+      writes += 1;
+      stored = value;
+      return { ok: true, status: 200 };
+    },
+  };
+
+  const first = await persistStatsWithCas({
+    transport,
+    path: "stats",
+    incomingSnapshots: { ewgfProfile: incoming },
+    metadata: metadata("2026-08-23T12:05:00.000Z"),
+  });
+  assert.equal(first.status, "written");
+  assert.equal(stored.profileStats.rankIcon, "supreme.png");
+  assert.equal(stored.profileStats.rankIsAllTimeHighest, true);
+
+  const second = await persistStatsWithCas({
+    transport,
+    path: "stats",
+    incomingSnapshots: { ewgfProfile: incoming },
+    metadata: metadata("2026-08-23T12:06:00.000Z"),
+  });
+  assert.equal(second.status, "noop");
+  assert.equal(writes, 1);
+});
+
+test("newer equal-revision EWGF observation promotes historical fallback to current rank", () => {
+  const historical = buildEwgfProfileSourceSnapshot({
+    ...profile,
+    latestBattleAt: "2026-08-22T12:00:00.000Z",
+    highestRank: "Tekken God Supreme",
+    highestRankIcon: "supreme.png",
+    rankIcon: "",
+    characters: [{ ...profile.characters[0], rankIcon: "" }, profile.characters[1]],
+  }, "2026-08-22T12:05:00.000Z");
+  const current = materializeFetchedStats({
+    current: {},
+    sourceSnapshots: { ewgfProfile: historical },
+    ...metadata("2026-08-22T12:05:00.000Z"),
+  });
+  const incoming = buildEwgfProfileSourceSnapshot({
+    ...profile,
+    latestBattleAt: "2026-08-22T12:00:00.000Z",
+  }, "2026-08-22T12:06:00.000Z");
+
+  const applied = applySourceSnapshotsToFetchedStats(current, { ewgfProfile: incoming }, metadata("2026-08-22T12:06:00.000Z"));
+  assert.equal(applied.changed, true);
+  assert.equal(applied.decisions.ewgfProfile.action, "repair");
+  assert.equal(applied.node.sourceSnapshots.ewgfProfile.revisionAt, historical.revisionAt);
+  assert.equal(applied.node.sourceSnapshots.ewgfProfile.observedAt, "2026-08-22T12:06:00.000Z");
+  assert.equal(applied.node.profileStats.danRank, "Fujin");
+  assert.equal(applied.node.profileStats.rankIcon, "kazuya.png");
+  assert.equal(applied.node.profileStats.rankIsAllTimeHighest, false);
+
+  const replay = applySourceSnapshotsToFetchedStats(applied.node, { ewgfProfile: incoming }, metadata("2026-08-22T12:07:00.000Z"));
+  assert.equal(replay.changed, false);
+});
+
+test("older EWGF observation cannot replace a valid current rank presentation", () => {
+  const currentSource = buildEwgfProfileSourceSnapshot({
+    ...profile,
+    latestBattleAt: "2026-08-22T12:00:00.000Z",
+  }, "2026-08-22T12:05:00.000Z");
+  const current = materializeFetchedStats({
+    current: {},
+    sourceSnapshots: { ewgfProfile: currentSource },
+    ...metadata("2026-08-22T12:05:00.000Z"),
+  });
+  const olderHistorical = buildEwgfProfileSourceSnapshot({
+    ...profile,
+    latestBattleAt: "2026-08-20T10:00:00.000Z",
+    characters: [{ ...profile.characters[0], currentRank: "Raijin", rankIcon: "older.png" }, profile.characters[1]],
+  }, "2026-08-23T12:06:00.000Z");
+
+  const applied = applySourceSnapshotsToFetchedStats(current, { ewgfProfile: olderHistorical }, metadata("2026-08-23T12:06:00.000Z"));
+  assert.equal(applied.changed, false);
+  assert.equal(applied.node.profileStats.danRank, "Fujin");
+  assert.equal(applied.node.profileStats.rankIcon, "kazuya.png");
+  assert.equal(applied.node.profileStats.rankIsAllTimeHighest, false);
+  assert.equal(applied.node.sourceSnapshots.ewgfProfile.revisionAt, currentSource.revisionAt);
+});
+
 test("background source snapshots carry the highest-rank icon and fallback flag", () => {
   const background = buildBackgroundSourceSnapshots({
     ...profile,

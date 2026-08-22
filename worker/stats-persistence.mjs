@@ -113,6 +113,12 @@ function newestObservedAt(current, incoming) {
   return cloneValue(current);
 }
 
+function isNewerObservedAt(current, incoming) {
+  const currentRevision = normalizeSourceRevision(current);
+  const incomingRevision = normalizeSourceRevision(incoming);
+  return incomingRevision !== null && (currentRevision === null || incomingRevision > currentRevision);
+}
+
 function normalizeCharacterKey(value) {
   return String(value || "").normalize("NFKD").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
@@ -429,12 +435,26 @@ function repairEwgfProfileSnapshot(current, incoming, decision) {
   const currentHighestRankIcon = hasMeaningfulValue(currentData.highestRankIcon)
     ? String(currentData.highestRankIcon).trim()
     : "";
+  const canRepairRankMetadata = ["equal", "unversioned"].includes(decision.comparison) || !currentRankIcon;
+  const incomingRankIsAllTimeHighest = incomingData.rankIsAllTimeHighest;
+  const currentRankIsAllTimeHighest = currentData.rankIsAllTimeHighest === true;
+  const sameHistoricalIcon = Boolean(currentRankIcon && incomingRankIcon && currentRankIcon === incomingRankIcon);
+  const incomingCurrentRank = hasMeaningfulValue(incomingData.danRank) && incomingData.danRank !== "-";
+  const canPromoteToCurrentRank = ["equal", "unversioned"].includes(decision.comparison)
+    && currentRankIsAllTimeHighest
+    && incomingRankIsAllTimeHighest === false
+    && Boolean(incomingRankIcon && incomingCurrentRank)
+    && isNewerObservedAt(current.observedAt, incoming.observedAt);
+  const needsHistoricalFlagRepair = canRepairRankMetadata
+    && incomingRankIsAllTimeHighest === true
+    && sameHistoricalIcon
+    && !currentRankIsAllTimeHighest;
   const needsRankPresentationRepair = canRepairRankPresentation && Boolean(
     (!currentRankIcon && incomingRankIcon)
-      || (!currentHighestRankIcon && incomingHighestRankIcon)
-      || (!currentRankIcon && incomingRankIcon && typeof incomingData.rankIsAllTimeHighest === "boolean" && currentData.rankIsAllTimeHighest !== incomingData.rankIsAllTimeHighest)
+      || (canRepairRankMetadata && !currentHighestRankIcon && incomingHighestRankIcon)
+      || needsHistoricalFlagRepair
       || ((!hasMeaningfulValue(currentData.danRank) || currentData.danRank === "-") && hasMeaningfulValue(incomingData.danRank)),
-  );
+  ) || canPromoteToCurrentRank;
   const needsPentagonRepair = decision.comparison === "older"
     && !isCompleteEwgfProfileSnapshot(current)
     && isCompleteEwgfProfileSnapshot(incoming);
@@ -449,6 +469,12 @@ function repairEwgfProfileSnapshot(current, incoming, decision) {
   if (!currentHighestRankIcon && incomingHighestRankIcon) snapshot.data.highestRankIcon = incomingHighestRankIcon;
   if (!currentRankIcon && incomingRankIcon && typeof incomingData.rankIsAllTimeHighest === "boolean") {
     snapshot.data.rankIsAllTimeHighest = incomingData.rankIsAllTimeHighest;
+  }
+  if (needsHistoricalFlagRepair) snapshot.data.rankIsAllTimeHighest = true;
+  if (canPromoteToCurrentRank) {
+    snapshot.data.danRank = cloneValue(incomingData.danRank);
+    snapshot.data.rankIcon = incomingRankIcon;
+    snapshot.data.rankIsAllTimeHighest = false;
   }
   if ((!hasMeaningfulValue(currentData.danRank) || currentData.danRank === "-") && hasMeaningfulValue(incomingData.danRank)) {
     snapshot.data.danRank = cloneValue(incomingData.danRank);
