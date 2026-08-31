@@ -2439,7 +2439,7 @@
   <script>
     // Change this fixed feature version only when integration UI assets change.
     (() => {
-      const assetVersion = '20260821-canonical-profile-completeness';
+      const assetVersion = '20260831-ewgf-stale-if-error';
       const stylesheet = document.createElement('link');
       stylesheet.rel = 'stylesheet';
       stylesheet.href = `stats-integration-v4.css?v=${assetVersion}`;
@@ -3257,7 +3257,13 @@
         // placeholder. Clear both storage forms so a later list render cannot
         // resurrect the frozen "準備中" card.
         if (!stats.isError && !stats.refreshFailed) delete stats.initialFetchPending;
-        stats.cachedAt = Date.now();
+        const degradedProfileObservedAt = Number(stats.ewgfProfileObservedAt || 0);
+        // Re-serving a last-known-good EWGF profile must not make the normal
+        // 12-hour client cache believe a fresh source observation occurred.
+        // Wavu fields are still stored from the same response independently.
+        stats.cachedAt = stats.ewgfDegraded && degradedProfileObservedAt > 0
+          ? degradedProfileObservedAt
+          : Date.now();
         localStorage.setItem(`${LOCAL_STATS_CACHE_KEY}_${gameId}`, JSON.stringify(stats));
 
         // 非同期取得の完了後に別リストへ切り替わっている場合、現在のリストへ
@@ -4023,6 +4029,8 @@
       if (!silent && stats && (stats.refreshFailed || stats.isError)) {
         const status = stats.refreshErrorStatus ? `HTTP ${stats.refreshErrorStatus}` : '通信エラー';
         showToast(`⚠️ 取得失敗（${status}）：${stats.refreshErrorMessage || '時間を置いて再取得してください'}`);
+      } else if (!silent && stats && stats.ewgfDegraded) {
+        showToast('ℹ️ EWGF一時障害のため、前回取得データを表示しています（Wavuは独立更新）');
       } else if (!silent && stats && stats.refreshUsedSharedCache) {
         showToast('ℹ️ 強制取得が混雑したため、安全な共有キャッシュを表示しました');
       } else if (!silent) {
@@ -4072,6 +4080,7 @@
       ready: { step: 5, tone: 'fresh', icon: '✓', label: '最新データ', detail: 'EWGF・Wavuから正常に取得しました' },
       cached: { step: 5, tone: 'cached', icon: '◷', label: '保存データ', detail: '保存済みの取得結果を使用しています' },
       partial: { step: 5, tone: 'partial', icon: '!', label: '一部データ', detail: '取得できた情報を表示しています' },
+      degraded: { step: 5, tone: 'partial', icon: '◌', label: '前回取得データを表示中', detail: 'EWGF一時障害のため前回取得データを表示しています' },
       error: { step: 1, tone: 'error', icon: '!', label: '取得失敗', detail: '取得診断から原因を確認できます' }
     };
 
@@ -4088,6 +4097,9 @@
           errorMessage: stats?.refreshErrorMessage || meta.errorMessage || '',
           errorStatus: stats?.refreshErrorStatus || meta.errorStatus || null
         };
+      }
+      if (stats?.ewgfDegraded || meta.state === 'degraded') {
+        return { ...FETCH_STAGE_VIEW.degraded, stats };
       }
       if (stats && !stats.initialFetchPending && stats.statsSource === '20260729-main-character-reasons') {
         if (meta.sourceErrors && Object.keys(meta.sourceErrors).length) {
@@ -4184,8 +4196,12 @@
     }
 
     function diagnosticSourceRow(label, state, timing) {
-      const normalized = state === 'ready' ? '取得済み' : (state === 'error' ? '取得失敗' : '記録なし');
-      const tone = state === 'ready' ? 'ready' : (state === 'error' ? 'error' : 'unknown');
+      const normalized = state === 'ready'
+        ? '取得済み'
+        : (state === 'degraded' ? '前回取得データ' : (state === 'error' ? '取得失敗' : '記録なし'));
+      const tone = state === 'ready' || state === 'degraded'
+        ? (state === 'degraded' ? 'partial' : 'ready')
+        : (state === 'error' ? 'error' : 'unknown');
       const timingText = Number.isFinite(Number(timing)) ? `${(Number(timing) / 1000).toFixed(1)}秒` : '—';
       return `<div class="fetch-source-row"><strong>${escapeHtml(label)}</strong><span class="tone-${tone}">${normalized}</span><small>${timingText}</small></div>`;
     }
@@ -4204,7 +4220,7 @@
       const state = acquisitionStateFor(member, stats, live);
       const meta = stats.fetchMeta || member.workerFetchedStats?.fetchMeta || member.fetchedStats?.fetchMeta || {};
       const sources = live?.sources || {
-        ewgf: meta.state === 'ready' ? 'ready' : (meta.state === 'error' ? 'error' : 'unknown'),
+        ewgf: stats?.ewgfDegraded ? 'degraded' : (meta.state === 'ready' ? 'ready' : (meta.state === 'error' ? 'error' : 'unknown')),
         wavu: meta.sourceErrors?.wavu ? 'error' : (meta.state === 'ready' ? 'ready' : 'unknown')
       };
       const timings = live?.sourceTimingsMs || meta.sourceTimingsMs || {};
@@ -4225,7 +4241,9 @@
       const activityTime = activityCheckedAt ? formatExactDateTime(activityCheckedAt) : 'まだ照会記録がありません';
       const latestBattleTime = latestBattleAt ? formatExactDateTime(latestBattleAt) : '最終対戦は未確認';
       const latestRankedTime = latestRankedAt ? formatExactDateTime(latestRankedAt) : '最終ランクマは未確認';
-      const workerDetail = backgroundSync
+      const workerDetail = stats.ewgfDegraded
+        ? 'EWGF一時障害のため前回取得データを表示'
+        : backgroundSync
         ? '完全自動取得で更新済み（約6時間間隔）'
         : (stats.refreshUsedSharedCache ? '共有キャッシュを使って取得済み' : '今回の取得経路は保存データです');
       const errorStatus = live?.errorStatus || stats.refreshErrorStatus || meta.errorStatus || null;
@@ -4244,8 +4262,8 @@
               <header><span aria-hidden="true">◈</span><div><strong>プロフィール・ランク</strong><small>${escapeHtml(profileTime)}</small></div></header>
               <p>段位・鉄拳力・μ・メインキャラ・ペンタゴン</p>
               <div class="data-location-route">
-                ${dataLocationStep('↗', 'EWGF / Wavu', `EWGF ${sources.ewgf === 'ready' ? '取得済み' : '未確認'}・Wavu ${sources.wavu === 'ready' ? '取得済み' : '未確認'}`, sources.ewgf === 'error' || sources.wavu === 'error' ? 'error' : (sources.ewgf === 'ready' ? 'ready' : 'unknown'))}
-                ${dataLocationStep('⚙', '拳トモ Worker', workerDetail, backgroundSync || stats.refreshUsedSharedCache ? 'ready' : 'unknown')}
+                ${dataLocationStep('↗', 'EWGF / Wavu', `EWGF ${sources.ewgf === 'ready' ? '取得済み' : (sources.ewgf === 'degraded' ? '前回取得データ' : '未確認')}・Wavu ${sources.wavu === 'ready' ? '取得済み' : '未確認'}`, sources.ewgf === 'error' || sources.wavu === 'error' ? 'error' : (sources.ewgf === 'ready' || sources.ewgf === 'degraded' ? 'ready' : 'unknown'))}
+                ${dataLocationStep('⚙', '拳トモ Worker', workerDetail, stats.ewgfDegraded || backgroundSync || stats.refreshUsedSharedCache ? 'ready' : 'unknown')}
                 ${dataLocationStep('☁', 'Firebase', hasFirebaseSnapshot ? 'このマイリストに保存済み' : 'このリストには未保存', hasFirebaseSnapshot ? 'ready' : 'unknown')}
                 ${dataLocationStep('◉', 'このブラウザ', hasBrowserSnapshot ? '端末キャッシュを利用可能' : '端末キャッシュは未作成', hasBrowserSnapshot ? 'ready' : 'unknown')}
               </div>
