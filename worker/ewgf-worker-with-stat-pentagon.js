@@ -117,10 +117,19 @@ function extractSpanNumber(rowHtml, className) {
 }
 
 function extractTekkenProwess(html) {
+  const metadata = extractStructuredObject(html, "playerMetadata");
+  const structuredProwess = parseNumber(metadata?.tekkenPower);
+  if (structuredProwess !== null) return structuredProwess;
+
   const pattern =
     /<span\b[^>]*>\s*Tekken\s+Prowess:\s*<\/span>\s*<span\b[^>]*class=["'][^"']*\btext-amber-400\b[^"']*["'][^>]*>\s*([\d,]+)\s*<\/span>/i;
   const match = html.match(pattern);
-  return match ? parseNumber(match[1]) : null;
+  if (match) return parseNumber(match[1]);
+
+  const currentLayoutMatch = html.match(
+    /<(?:p|span|div)\b[^>]*>\s*Tekken\s+Prowess\s*:?\s*<\/(?:p|span|div)>\s*<(?:p|span|div)\b[^>]*>\s*([\d,]+)\s*<\/(?:p|span|div)>/i,
+  );
+  return currentLayoutMatch ? parseNumber(currentLayoutMatch[1]) : null;
 }
 
 function extractHighestRankProfile(html) {
@@ -146,6 +155,14 @@ function platformFromUrl(value) {
     if (hostname === "psnprofiles.com") return "playstation";
     if (hostname === "xbox.com" || hostname.endsWith(".xbox.com")) return "xbox";
   } catch {}
+  return "";
+}
+
+function platformFromName(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "steam") return "steam";
+  if (normalized === "playstation" || normalized === "psn") return "playstation";
+  if (normalized === "xbox") return "xbox";
   return "";
 }
 
@@ -180,6 +197,13 @@ function buildPlatformProfile(platform, rawId, rawUrl = "") {
 
 function extractPlatformProfile(html) {
   const source = String(html || "");
+  const metadata = extractStructuredObject(source, "playerMetadata");
+  const polarisProfile = extractStructuredObject(source, "polarisProfile");
+  const structuredPlatform = platformFromName(metadata?.platform || polarisProfile?.platform);
+  const structuredId = metadata?.platformUsername || polarisProfile?.onlineId;
+  const structuredProfile = buildPlatformProfile(structuredPlatform, structuredId);
+  if (structuredProfile) return structuredProfile;
+
   // Prefer EWGF's own external link. This preserves the exact destination if
   // a platform changes its public-profile URL format.
   for (const match of source.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)) {
@@ -318,6 +342,13 @@ function extractPlayerMessage(html) {
     }
     return message.slice(0, 160);
   };
+  const metadata = extractStructuredObject(html, "playerMetadata");
+  const polarisProfile = extractStructuredObject(html, "polarisProfile");
+  for (const value of [metadata?.profileComment, polarisProfile?.myComment]) {
+    const message = normalizeMessage(decodeHtml(value));
+    if (message && !/^(?:null|undefined)$/i.test(message)) return message;
+  }
+
   const jsonKeys = ["playerMessage", "player_message", "playerMsg", "player_msg"];
   for (const key of jsonKeys) {
     const patterns = [
@@ -348,14 +379,16 @@ function extractPlayerMessage(html) {
     .split(/\r?\n/)
     .map((line) => line.replace(/\s+/g, " ").trim())
     .filter(Boolean);
+  const inlineMessage = visibleText.find((line) => /^Player\s+Message\s*:\s*.+$/i.test(line));
   const labelIndex = visibleText.findIndex((line) => /^Player\s+Message\s*:?\s*$/i.test(line));
-  if (labelIndex < 0) return "";
-  const message = String(visibleText[labelIndex + 1] || "").trim();
+  const message = inlineMessage
+    ? inlineMessage.replace(/^Player\s+Message\s*:\s*/i, "").trim()
+    : String(labelIndex >= 0 ? visibleText[labelIndex + 1] || "" : "").trim();
   if (!message || /^(?:Set Profile|All time highest rank)$/i.test(message)) return "";
   return normalizeMessage(message);
 }
 
-function extractCharacters(html) {
+function extractLegacyCharacters(html) {
   const rowPattern = /<tr\b[^>]*>[\s\S]*?<\/tr>/gi;
   const characters = [];
   const seenCharacters = new Set();
@@ -421,50 +454,225 @@ function extractCharacters(html) {
   return characters;
 }
 
+function extractBalancedDivBlocksByClass(html, requiredClasses) {
+  const blocks = [];
+  const openingPattern = /<div\b[^>]*>/gi;
+  for (const openingMatch of String(html || "").matchAll(openingPattern)) {
+    const className = getAttribute(openingMatch[0], "class");
+    const classes = new Set(className.split(/\s+/).filter(Boolean));
+    if (!requiredClasses.every((requiredClass) => classes.has(requiredClass))) continue;
+
+    const tagPattern = /<\/?div\b[^>]*>/gi;
+    tagPattern.lastIndex = openingMatch.index + openingMatch[0].length;
+    let depth = 1;
+    for (const tagMatch of String(html || "").matchAll(tagPattern)) {
+      if (/^<\//.test(tagMatch[0])) depth -= 1;
+      else depth += 1;
+      if (depth === 0) {
+        blocks.push(String(html || "").slice(openingMatch.index, tagMatch.index + tagMatch[0].length));
+        break;
+      }
+    }
+  }
+  return blocks;
+}
+
+function extractCharacterPresentation(html) {
+  const records = new Map();
+  const blocks = extractBalancedDivBlocksByClass(html, ["relative", "flex", "items-center", "gap-2.5"]);
+  for (const block of blocks) {
+    const characterCodeMatch = block.match(/href=["']\/character\/([^"'/?#]+)["']/i);
+    const characterCode = characterCodeMatch ? decodeHtml(characterCodeMatch[1]) : "";
+    if (!characterCode) continue;
+
+    const imageTags = Array.from(block.matchAll(/<img\b[^>]*>/gi), (match) => match[0]);
+    const characterImageTag = imageTags.find((tag) => getAttribute(tag, "src").includes("/static/circular_character_icons/"));
+    if (!characterImageTag) continue;
+    const rankImageTag = imageTags.find((tag) => getAttribute(tag, "src").includes("/static/rank-icons/"));
+    const record = {
+      character: getAttribute(characterImageTag, "alt") || characterCode,
+      characterCode,
+      characterImage: getAttribute(characterImageTag, "src"),
+      rankIcon: rankImageTag ? getAttribute(rankImageTag, "src") : "",
+    };
+    const key = normalizeCharacterKey(characterCode);
+    const previous = records.get(key);
+    if (!previous || (!previous.rankIcon && record.rankIcon) || (!previous.characterImage && record.characterImage)) {
+      records.set(key, record);
+    }
+  }
+  return [...records.values()];
+}
+
+function normalizeStructuredJson(serialized) {
+  if (!serialized) return null;
+  try {
+    return JSON.parse(String(serialized));
+  } catch {
+    try {
+      return JSON.parse(String(serialized).replace(/\\"/g, '"').replace(/\\\\/g, "\\"));
+    } catch {
+      return null;
+    }
+  }
+}
+
+function extractStructuredObject(html, key) {
+  return normalizeStructuredJson(extractObjectAfterKey(html, key));
+}
+
+function extractStructuredArray(html, key) {
+  return normalizeStructuredJson(extractArrayAfterKey(html, key));
+}
+
+function extractStructuredCharacters(html) {
+  const playedCharacters = extractStructuredObject(html, "playedCharacters");
+  if (!playedCharacters || typeof playedCharacters !== "object" || Array.isArray(playedCharacters)) return [];
+
+  const presentation = extractCharacterPresentation(html);
+  const presentationByKey = new Map(presentation.map((record) => [normalizeCharacterKey(record.characterCode || record.character), record]));
+  const structured = [];
+  for (const [characterKey, modes] of Object.entries(playedCharacters)) {
+    const stats = modes?.RANKED_BATTLE;
+    if (!stats || typeof stats !== "object" || Array.isArray(stats)) continue;
+    const wins = Number(stats.wins);
+    const losses = Number(stats.losses);
+    if (!Number.isFinite(wins) || !Number.isFinite(losses) || wins < 0 || losses < 0) continue;
+
+    const domRecord = presentationByKey.get(normalizeCharacterKey(characterKey)) || null;
+    const currentRank = String(stats.currentSeasonRank || "").trim() || "Unranked";
+    structured.push({
+      character: domRecord?.character || characterKey,
+      characterCode: domRecord?.characterCode || "",
+      characterImage: domRecord?.characterImage
+        ? (domRecord.characterImage.startsWith("http") ? domRecord.characterImage : `https://ewgf.gg${domRecord.characterImage}`)
+        : "",
+      currentRank,
+      rankIcon: domRecord?.rankIcon
+        ? (domRecord.rankIcon.startsWith("http") ? domRecord.rankIcon : `https://ewgf.gg${domRecord.rankIcon}`)
+        : "",
+      wins,
+      losses,
+      games: wins + losses,
+    });
+  }
+
+  const structuredByKey = new Map(structured.map((record) => [normalizeCharacterKey(record.characterCode || record.character), record]));
+  const ordered = [];
+  for (const domRecord of presentation) {
+    const match = structuredByKey.get(normalizeCharacterKey(domRecord.characterCode || domRecord.character));
+    if (!match || ordered.includes(match)) continue;
+    ordered.push(match);
+  }
+  for (const record of structured) if (!ordered.includes(record)) ordered.push(record);
+  return ordered;
+}
+
+function extractCharacters(html) {
+  const structured = extractStructuredCharacters(html);
+  return structured.length ? structured : extractLegacyCharacters(html);
+}
+
 /*
  * Extract a balanced JSON object following a key in a Next.js Flight payload.
  * EWGF serializes the payload inside self.__next_f.push(), so property quotes
  * normally appear as \" in the raw HTML.
  */
-function extractObjectAfterKey(html, key) {
-  const markers = [`\\"${key}\\":`, `"${key}":`];
+function findBalancedValueEnd(value, start, opening, closing) {
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
 
-  for (const marker of markers) {
-    const markerIndex = html.indexOf(marker);
-    if (markerIndex < 0) continue;
+  for (let index = start; index < value.length; index += 1) {
+    const character = value[index];
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (character === "\\") {
+        escaped = true;
+      } else if (character === '"') {
+        inString = false;
+      }
+      continue;
+    }
 
-    const objectStart = html.indexOf("{", markerIndex + marker.length);
-    if (objectStart < 0) continue;
+    if (character === '"') {
+      inString = true;
+    } else if (character === opening) {
+      depth += 1;
+    } else if (character === closing) {
+      depth -= 1;
+      if (depth === 0) return index + 1;
+      if (depth < 0) return -1;
+    }
+  }
 
-    let depth = 0;
-    for (let index = objectStart; index < html.length; index += 1) {
-      if (html[index] === "{") depth += 1;
-      if (html[index] === "}") depth -= 1;
+  return -1;
+}
 
-      if (depth === 0) {
-        return html.slice(objectStart, index + 1);
+function decodeEscapedFlightValue(value) {
+  const characters = [];
+  const rawEnds = [];
+  for (let index = 0; index < value.length;) {
+    let character = value[index];
+    index += 1;
+    if (character === "\\" && index < value.length) {
+      const escaped = value[index];
+      index += 1;
+      if (escaped === "u" && /^[0-9a-f]{4}$/i.test(value.slice(index, index + 4))) {
+        character = String.fromCharCode(parseInt(value.slice(index, index + 4), 16));
+        index += 4;
+      } else {
+        const decoded = { '"': '"', "\\": "\\", "/": "/", b: "\b", f: "\f", n: "\n", r: "\r", t: "\t" }[escaped];
+        if (decoded === undefined) {
+          characters.push("\\", escaped);
+          rawEnds.push(index - 2, index - 1);
+          continue;
+        }
+        character = decoded;
       }
     }
+    characters.push(character);
+    rawEnds.push(index - 1);
+  }
+  return { text: characters.join(""), rawEnds };
+}
+
+function extractBalancedValueAfterKey(html, key, opening, closing) {
+  const source = String(html || "");
+  const markers = [
+    { value: `\\"${key}\\":`, escaped: true },
+    { value: `"${key}":`, escaped: false },
+  ];
+
+  for (const marker of markers) {
+    const markerIndex = source.indexOf(marker.value);
+    if (markerIndex < 0) continue;
+    const valueStart = source.indexOf(opening, markerIndex + marker.value.length);
+    if (valueStart < 0) continue;
+
+    if (!marker.escaped) {
+      const end = findBalancedValueEnd(source, valueStart, opening, closing);
+      if (end >= 0) return source.slice(valueStart, end);
+      continue;
+    }
+
+    const decoded = decodeEscapedFlightValue(source.slice(valueStart));
+    const end = findBalancedValueEnd(decoded.text, 0, opening, closing);
+    if (end < 0) continue;
+    const rawEnd = decoded.rawEnds[end - 1];
+    if (Number.isInteger(rawEnd)) return source.slice(valueStart, valueStart + rawEnd + 1);
   }
 
   return null;
 }
 
+function extractObjectAfterKey(html, key) {
+  return extractBalancedValueAfterKey(html, key, "{", "}");
+}
+
 function extractArrayAfterKey(html, key) {
-  const markers = [`\\"${key}\\":`, `"${key}":`];
-  for (const marker of markers) {
-    const markerIndex = html.indexOf(marker);
-    if (markerIndex < 0) continue;
-    const arrayStart = html.indexOf("[", markerIndex + marker.length);
-    if (arrayStart < 0) continue;
-    let depth = 0;
-    for (let index = arrayStart; index < html.length; index += 1) {
-      if (html[index] === "[") depth += 1;
-      if (html[index] === "]") depth -= 1;
-      if (depth === 0) return html.slice(arrayStart, index + 1);
-    }
-  }
-  return null;
+  return extractBalancedValueAfterKey(html, key, "[", "]");
 }
 
 function isScore(value, maximum) {
@@ -513,17 +721,7 @@ function normalizeStatPentagon(value) {
 }
 
 function extractStatPentagon(html) {
-  const serialized = extractObjectAfterKey(html, "statPentagonData");
-  if (!serialized) return null;
-
-  try {
-    // The object contains numeric values and ASCII property names. Unescape the
-    // quotes added by the surrounding Next.js JavaScript string.
-    const parsed = JSON.parse(serialized.replace(/\\"/g, '"'));
-    return normalizeStatPentagon(parsed);
-  } catch {
-    return null;
-  }
+  return normalizeStatPentagon(extractStructuredObject(html, "statPentagonData"));
 }
 
 function normalizeRankedCharacterStats(value) {
@@ -551,22 +749,17 @@ function normalizeRankedCharacterStats(value) {
 }
 
 function extractCharacterModeStatsBatch(html, modeNames) {
-  const serialized = extractObjectAfterKey(html, "playedCharacters");
   const result = Object.fromEntries(modeNames.map((modeName) => [modeName, {}]));
-  if (!serialized) return result;
+  const playedCharacters = extractStructuredObject(html, "playedCharacters");
+  if (!playedCharacters || typeof playedCharacters !== "object" || Array.isArray(playedCharacters)) return result;
 
-  try {
-    const playedCharacters = JSON.parse(serialized.replace(/\\"/g, '"'));
-    for (const [character, modes] of Object.entries(playedCharacters)) {
-      for (const modeName of modeNames) {
-        const modeStats = normalizeRankedCharacterStats(modes?.[modeName]);
-        if (modeStats) result[modeName][character] = modeStats;
-      }
+  for (const [character, modes] of Object.entries(playedCharacters)) {
+    for (const modeName of modeNames) {
+      const modeStats = normalizeRankedCharacterStats(modes?.[modeName]);
+      if (modeStats) result[modeName][character] = modeStats;
     }
-    return result;
-  } catch {
-    return result;
   }
+  return result;
 }
 
 function extractCharacterModeStats(html, modeName) {
@@ -599,26 +792,23 @@ function normalizeMatchupRecords(value) {
 }
 
 function extractRankedCharacterMatchupsResult(html) {
-  const serialized = extractObjectAfterKey(html, "playedCharacters");
-  if (!serialized) return { parsed: false, matchups: {} };
-  try {
-    const playedCharacters = JSON.parse(serialized.replace(/\\"/g, '"'));
-    const matchups = {};
-    for (const [character, modes] of Object.entries(playedCharacters)) {
-      const ranked = modes?.RANKED_BATTLE;
-      const currentSeason = normalizeMatchupRecords(ranked?.currentSeasonMatchups);
-      if (!Object.keys(currentSeason).length) continue;
-      matchups[character] = {
-        scope: "current-season-ranked",
-        records: currentSeason,
-        bestMatchup: ranked?.bestMatchup || null,
-        worstMatchup: ranked?.worstMatchup || null,
-      };
-    }
-    return { parsed: true, matchups };
-  } catch {
+  const playedCharacters = extractStructuredObject(html, "playedCharacters");
+  if (!playedCharacters || typeof playedCharacters !== "object" || Array.isArray(playedCharacters)) {
     return { parsed: false, matchups: {} };
   }
+  const matchups = {};
+  for (const [character, modes] of Object.entries(playedCharacters)) {
+    const ranked = modes?.RANKED_BATTLE;
+    const currentSeason = normalizeMatchupRecords(ranked?.currentSeasonMatchups);
+    if (!Object.keys(currentSeason).length) continue;
+    matchups[character] = {
+      scope: "current-season-ranked",
+      records: currentSeason,
+      bestMatchup: ranked?.bestMatchup || null,
+      worstMatchup: ranked?.worstMatchup || null,
+    };
+  }
+  return { parsed: true, matchups };
 }
 
 function extractRankedCharacterMatchups(html) {
@@ -681,6 +871,24 @@ function extractLatestBattle(html, ewgfId) {
       character: String(isPlayerOne ? latest.p1Char : (isPlayerTwo ? latest.p2Char : "")),
     };
   }
+
+  // The current profile overview keeps the latest source timestamp in the
+  // structured player metadata even though the detailed battle table is now a
+  // client-side tab on the same route. These are source observations, never
+  // request-completion timestamps.
+  const metadata = extractStructuredObject(html, "playerMetadata");
+  const structuredCandidates = [];
+  const metadataLatest = metadata?.latestBattle;
+  const metadataAt = typeof metadataLatest === "string"
+    ? metadataLatest
+    : (metadataLatest?.battleAt || metadataLatest?.at || "");
+  if (Number.isFinite(Date.parse(String(metadataAt)))) {
+    structuredCandidates.push({ at: String(metadataAt), battleType: "", character: "" });
+  }
+  const structuredLatest = structuredCandidates
+    .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))[0];
+  if (structuredLatest) return structuredLatest;
+
   // A timestamp-only fallback keeps existing activity display working when
   // EWGF changes the serialized battles payload.
   const patterns = [/\\"battleAt\\":\\"([^"\\]+)\\"/g, /"battleAt":"([^"]+)"/g];
@@ -1003,11 +1211,9 @@ async function fetchAwardSnapshot(env, gameId) {
   const playerMessage = extractPlayerMessage(html);
   const platformProfile = extractPlatformProfile(html);
   const profileLatest = extractLatestBattle(html, gameId);
+  // Background profile refreshes must not spend the paid battles API merely
+  // because the detailed Recent Battles tab is client-rendered.
   let officialLatest = null;
-  if (!profileLatest) {
-    try { officialLatest = await fetchOfficialLatestBattle(env, gameId); }
-    catch (error) { console.warn("Kentomo background latest battle fallback failed", gameId, error instanceof Error ? error.message : String(error)); }
-  }
   const modeStats = extractCharacterModeStatsBatch(html, ["RANKED_BATTLE", "PLAYER_BATTLE", "QUICK_BATTLE", "GROUP_BATTLE"]);
   const rankedCharacterStats = modeStats.RANKED_BATTLE;
   const playerCharacterStats = modeStats.PLAYER_BATTLE;
@@ -1730,16 +1936,10 @@ export default {
         ]);
         const profileHtmlLatest = profileHtmlResult.status === "fulfilled" ? profileHtmlResult.value : null;
         const wavuLatest = wavuResult.status === "fulfilled" ? wavuResult.value : null;
-        // The complete profile HTML includes all battle types. Only spend an
-        // official API request when that HTML route itself is unavailable.
+        // The profile route remains the free source. If it has no source
+        // timestamp, leave the EWGF latest detail unavailable and use Wavu's
+        // independent ranked observation instead of spending the paid API.
         let officialLatest = null;
-        if (!profileHtmlLatest) {
-          try {
-            officialLatest = await fetchOfficialLatestBattle(env, ewgfId);
-          } catch (error) {
-            console.warn("EWGF official fallback failed", error);
-          }
-        }
         const candidates = [
           { battle: officialLatest, source: "ewgf-official-battles-api", scope: "all-battle-types" },
           { battle: profileHtmlLatest, source: "ewgf-profile-recent-battles", scope: "all-battle-types" },
@@ -1874,14 +2074,9 @@ export default {
       const playerMessage = extractPlayerMessage(html);
       const platformProfile = extractPlatformProfile(html);
       const htmlLatestBattle = extractLatestBattle(html, ewgfId);
+      // Do not turn the overview's missing client-side battle table into a
+      // paid API fallback. Wavu/latest remain independent sources.
       let officialLatestBattle = null;
-      if (!htmlLatestBattle) {
-        try {
-          officialLatestBattle = await fetchOfficialLatestBattle(env, ewgfId);
-        } catch (error) {
-          console.warn("EWGF official latest battle fallback failed", error);
-        }
-      }
       const selectedLatest = selectLatestBattle([
         { battle: htmlLatestBattle, source: "ewgf-profile-recent-battles", scope: "all-battle-types" },
         { battle: officialLatestBattle, source: "ewgf-official-battles-api", scope: "all-battle-types" },
