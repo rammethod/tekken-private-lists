@@ -26,6 +26,8 @@ function loadExtractors() {
       extractPlayerMessage,
       extractPlatformProfile,
       extractLatestBattle,
+      extractStructuredObject,
+      extractStructuredArray,
     };
   })()`, { URL, console, encodeURIComponent });
 }
@@ -66,23 +68,42 @@ const playedCharacters = {
   },
 };
 
-function syntheticProfileHtml({ includeLatestBattle = true, recentActivityDate = "2026-09-01T12:00:00.000Z" } = {}) {
+const delimiterComment = 'message {foo} [bar] with "quoted" and C:\\tmp';
+const playedCharactersWithDelimiters = {
+  ...playedCharacters,
+  Kazuya: {
+    ...playedCharacters.Kazuya,
+    RANKED_BATTLE: {
+      ...playedCharacters.Kazuya.RANKED_BATTLE,
+      allTimeHighestRank: 'Tekken God {peak} [legacy] "quoted" and C:\\tmp',
+    },
+  },
+};
+
+function syntheticProfileHtml({
+  includeLatestBattle = true,
+  recentActivityDate = "2026-09-01T12:00:00.000Z",
+  profileComment = "fixture message",
+  characters = playedCharacters,
+  flight = true,
+} = {}) {
   const playerMetadata = {
     tekkenPower: 345678,
-    profileComment: "fixture message",
+    profileComment,
     platform: "STEAM",
     platformUsername: "12345678901234567",
   };
   if (includeLatestBattle) playerMetadata.latestBattle = "2026-08-30T12:00:00.000Z";
 
   const data = {
-    playedCharacters,
+    playedCharacters: characters,
     statPentagonData,
     playerMetadata,
     polarisProfile: { onlineId: "12345678901234567", platform: "STEAM", myComment: "fixture message" },
     recentActivity: [{ date: recentActivityDate, type: "RANKED_BATTLE", wins: 1, losses: 0 }],
   };
-  const flightString = JSON.stringify(JSON.stringify(data)).slice(1, -1);
+  const payload = JSON.stringify(data);
+  const flightString = flight ? JSON.stringify(payload).slice(1, -1) : payload;
   return `<main>
     <div class="relative flex items-center gap-2.5 px-3 py-2.5">
       <a href="/character/KAZUYA" class="relative flex-shrink-0 rounded-full"><img src="/static/circular_character_icons/kazuya.webp" alt="Kazuya"></a>
@@ -130,6 +151,33 @@ test("legacy table remains a fallback and malformed structured HTML fails closed
   assert.equal(extractors.extractCharacters(legacy)[0].currentRank, "Fujin");
   assert.equal(extractors.extractCharacters(legacy)[0].games, 12);
   assert.deepEqual(toPlain(extractors.extractCharacters(malformed)), []);
+
+  const truncatedObject = `<script>{"playerMetadata":{"profileComment":"{foo}"</script>`;
+  const truncatedArray = `<script>{"recentActivity":[{"date":"2026-09-01T00:00:00.000Z"}</script>`;
+  assert.equal(extractors.extractStructuredObject(truncatedObject, "playerMetadata"), null);
+  assert.equal(extractors.extractStructuredArray(truncatedArray, "recentActivity"), null);
+});
+
+test("balanced scanner handles delimiters and escapes in Flight and plain JSON", () => {
+  const extractors = loadExtractors();
+  const expectedRank = 'Tekken God {peak} [legacy] "quoted" and C:\\tmp';
+
+  for (const flight of [true, false]) {
+    const html = syntheticProfileHtml({
+      flight,
+      profileComment: delimiterComment,
+      characters: playedCharactersWithDelimiters,
+    });
+    const metadata = extractors.extractStructuredObject(html, "playerMetadata");
+    const characters = extractors.extractStructuredObject(html, "playedCharacters");
+    const activity = extractors.extractStructuredArray(html, "recentActivity");
+
+    assert.equal(metadata.profileComment, delimiterComment);
+    assert.equal(characters.Kazuya.RANKED_BATTLE.allTimeHighestRank, expectedRank);
+    assert.equal(activity.length, 1);
+    assert.equal(extractors.extractPlayerMessage(html), delimiterComment);
+    assert.equal(extractors.extractCharacters(html).length, 2);
+  }
 });
 
 test("current structured fields remain individually parseable", () => {

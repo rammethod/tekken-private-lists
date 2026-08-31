@@ -507,9 +507,13 @@ function extractCharacterPresentation(html) {
 function normalizeStructuredJson(serialized) {
   if (!serialized) return null;
   try {
-    return JSON.parse(String(serialized).replace(/\\"/g, '"').replace(/\\\\/g, "\\"));
+    return JSON.parse(String(serialized));
   } catch {
-    return null;
+    try {
+      return JSON.parse(String(serialized).replace(/\\"/g, '"').replace(/\\\\/g, "\\"));
+    } catch {
+      return null;
+    }
   }
 }
 
@@ -574,45 +578,101 @@ function extractCharacters(html) {
  * EWGF serializes the payload inside self.__next_f.push(), so property quotes
  * normally appear as \" in the raw HTML.
  */
-function extractObjectAfterKey(html, key) {
-  const markers = [`\\"${key}\\":`, `"${key}":`];
+function findBalancedValueEnd(value, start, opening, closing) {
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
 
-  for (const marker of markers) {
-    const markerIndex = html.indexOf(marker);
-    if (markerIndex < 0) continue;
+  for (let index = start; index < value.length; index += 1) {
+    const character = value[index];
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (character === "\\") {
+        escaped = true;
+      } else if (character === '"') {
+        inString = false;
+      }
+      continue;
+    }
 
-    const objectStart = html.indexOf("{", markerIndex + marker.length);
-    if (objectStart < 0) continue;
+    if (character === '"') {
+      inString = true;
+    } else if (character === opening) {
+      depth += 1;
+    } else if (character === closing) {
+      depth -= 1;
+      if (depth === 0) return index + 1;
+      if (depth < 0) return -1;
+    }
+  }
 
-    let depth = 0;
-    for (let index = objectStart; index < html.length; index += 1) {
-      if (html[index] === "{") depth += 1;
-      if (html[index] === "}") depth -= 1;
+  return -1;
+}
 
-      if (depth === 0) {
-        return html.slice(objectStart, index + 1);
+function decodeEscapedFlightValue(value) {
+  const characters = [];
+  const rawEnds = [];
+  for (let index = 0; index < value.length;) {
+    let character = value[index];
+    index += 1;
+    if (character === "\\" && index < value.length) {
+      const escaped = value[index];
+      index += 1;
+      if (escaped === "u" && /^[0-9a-f]{4}$/i.test(value.slice(index, index + 4))) {
+        character = String.fromCharCode(parseInt(value.slice(index, index + 4), 16));
+        index += 4;
+      } else {
+        const decoded = { '"': '"', "\\": "\\", "/": "/", b: "\b", f: "\f", n: "\n", r: "\r", t: "\t" }[escaped];
+        if (decoded === undefined) {
+          characters.push("\\", escaped);
+          rawEnds.push(index - 2, index - 1);
+          continue;
+        }
+        character = decoded;
       }
     }
+    characters.push(character);
+    rawEnds.push(index - 1);
+  }
+  return { text: characters.join(""), rawEnds };
+}
+
+function extractBalancedValueAfterKey(html, key, opening, closing) {
+  const source = String(html || "");
+  const markers = [
+    { value: `\\"${key}\\":`, escaped: true },
+    { value: `"${key}":`, escaped: false },
+  ];
+
+  for (const marker of markers) {
+    const markerIndex = source.indexOf(marker.value);
+    if (markerIndex < 0) continue;
+    const valueStart = source.indexOf(opening, markerIndex + marker.value.length);
+    if (valueStart < 0) continue;
+
+    if (!marker.escaped) {
+      const end = findBalancedValueEnd(source, valueStart, opening, closing);
+      if (end >= 0) return source.slice(valueStart, end);
+      continue;
+    }
+
+    const decoded = decodeEscapedFlightValue(source.slice(valueStart));
+    const end = findBalancedValueEnd(decoded.text, 0, opening, closing);
+    if (end < 0) continue;
+    const rawEnd = decoded.rawEnds[end - 1];
+    if (Number.isInteger(rawEnd)) return source.slice(valueStart, valueStart + rawEnd + 1);
   }
 
   return null;
 }
 
+function extractObjectAfterKey(html, key) {
+  return extractBalancedValueAfterKey(html, key, "{", "}");
+}
+
 function extractArrayAfterKey(html, key) {
-  const markers = [`\\"${key}\\":`, `"${key}":`];
-  for (const marker of markers) {
-    const markerIndex = html.indexOf(marker);
-    if (markerIndex < 0) continue;
-    const arrayStart = html.indexOf("[", markerIndex + marker.length);
-    if (arrayStart < 0) continue;
-    let depth = 0;
-    for (let index = arrayStart; index < html.length; index += 1) {
-      if (html[index] === "[") depth += 1;
-      if (html[index] === "]") depth -= 1;
-      if (depth === 0) return html.slice(arrayStart, index + 1);
-    }
-  }
-  return null;
+  return extractBalancedValueAfterKey(html, key, "[", "]");
 }
 
 function isScore(value, maximum) {
