@@ -1,5 +1,5 @@
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -13,31 +13,45 @@ function getAccountId(config) {
   return configValue(config, "account_id");
 }
 
-function getAuthToken() {
-  if (process.env.CLOUDFLARE_API_TOKEN) return process.env.CLOUDFLARE_API_TOKEN;
-
-  const appData = process.env.APPDATA || join(homedir(), "AppData", "Roaming");
-  const configCandidates = [
-    process.env.WRANGLER_AUTH_FILE,
-    join(appData, "xdg.config", ".wrangler", "config", "default.toml"),
-    join(process.env.XDG_CONFIG_HOME || join(homedir(), ".config"), ".wrangler", "config", "default.toml"),
-  ].filter(Boolean);
-
-  for (const authPath of configCandidates) {
-    try {
-      const authText = readFileSync(authPath, "utf8");
-      const token = authText.match(/^oauth_token\s*=\s*"([^"]+)"/m)?.[1];
-      if (token) return token;
-    } catch {
-      // Try the next known Wrangler auth location without exposing local auth details.
-    }
-  }
-  return "";
+function wranglerBin(root = repoRoot) {
+  return join(root, "node_modules", ".bin", process.platform === "win32" ? "wrangler.cmd" : "wrangler");
 }
 
-async function cloudflareGet(token, path) {
+export function authHeadersFromWranglerJson(credentials) {
+  if (!credentials || typeof credentials !== "object" || Array.isArray(credentials)) return null;
+
+  if ((credentials.type === "oauth" || credentials.type === "api_token") && typeof credentials.token === "string" && credentials.token) {
+    return { Authorization: `Bearer ${credentials.token}` };
+  }
+  if (credentials.type === "api_key" && typeof credentials.email === "string" && credentials.email && typeof credentials.key === "string" && credentials.key) {
+    return { "X-Auth-Email": credentials.email, "X-Auth-Key": credentials.key };
+  }
+  return null;
+}
+
+export function authHeadersFromWranglerOutput(stdout, status = 0) {
+  if (status !== 0 || typeof stdout !== "string" || !stdout.trim()) return null;
+  try {
+    return authHeadersFromWranglerJson(JSON.parse(stdout));
+  } catch {
+    return null;
+  }
+}
+
+function getAuthHeaders(root = repoRoot) {
+  const result = spawnSync(wranglerBin(root), ["auth", "token", "--json"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    shell: process.platform === "win32",
+    windowsHide: true,
+  });
+  return authHeadersFromWranglerOutput(result.stdout, result.status);
+}
+
+async function cloudflareGet(authHeaders, path) {
   const response = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
-    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    headers: { ...authHeaders, Accept: "application/json" },
   });
   let body;
   try {
@@ -53,22 +67,22 @@ export async function readProductionWorkerState(root = repoRoot) {
   const config = readFileSync(join(root, "wrangler.toml"), "utf8");
   const accountId = getAccountId(config);
   const workerName = configValue(config, "name");
-  const token = getAuthToken();
+  const authHeaders = getAuthHeaders(root);
   if (!accountId || !workerName) throw new Error("wrangler.toml production target is incomplete");
-  if (!token) throw new Error("Cloudflare read-only authentication is unavailable");
+  if (!authHeaders) throw new Error("Cloudflare read-only authentication is unavailable");
 
   const base = `/accounts/${encodeURIComponent(accountId)}/workers/scripts/${encodeURIComponent(workerName)}`;
   const [settings, subdomain, schedules, domains, zones] = await Promise.all([
-    cloudflareGet(token, `${base}/settings`),
-    cloudflareGet(token, `${base}/subdomain`),
-    cloudflareGet(token, `${base}/schedules`),
-    cloudflareGet(token, `/accounts/${encodeURIComponent(accountId)}/workers/domains`),
-    cloudflareGet(token, `/zones?account.id=${encodeURIComponent(accountId)}&per_page=50`),
+    cloudflareGet(authHeaders, `${base}/settings`),
+    cloudflareGet(authHeaders, `${base}/subdomain`),
+    cloudflareGet(authHeaders, `${base}/schedules`),
+    cloudflareGet(authHeaders, `/accounts/${encodeURIComponent(accountId)}/workers/domains`),
+    cloudflareGet(authHeaders, `/zones?account.id=${encodeURIComponent(accountId)}&per_page=50`),
   ]);
 
   const routes = [];
   for (const zone of Array.isArray(zones) ? zones : []) {
-    const zoneRoutes = await cloudflareGet(token, `/zones/${encodeURIComponent(zone.id)}/workers/routes?per_page=100`);
+    const zoneRoutes = await cloudflareGet(authHeaders, `/zones/${encodeURIComponent(zone.id)}/workers/routes?per_page=100`);
     for (const route of Array.isArray(zoneRoutes) ? zoneRoutes : []) {
       if (route.script === workerName) routes.push({ pattern: route.pattern || "", script: route.script || "" });
     }
