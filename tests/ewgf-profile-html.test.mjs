@@ -66,19 +66,21 @@ const playedCharacters = {
   },
 };
 
-function syntheticProfileHtml() {
+function syntheticProfileHtml({ includeLatestBattle = true, recentActivityDate = "2026-09-01T12:00:00.000Z" } = {}) {
+  const playerMetadata = {
+    tekkenPower: 345678,
+    profileComment: "fixture message",
+    platform: "STEAM",
+    platformUsername: "12345678901234567",
+  };
+  if (includeLatestBattle) playerMetadata.latestBattle = "2026-08-30T12:00:00.000Z";
+
   const data = {
     playedCharacters,
     statPentagonData,
-    playerMetadata: {
-      tekkenPower: 345678,
-      profileComment: "fixture message",
-      platform: "STEAM",
-      platformUsername: "12345678901234567",
-      latestBattle: "2026-08-30T12:00:00.000Z",
-    },
+    playerMetadata,
     polarisProfile: { onlineId: "12345678901234567", platform: "STEAM", myComment: "fixture message" },
-    recentActivity: [{ date: "2026-08-29T12:00:00.000Z", type: "RANKED_BATTLE", wins: 1, losses: 0 }],
+    recentActivity: [{ date: recentActivityDate, type: "RANKED_BATTLE", wins: 1, losses: 0 }],
   };
   const flightString = JSON.stringify(JSON.stringify(data)).slice(1, -1);
   return `<main>
@@ -156,11 +158,18 @@ test("current structured fields remain individually parseable", () => {
   assert.deepEqual(toPlain(latest), { at: "2026-08-30T12:00:00.000Z", battleType: "", character: "" });
 });
 
-test("current overview timestamp prevents paid latest-battle fallback", () => {
+test("EWGF latest authority excludes recentActivity dates and paid fallback", () => {
   const extractors = loadExtractors();
   const latest = extractors.extractLatestBattle(syntheticProfileHtml(), "fixture-target");
   assert.ok(latest, "HTTP-200 new-layout profile must provide a source timestamp");
   assert.equal(latest.at, "2026-08-30T12:00:00.000Z");
+  assert.doesNotMatch(workerSource, /extractStructuredArray\(html,\s*"recentActivity"\)/);
+
+  const activityOnly = extractors.extractLatestBattle(
+    syntheticProfileHtml({ includeLatestBattle: false }),
+    "fixture-target",
+  );
+  assert.equal(activityOnly, null, "recentActivity alone must not generate an EWGF latest source");
 
   const definitionStart = workerSource.indexOf("async function fetchOfficialLatestBattle");
   const definitionEnd = workerSource.indexOf("async function fetchProfileHtmlLatestBattle", definitionStart);

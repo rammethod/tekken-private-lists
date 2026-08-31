@@ -817,7 +817,6 @@ function extractLatestBattle(html, ewgfId) {
   // client-side tab on the same route. These are source observations, never
   // request-completion timestamps.
   const metadata = extractStructuredObject(html, "playerMetadata");
-  const recentActivity = extractStructuredArray(html, "recentActivity");
   const structuredCandidates = [];
   const metadataLatest = metadata?.latestBattle;
   const metadataAt = typeof metadataLatest === "string"
@@ -825,13 +824,6 @@ function extractLatestBattle(html, ewgfId) {
     : (metadataLatest?.battleAt || metadataLatest?.at || "");
   if (Number.isFinite(Date.parse(String(metadataAt)))) {
     structuredCandidates.push({ at: String(metadataAt), battleType: "", character: "" });
-  }
-  if (Array.isArray(recentActivity)) {
-    for (const activity of recentActivity) {
-      const at = String(activity?.date || "");
-      if (!Number.isFinite(Date.parse(at))) continue;
-      structuredCandidates.push({ at, battleType: formatBattleType(activity?.type), character: "" });
-    }
   }
   const structuredLatest = structuredCandidates
     .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))[0];
