@@ -10,9 +10,14 @@ import {
 } from "./stats-persistence.mjs";
 
 const WORKER_CACHE_TTL_SECONDS = 12 * 60 * 60;
+const EWGF_LAST_KNOWN_GOOD_CACHE_TTL_SECONDS = 7 * 24 * 60 * 60;
+const EWGF_PROFILE_FETCH_TIMEOUT_MS = 30 * 1000;
 const LATEST_BATTLE_CACHE_TTL_SECONDS = 5 * 60;
 const WAVU_RATINGS_CACHE_TTL_SECONDS = 30 * 60;
 const FORCE_REFRESH_GUARD_TTL_SECONDS = 30 * 60;
+const EWGF_RETRIABLE_STATUS_CODES = new Set([429, 500, 502, 503, 504, 522, 524]);
+const PROFILE_CACHE_SCHEMA = "profile-20260802-lazy-matchups-v1";
+const PROFILE_LAST_KNOWN_GOOD_CACHE_SCHEMA = "profile-20260831-stale-if-error-v1";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -43,6 +48,7 @@ function json(data, status = 200, cacheControl = "no-store") {
 function withCacheStatus(response, status) {
   const headers = new Headers(response.headers);
   headers.set("X-EWGF-Worker-Cache", status);
+  if (status === "STALE-IF-ERROR") headers.set("X-EWGF-Profile-State", "degraded");
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
@@ -65,6 +71,58 @@ async function getFreshCachedJson(cache, key, ttlSeconds) {
   } catch (_) {
     return null;
   }
+}
+
+async function fetchWithTimeout(url, options, timeoutMs) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+export function isRetriableEwgfFailure(value) {
+  const status = typeof value === "number"
+    ? value
+    : Number(value?.status || value?.ewgfStatus || 0);
+  if (Number.isInteger(status) && status > 0) return EWGF_RETRIABLE_STATUS_CODES.has(status);
+  // A fetch rejection (including AbortError from a network timeout) has no
+  // HTTP status. The caller only passes failures from the upstream fetch/body
+  // read boundary, never parser or validation failures.
+  return true;
+}
+
+export function buildProfileLastKnownGoodCacheKey(cacheKey) {
+  const url = new URL(cacheKey.url);
+  url.searchParams.set("schema", PROFILE_LAST_KNOWN_GOOD_CACHE_SCHEMA);
+  return new Request(url.toString(), { method: "GET" });
+}
+
+export async function getBoundedLastKnownGoodProfile(cache, key, ttlSeconds = EWGF_LAST_KNOWN_GOOD_CACHE_TTL_SECONDS, now = Date.now()) {
+  const cached = await cache.match(key);
+  if (!cached || cached.status !== 200) return null;
+  try {
+    const payload = await cached.clone().json();
+    if (!payload?.ok || payload?.staleIfError === true || payload?.degraded === true) return null;
+    const cachedAt = Date.parse(payload?.workerCachedAt || "");
+    const age = now - cachedAt;
+    if (!Number.isFinite(cachedAt) || age < 0 || age >= ttlSeconds * 1000) return null;
+    return cached;
+  } catch (_) {
+    return null;
+  }
+}
+
+export async function buildStaleIfErrorProfileResponse(cachedResponse, reason = "ewgf-upstream-retriable") {
+  const payload = await cachedResponse.clone().json();
+  return json({
+    ...payload,
+    degraded: true,
+    staleIfError: true,
+    degradedReason: reason,
+  }, 200, "no-store");
 }
 
 async function hasFreshThrottleMarker(cache, key, ttlSeconds) {
@@ -1272,6 +1330,12 @@ function scheduleFirebaseSourceSnapshots(env, ctx, gameId, sourceSnapshots, meta
 function scheduleCachedFirebaseSourceSnapshot(env, ctx, gameId, cachedResponse, domain, buildSnapshot, fetchedBy) {
   const task = cachedResponse.clone().json()
     .then(cachedPayload => {
+      // A stale-if-error response is display-only. It retains the original
+      // source revision/observation and must never become a new Firebase
+      // source snapshot merely because it was re-served.
+      if (domain === "ewgfProfile" && (cachedPayload?.staleIfError === true || cachedPayload?.degraded === true)) {
+        return { targets: 0, shared: 0, skipped: "stale-if-error" };
+      }
       const observedAt = Date.now();
       return scheduleFirebaseSourceSnapshots(
         env,
@@ -1798,8 +1862,9 @@ export default {
     // Invalidate pre-detail cache entries after a Worker deployment.
     // This response deliberately excludes all-character matchup tables.
     // Bump the key so an older 12-hour profile body cannot keep serving them.
-    canonicalUrl.searchParams.set("schema", "profile-20260802-lazy-matchups-v1");
+    canonicalUrl.searchParams.set("schema", PROFILE_CACHE_SCHEMA);
     const cacheKey = new Request(canonicalUrl.toString(), { method: "GET" });
+    const lastKnownGoodCacheKey = buildProfileLastKnownGoodCacheKey(cacheKey);
 
     let forceGuardThrottleKey = null;
     // See the matching Wavu guard above. Page-open and manual requests share
@@ -1835,19 +1900,37 @@ export default {
       }
     }
     const profileUrl = `https://ewgf.gg/player/${encodeURIComponent(ewgfId)}`;
+    const serveLastKnownGoodProfile = async reason => {
+      const cachedLastKnownGood = await getBoundedLastKnownGoodProfile(
+        cache,
+        lastKnownGoodCacheKey,
+        EWGF_LAST_KNOWN_GOOD_CACHE_TTL_SECONDS,
+      );
+      if (!cachedLastKnownGood) return null;
+      const degradedResponse = await buildStaleIfErrorProfileResponse(cachedLastKnownGood, reason);
+      return withCacheStatus(degradedResponse, "STALE-IF-ERROR");
+    };
+    let upstreamResponse = null;
+    let upstreamBodyRead = false;
 
     try {
-      const response = await fetch(profileUrl, {
+      const response = await fetchWithTimeout(profileUrl, {
         method: "GET",
         redirect: "follow",
         headers: {
           Accept: "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
           "User-Agent": "Mozilla/5.0 compatible EWGF profile checker",
         },
-      });
+      }, EWGF_PROFILE_FETCH_TIMEOUT_MS);
+      upstreamResponse = response;
       const html = await response.text();
+      upstreamBodyRead = true;
 
       if (!response.ok) {
+        if (isRetriableEwgfFailure(response.status)) {
+          const staleResponse = await serveLastKnownGoodProfile(`ewgf-http-${response.status}`);
+          if (staleResponse) return staleResponse;
+        }
         return json(
           {
             error: "EWGF request failed",
@@ -1942,7 +2025,10 @@ export default {
           workerCacheTtlSeconds: WORKER_CACHE_TTL_SECONDS,
       };
       const successResponse = json(profileSnapshot, 200, `public, max-age=0, s-maxage=${WORKER_CACHE_TTL_SECONDS}`);
-      const cacheWrite = cache.put(cacheKey, successResponse.clone());
+      const cacheWrite = Promise.all([
+        cache.put(cacheKey, successResponse.clone()),
+        cache.put(lastKnownGoodCacheKey, successResponse.clone()),
+      ]);
       if (ctx && typeof ctx.waitUntil === "function") ctx.waitUntil(cacheWrite);
       else await cacheWrite;
       if (forceGuardThrottleKey) {
@@ -1978,6 +2064,10 @@ export default {
       }
       return withCacheStatus(successResponse, forceRefresh ? "REFRESH" : "MISS");
     } catch (error) {
+      if (!upstreamBodyRead && isRetriableEwgfFailure(upstreamResponse?.status || error)) {
+        const staleResponse = await serveLastKnownGoodProfile("ewgf-network-or-timeout");
+        if (staleResponse) return staleResponse;
+      }
       return json(
         {
           error: "Worker fetch failed",

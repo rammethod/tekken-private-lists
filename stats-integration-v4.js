@@ -284,6 +284,8 @@
       if (profileResult.status === 'rejected') throw profileResult.reason;
       const profile = profileResult.value;
       const wavu = wavuResult.status === 'fulfilled' ? wavuResult.value : null;
+      const ewgfDegraded = profile?.staleIfError === true || profile?.degraded === true;
+      const ewgfProfileObservedAt = Date.parse(profile?.workerCachedAt || '');
       if (wavuResult.status === 'rejected') {
         sourceErrors.wavu = wavuResult.reason?.message || String(wavuResult.reason);
         console.warn(`Wavu unavailable for ${id}; rendering EWGF profile fallback`, wavuResult.reason);
@@ -389,16 +391,24 @@
         totalRecordedGames:Number.isFinite(Number(profile.totalRecordedGames))
           ? Math.max(0, Number(profile.totalRecordedGames)) : cached?.totalRecordedGames,
         refreshUsedSharedCache,
+        ewgfDegraded,
+        ewgfDegradedReason: ewgfDegraded ? String(profile?.degradedReason || 'ewgf-upstream-retriable') : '',
+        ewgfProfileObservedAt: Number.isFinite(ewgfProfileObservedAt) ? ewgfProfileObservedAt : 0,
         fetchMeta:{
-          state:'ready',
+          state: ewgfDegraded ? 'degraded' : 'ready',
           startedAt:fetchStartedAt,
-          completedAt:Date.now(),
+          // A degraded response is a re-serve of the old EWGF observation;
+          // keep cadence/freshness anchored to that source timestamp.
+          completedAt: ewgfDegraded && Number.isFinite(ewgfProfileObservedAt)
+            ? ewgfProfileObservedAt : Date.now(),
           durationMs:Date.now() - fetchStartedAt,
           sourceTimingsMs,
           sourceErrors,
           schema:'20260729-acquisition-pipeline'
         },
-        totalBattlesFetched:0, statsSource:'20260729-main-character-reasons', isError:false, updatedAt:Date.now()
+        totalBattlesFetched:0, statsSource:'20260729-main-character-reasons', isError:false,
+        updatedAt: ewgfDegraded && Number.isFinite(ewgfProfileObservedAt)
+          ? ewgfProfileObservedAt : Date.now()
       };
       // This is Kentomo-owned notification state. EWGF/Wavu provide the
       // ranked-activity facts; the app remembers one return per dormant
