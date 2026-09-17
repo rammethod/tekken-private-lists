@@ -86,6 +86,7 @@ function syntheticProfileHtml({
   profileComment = "fixture message",
   characters = playedCharacters,
   flight = true,
+  includeCharacterImages = true,
 } = {}) {
   const playerMetadata = {
     tekkenPower: 345678,
@@ -104,13 +105,19 @@ function syntheticProfileHtml({
   };
   const payload = JSON.stringify(data);
   const flightString = flight ? JSON.stringify(payload).slice(1, -1) : payload;
+  const characterImages = includeCharacterImages
+    ? '<img src="/static/circular_character_icons/kazuya.webp" alt="Kazuya">'
+    : '';
+  const jinImage = includeCharacterImages
+    ? '<img src="/static/circular_character_icons/jin.webp" alt="Jin">'
+    : '';
   return `<main>
     <div class="relative flex items-center gap-2.5 px-3 py-2.5">
-      <a href="/character/KAZUYA" class="relative flex-shrink-0 rounded-full"><img src="/static/circular_character_icons/kazuya.webp" alt="Kazuya"></a>
+      <a href="/character/KAZUYA" class="relative flex-shrink-0 rounded-full">${characterImages}</a>
       <div><a href="/character/KAZUYA">KAZUYA</a><img src="/static/rank-icons/FujinT8.webp" alt="Fujin"></div>
     </div>
     <div class="relative flex items-center gap-2.5 px-3 py-2.5">
-      <a href="/character/JIN" class="relative flex-shrink-0 rounded-full"><img src="/static/circular_character_icons/jin.webp" alt="Jin"></a>
+      <a href="/character/JIN" class="relative flex-shrink-0 rounded-full">${jinImage}</a>
       <div><a href="/character/JIN">JIN</a><span>UNRANKED</span></div>
     </div>
     <div class="flex flex-col items-center gap-1"><img src="/static/rank-icons/TekkenGodT8.webp" alt="Tekken God rank icon"><span>All time highest rank</span></div>
@@ -141,6 +148,45 @@ test("new-layout structured characters normalize ranked and unranked cards", () 
   assert.equal(characters[1].currentRank, "Unranked");
   assert.equal(characters[1].rankIcon, "");
   assert.equal(characters[1].games, 0);
+});
+
+test("structured-only characters receive safe circular image fallbacks", () => {
+  const extractors = loadExtractors();
+  const html = syntheticProfileHtml({
+    includeCharacterImages: false,
+    characters: {
+      Kazuya: playedCharacters.Kazuya,
+      "Devil Jin": {
+        RANKED_BATTLE: {
+          currentSeasonRank: null,
+          wins: 0,
+          losses: 2,
+        },
+      },
+      Jin: playedCharacters.Jin,
+    },
+  });
+  const characters = extractors.extractCharacters(html);
+
+  assert.deepEqual(toPlain(characters.map((character) => character.characterImage)), [
+    "https://ewgf.gg/static/circular_character_icons/kazuya.webp",
+    "https://ewgf.gg/static/circular_character_icons/devil_jin.webp",
+    "https://ewgf.gg/static/circular_character_icons/jin.webp",
+  ]);
+  assert.equal(characters[0].currentRank, "Fujin");
+  assert.equal(characters[1].currentRank, "Unranked");
+  assert.equal(characters[2].currentRank, "Unranked");
+
+  const unsafe = extractors.extractCharacters(syntheticProfileHtml({
+    includeCharacterImages: false,
+    characters: {
+      "https://evil.example/character": {
+        RANKED_BATTLE: { currentSeasonRank: null, wins: 1, losses: 0 },
+      },
+    },
+  }));
+  assert.equal(unsafe.length, 1);
+  assert.equal(unsafe[0].characterImage, "");
 });
 
 test("legacy table remains a fallback and malformed structured HTML fails closed", () => {
