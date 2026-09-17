@@ -7,6 +7,23 @@
   };
 
   const normalizeCharacter = value => String(value || '').normalize('NFKD').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const buildCharacterImageFallback = characterName => {
+    if (typeof characterName !== 'string') return '';
+    const normalizedName = characterName.trim().normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+    if (!normalizedName || !/^[\x00-\x7F]+$/.test(normalizedName) || /[\\/:?#%]/.test(normalizedName)) return '';
+
+    const slug = normalizedName
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]+/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_+|_+$/g, '');
+    if (!slug || !/^[a-z0-9_-]+$/.test(slug)) return '';
+    return `https://ewgf.gg/static/circular_character_icons/${slug}.webp`;
+  };
+  const resolveMainCharacterImage = stats => {
+    const currentImage = typeof stats?.mainCharImage === 'string' ? stats.mainCharImage.trim() : '';
+    return currentImage || buildCharacterImageFallback(stats?.mainChar);
+  };
   const hasRecentRankedActivity = stats => (
     Number(stats?.recentRankedGames7d || 0) >= 3
     || Number(stats?.recentRankedGames30d || 0) >= 10
@@ -854,6 +871,7 @@
     const card = box.closest('.poster-card');
     const recentRankedActive = hasRecentRankedActivity(stats);
     const dormant = isDormantStats(stats);
+    const resolvedMainCharImage = resolveMainCharacterImage(stats);
     box.classList.toggle('is-historical-player', dormant);
     // Opening a list is display-only. Data acquisition is intentionally
     // limited to a newly added player and the Worker's background scheduler.
@@ -877,10 +895,10 @@
         if (existingGames) mainCopy.append(existingGames);
         main.append(mainCopy);
       }
-      setImageSourceIfChanged(image, stats.mainCharImage);
+      setImageSourceIfChanged(image, resolvedMainCharImage);
       image.alt = stats.mainChar ? `${stats.mainChar} icon` : '';
       image.hidden = false;
-      image.classList.toggle('is-image-missing', !stats.mainCharImage);
+      image.classList.toggle('is-image-missing', !resolvedMainCharImage);
       const name = main.querySelector('.val-main-char'); if (name && name.textContent !== (stats.mainChar || 'Unknown')) name.textContent = stats.mainChar || 'Unknown';
       const games = main.querySelector('.stats-preview-games'); if (games) games.textContent = stats.mainCharGames ? `· ${stats.mainCharGames.toLocaleString()} games` : '';
     }
@@ -957,7 +975,7 @@
         characterReasonButton.innerHTML = '<img alt=""><span>MAIN CHARACTER</span>';
         avatarFrame.append(characterReasonButton);
       }
-      setImageSourceIfChanged(characterReasonButton.querySelector('img'), stats.mainCharImage);
+      setImageSourceIfChanged(characterReasonButton.querySelector('img'), resolvedMainCharImage);
       characterReasonButton.querySelector('img').alt = stats.mainChar ? `${stats.mainChar} icon` : '';
       characterReasonButton.classList.toggle('is-over-player-photo', Boolean(member.photoData));
       characterReasonButton.title = `${stats.mainChar}がメインキャラと判定された根拠を表示`;
@@ -1035,14 +1053,14 @@
       card.classList.toggle('is-dormant-player-card', dormant);
       card.classList.toggle('has-recent-ranked-activity', recentRankedActive);
     }
-    if (avatarFrame && !member.photoData && stats.mainCharImage) {
+    if (avatarFrame && !member.photoData && resolvedMainCharImage) {
       let fallbackImage = avatarFrame.querySelector('.avatar-main-character-fallback');
       if (!fallbackImage) {
         fallbackImage = document.createElement('img');
         fallbackImage.className = 'avatar-main-character-fallback';
         avatarFrame.prepend(fallbackImage);
       }
-      setImageSourceIfChanged(fallbackImage, stats.mainCharImage);
+      setImageSourceIfChanged(fallbackImage, resolvedMainCharImage);
       fallbackImage.alt = (stats.mainChar || 'Main character') + ' image';
       avatarFrame.classList.add('uses-main-character-fallback');
       // プロフィール画像未設定時は、現役プレイヤーならキャラクター本来の色を使う。

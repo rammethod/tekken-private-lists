@@ -163,19 +163,34 @@ test("structured-only characters receive safe circular image fallbacks", () => {
           losses: 2,
         },
       },
+      "Armor King": {
+        RANKED_BATTLE: {
+          currentSeasonRank: "Mighty Ruler",
+          wins: 3,
+          losses: 1,
+        },
+      },
+      "Jack-8": {
+        RANKED_BATTLE: {
+          currentSeasonRank: "Destroyer",
+          wins: 4,
+          losses: 2,
+        },
+      },
       Jin: playedCharacters.Jin,
     },
   });
   const characters = extractors.extractCharacters(html);
+  const imagesByCharacter = Object.fromEntries(characters.map((character) => [character.character, character.characterImage]));
 
-  assert.deepEqual(toPlain(characters.map((character) => character.characterImage)), [
-    "https://ewgf.gg/static/circular_character_icons/kazuya.webp",
-    "https://ewgf.gg/static/circular_character_icons/devil_jin.webp",
-    "https://ewgf.gg/static/circular_character_icons/jin.webp",
-  ]);
+  assert.equal(imagesByCharacter.Kazuya, "https://ewgf.gg/static/circular_character_icons/kazuya.webp");
+  assert.equal(imagesByCharacter["Devil Jin"], "https://ewgf.gg/static/circular_character_icons/devil_jin.webp");
+  assert.equal(imagesByCharacter["Armor King"], "https://ewgf.gg/static/circular_character_icons/armor_king.webp");
+  assert.equal(imagesByCharacter["Jack-8"], "https://ewgf.gg/static/circular_character_icons/jack-8.webp");
+  assert.equal(imagesByCharacter.Jin, "https://ewgf.gg/static/circular_character_icons/jin.webp");
   assert.equal(characters[0].currentRank, "Fujin");
-  assert.equal(characters[1].currentRank, "Unranked");
-  assert.equal(characters[2].currentRank, "Unranked");
+  assert.equal(characters.find((character) => character.character === "Devil Jin").currentRank, "Unranked");
+  assert.equal(characters.find((character) => character.character === "Jin").currentRank, "Unranked");
 
   const unsafe = extractors.extractCharacters(syntheticProfileHtml({
     includeCharacterImages: false,

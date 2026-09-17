@@ -532,10 +532,10 @@ function buildCharacterImageFallback(characterName) {
 
   const slug = normalizedName
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/[^a-z0-9_-]+/g, "_")
     .replace(/_+/g, "_")
     .replace(/^_+|_+$/g, "");
-  if (!slug || !/^[a-z0-9_]+$/.test(slug)) return "";
+  if (!slug || !/^[a-z0-9_-]+$/.test(slug)) return "";
   return `https://ewgf.gg/static/circular_character_icons/${slug}.webp`;
 }
 
