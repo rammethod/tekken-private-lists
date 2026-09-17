@@ -525,6 +525,20 @@ function extractStructuredArray(html, key) {
   return normalizeStructuredJson(extractArrayAfterKey(html, key));
 }
 
+function buildCharacterImageFallback(characterName) {
+  if (typeof characterName !== "string") return "";
+  const normalizedName = characterName.trim().normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
+  if (!normalizedName || !/^[\x00-\x7F]+$/.test(normalizedName) || /[\\/:?#%]/.test(normalizedName)) return "";
+
+  const slug = normalizedName
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  if (!slug || !/^[a-z0-9_-]+$/.test(slug)) return "";
+  return `https://ewgf.gg/static/circular_character_icons/${slug}.webp`;
+}
+
 function extractStructuredCharacters(html) {
   const playedCharacters = extractStructuredObject(html, "playedCharacters");
   if (!playedCharacters || typeof playedCharacters !== "object" || Array.isArray(playedCharacters)) return [];
@@ -540,13 +554,15 @@ function extractStructuredCharacters(html) {
     if (!Number.isFinite(wins) || !Number.isFinite(losses) || wins < 0 || losses < 0) continue;
 
     const domRecord = presentationByKey.get(normalizeCharacterKey(characterKey)) || null;
+    const characterName = domRecord?.character || characterKey;
+    const characterImage = domRecord?.characterImage
+      ? (domRecord.characterImage.startsWith("http") ? domRecord.characterImage : `https://ewgf.gg${domRecord.characterImage}`)
+      : buildCharacterImageFallback(characterName);
     const currentRank = String(stats.currentSeasonRank || "").trim() || "Unranked";
     structured.push({
-      character: domRecord?.character || characterKey,
+      character: characterName,
       characterCode: domRecord?.characterCode || "",
-      characterImage: domRecord?.characterImage
-        ? (domRecord.characterImage.startsWith("http") ? domRecord.characterImage : `https://ewgf.gg${domRecord.characterImage}`)
-        : "",
+      characterImage,
       currentRank,
       rankIcon: domRecord?.rankIcon
         ? (domRecord.rankIcon.startsWith("http") ? domRecord.rankIcon : `https://ewgf.gg${domRecord.rankIcon}`)

@@ -79,3 +79,24 @@ test("all visible rating paths reject undefined, null, and non-finite values", (
   assert.match(index, /const rating = stats\.ratingMu !== null && stats\.ratingMu !== undefined && stats\.ratingMu !== '' && Number\.isFinite\(Number\(stats\.ratingMu\)\)/);
   assert.match(integration, /const hasRating = stats\.ratingMu !== null && stats\.ratingMu !== undefined && stats\.ratingMu !== '' && Number\.isFinite\(numericRating\)/);
 });
+
+test("cached character images use the safe display fallback without overwriting real images", () => {
+  const helperStart = integration.indexOf("  const buildCharacterImageFallback =");
+  const helperEnd = integration.indexOf("\n  const selectCharacterCandidates", helperStart);
+  assert.ok(helperStart >= 0 && helperEnd > helperStart, "character image helpers must remain discoverable");
+  const { resolveMainCharacterImage } = runInNewContext(
+    `(() => { ${integration.slice(helperStart, helperEnd)}; return { resolveMainCharacterImage }; })()`,
+    { window: {} },
+  );
+
+  const cachedKazuya = { mainChar: "Kazuya", mainCharImage: "" };
+  const cachedJack = { mainChar: "Jack-8", mainCharImage: "" };
+  const realImage = { mainChar: "Jack-8", mainCharImage: "https://cdn.example.test/current.webp" };
+  assert.equal(resolveMainCharacterImage(cachedKazuya), "https://ewgf.gg/static/circular_character_icons/kazuya.webp");
+  assert.equal(resolveMainCharacterImage(cachedJack), "https://ewgf.gg/static/circular_character_icons/jack-8.webp");
+  assert.equal(resolveMainCharacterImage(realImage), realImage.mainCharImage);
+  assert.equal(cachedKazuya.mainCharImage, "");
+  assert.equal(cachedJack.mainCharImage, "");
+  assert.match(integration, /const resolvedMainCharImage = resolveMainCharacterImage\(stats\)/);
+  assert.match(integration, /setImageSourceIfChanged\(image, resolvedMainCharImage\)/);
+});
