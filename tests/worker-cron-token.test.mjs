@@ -20,14 +20,14 @@ const env = {
 
 async function runScheduledFixture({ users = {}, schedules = {}, state = {}, failUsers = false, rejectUpstream = false } = {}) {
   const originalFetch = globalThis.fetch;
-  const originalCrypto = globalThis.crypto;
+  const cryptoDescriptor = Object.getOwnPropertyDescriptor(globalThis, "crypto");
   const requests = [];
   let authRequests = 0;
   let awaitedTask;
   let statusBody = null;
   const storedSchedules = structuredClone(schedules);
 
-  globalThis.crypto = webcrypto;
+  Object.defineProperty(globalThis, "crypto", { value: webcrypto, configurable: true });
   globalThis.fetch = async (url, options = {}) => {
     const target = new URL(String(url));
     const method = options.method || "GET";
@@ -83,7 +83,8 @@ async function runScheduledFixture({ users = {}, schedules = {}, state = {}, fai
     return { authRequests, requests, statusBody };
   } finally {
     globalThis.fetch = originalFetch;
-    globalThis.crypto = originalCrypto;
+    if (cryptoDescriptor) Object.defineProperty(globalThis, "crypto", cryptoDescriptor);
+    else delete globalThis.crypto;
   }
 }
 
