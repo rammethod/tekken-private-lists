@@ -1511,9 +1511,9 @@ function scheduleCachedFirebaseSourceSnapshot(env, ctx, gameId, cachedResponse, 
   return task;
 }
 
-async function runBackgroundSync(env) {
+async function runBackgroundSync(env, existingToken = "") {
   if (!env.FIREBASE_SERVICE_ACCOUNT_JSON) return { processed: 0, skipped: "secret-missing" };
-  const token = await getFirebaseAccessToken(env);
+  const token = existingToken || await getFirebaseAccessToken(env);
   const users = await firebaseRequest(env, token, "users");
   const locations = new Map();
   const shareOwners = new Map();
@@ -1575,9 +1575,9 @@ async function runBackgroundSync(env) {
   return { processed, failures, due: due.length, registeredPlayers: locations.size };
 }
 
-async function runAwardAutomation(env) {
+async function runAwardAutomation(env, existingToken = "") {
   if (!env.FIREBASE_SERVICE_ACCOUNT_JSON) return { processed: 0, skipped: "secret-missing" };
-  const token = await getFirebaseAccessToken(env);
+  const token = existingToken || await getFirebaseAccessToken(env);
   const schedules = await firebaseRequest(env, token, "awardSchedules");
   const now = new Date(); const parts = jstDateParts(now); const period = awardPeriodKey(parts);
   const isOpeningWindow = parts.day <= 2;
@@ -1686,11 +1686,13 @@ async function runScheduledAutomation(env) {
     // A schema migration affects visible player cards immediately, so it takes
     // priority over the monthly award backfill.  Keep one external profile
     // collection per invocation to stay below the Workers Free CPU limit.
-    const background = await runBackgroundSync(env);
+    // Reuse one OAuth token within this single scheduled invocation.
+    // Do not cache the token across Workers invocations or HTTP requests.
+    const token = await getFirebaseAccessToken(env);
+    const background = await runBackgroundSync(env, token);
     const awards = background.processed > 0
       ? { processed: 0, skipped: "background-migration-priority" }
-      : await runAwardAutomation(env);
-    const token = await getFirebaseAccessToken(env);
+      : await runAwardAutomation(env, token);
     const awardData = await awardDiagnostics(env, token);
     const backgroundOk = Number(background.failures || 0) === 0;
     await firebaseRequest(env, token, "automationStatus", { method: "PUT", body: { ok: backgroundOk, workerBuild: WORKER_BUILD, lastRunAt: startedAt, completedAt: new Date().toISOString(), error: backgroundOk ? "" : `${background.failures} background sync item(s) failed; retry state recorded`, awards, awardData, background } });
