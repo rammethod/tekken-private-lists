@@ -80,6 +80,17 @@ invalid date, JST month-end/new-year/leap boundaries and HTTP silence.
 An additional 1,152 date fixtures plus invalid inputs remain equivalent. The HTTP
 handler text (after line-ending normalization) and total await-site count are
 identical to baseline. Existing 77 stats and four token-reuse tests are preserved.
+Final scoped test count: 41 new tests plus four original token-reuse tests (45).
+The 41 include the 1,152-date batch, HTTP automation-status parity, invalid enum
+rejection and 100 attempted emits staying at 12. Simulated every-second-log loss
+receives six of the 12 due-success records with unchanged business traces; this
+is a controlled test of ambiguity, not a measured provider drop rate.
+Final verification: `npm run check` PASS; all repository tests **126 PASS**
+(including stats77, token4, checkpoints41 and existing inspection tests4).
+Local Wrangler dry-run PASS, with no upload/deploy. Candidate bundled JS is
+136,151 bytes, SHA256
+`3c6aa56a97bfdfe65dc3c8f00ffbc554c7b3b4f4ed3650403a25b145298ffa71`.
+`git diff --check` PASS. Remote main was rechecked unchanged before final handoff.
 
 ## Offline overhead and limits
 

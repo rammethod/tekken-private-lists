@@ -18,12 +18,13 @@ const specs = [
   ["newer canonical source retained", { due: true, newerCanonical: true }],
   ["repeat Cron", { repeat: 2 }], ["sink throws", { due: true, sinkThrows: true }],
   ["dropped logs", { due: true, dropEvery: 2 }], ["invalid date", { epoch: NaN }], ["HTTP no markers", { http: true }],
+  ["HTTP diagnostics no markers", { http: true, httpStatus: true }],
 ];
 for (const [year, month, day] of [[2026, 0, 1], [2026, 11, 31], [2028, 1, 29], [2026, 1, 28]]) for (const delta of [-1, 0, 1]) specs.push([`JST boundary ${year}/${month + 1}/${day}/${delta}`, { epoch: Date.UTC(year, month, day, 15) + delta, emptyAward: true }]);
 
 for (const [name, spec] of specs) test(`Scheduled checkpoint parity: ${name}`, async () => {
   const a = await run(baseline, spec), b = await run(candidate, spec);
-  for (const key of ["trace", "db", "tokenCalls", "profileCalls", "snapshots", "error", "legacy"]) assert.deepEqual(b[key], a[key], key);
+  for (const key of ["trace", "db", "tokenCalls", "profileCalls", "snapshots", "error", "httpResult", "legacy"]) assert.deepEqual(b[key], a[key], key);
   assert.ok(b.attempts.length <= 12 * (spec.repeat ?? 1));
   for (const event of b.attempts) {
     assert.equal(typeof event, "string");
@@ -43,6 +44,20 @@ for (const [name, spec] of specs) test(`Scheduled checkpoint parity: ${name}`, a
   if (name === "fresh target deleted") assert.equal(b.trace.some(x => x.method === "PUT" && x.path.includes("workerFetchedStats")), false);
   if (name === "ambiguous share") assert.equal(b.trace.some(x => x.method === "PUT" && x.path.startsWith("sharedLists/")), false);
   if (name === "newer canonical source retained") assert.equal(b.db.workerStatsByGameId.SYNTHETIC_001.sourceSnapshots.ewgfProfile.revisionAt, Date.parse("2026-10-01T00:00:00Z"));
+  if (name === "dropped logs") assert.equal(b.diagnostic.length, 6);
+});
+
+test("recorder rejects dynamic values and cannot exceed 12 attempts", () => {
+  const messages = [];
+  const helper = candidate.slice(candidate.indexOf("const SCHEDULED_CHECKPOINT_STAGES"), candidate.indexOf("\nfunction base64Url"));
+  const create = vm.runInNewContext(helper + ";createScheduledCheckpoints", { console: { log: x => messages.push(x) } });
+  const cp = create();
+  cp.emit("SENSITIVE_FIXTURE_STAGE", "done", { private: "SENSITIVE" });
+  cp.emit("oauth", "SENSITIVE_FIXTURE_OUTCOME");
+  cp.emit({ toString() { throw Error("not allowed"); } }, "done");
+  for (let i = 0; i < 100; i++) cp.emit("due_selected", "done", { private: "SENSITIVE" });
+  assert.equal(messages.length, 12);
+  assert.ok(messages.every(x => /^KENTOMO_SCHEDULED_CHECKPOINT (scheduled begin|due_selected done)$/.test(x)));
 });
 
 test("1152 original date cases and invalid-date errors unchanged", () => {

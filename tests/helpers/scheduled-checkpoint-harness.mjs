@@ -29,7 +29,7 @@ export async function run(source, spec = {}) {
   const period = `${periodDate.getUTCFullYear()}-${String(periodDate.getUTCMonth() + 1).padStart(2, "0")}`;
   if (!spec.emptyAward) db.awardRuns.owner.list[period] = { status: "started", start: { member: { totalRankedGames: 1 } } };
   const trace = [], diagnostic = [], attempts = [], legacy = [], counts = {}, snapshots = [];
-  let tokenCalls = 0, profileCalls = 0, error = null;
+  let tokenCalls = 0, profileCalls = 0, error = null, httpResult = null;
   function get(path) { return path.split("/").reduce((v, k) => v?.[k], db) ?? null; }
   function put(path, value, patch) {
     const keys = path.split("/"); const leaf = keys.pop(); let node = db;
@@ -68,7 +68,10 @@ export async function run(source, spec = {}) {
   vm.runInContext("getFirebaseAccessToken=mockToken;fetchAwardSnapshot=mockProfile;", context);
   const env = { FIREBASE_SERVICE_ACCOUNT_JSON: "SENSITIVE_FIXTURE_SECRET", FIREBASE_DATABASE_URL: "https://fixture.invalid" };
   try {
-    if (spec.http) await context.worker.fetch(new Request("https://fixture.invalid/", { method: "OPTIONS" }), env, {});
+    if (spec.http) {
+      const response = await context.worker.fetch(new Request(`https://fixture.invalid/${spec.httpStatus ? '?mode=automation-status' : ''}`, { method: spec.httpStatus ? "GET" : "OPTIONS" }), env, {});
+      httpResult = { status: response.status, body: await response.text() };
+    }
     else for (let i = 0; i < (spec.repeat ?? 1); i++) {
       let task; let waitCalls = 0;
       await context.worker.scheduled({}, env, { waitUntil(value) { waitCalls++; task = value; } });
@@ -76,5 +79,5 @@ export async function run(source, spec = {}) {
       await task;
     }
   } catch (e) { error = { name: e.name, message: e.message }; }
-  return { trace: plain(trace), db: plain(db), tokenCalls, profileCalls, snapshots, error, diagnostic, attempts, legacy };
+  return { trace: plain(trace), db: plain(db), tokenCalls, profileCalls, snapshots, error, httpResult, diagnostic, attempts, legacy };
 }
