@@ -1,0 +1,95 @@
+{
+  "runtime": {
+    "node": "v24.19.0",
+    "miniflare": "5.20260820.0-alpha",
+    "compatibilityDate": "2026-07-23"
+  },
+  "units": "host monotonic wall ms via local workerd requests; not provider CPU; cold includes compilation/IPC",
+  "methodology": "Exact scheduled orchestration/checkpoint/helper code; synthetic auth/Firebase/profile/CAS no-ops, no outbound network. Real console API, Miniflare host log level NONE. 8 cold isolates per variant/path; warm alternating batches of 250 ticks. Synthetic small payload, not full app performance.",
+  "paths": {
+    "idle": {
+      "cold_wall_ms": {
+        "baseline": {
+          "n": 8,
+          "median": 18.657400000000052,
+          "p90": 27.89760000000001,
+          "max": 27.89760000000001
+        },
+        "instrumented": {
+          "n": 8,
+          "median": 19.66249999999991,
+          "p90": 22.697299999999927,
+          "max": 22.697299999999927
+        }
+      },
+      "warm_wall_ms_per_tick": {
+        "baseline": {
+          "n": 10,
+          "median": 0.08996519999999963,
+          "p90": 0.09719560000000001,
+          "max": 0.09987960000000021
+        },
+        "instrumented": {
+          "n": 10,
+          "median": 0.1303668000000007,
+          "p90": 0.14484479999999986,
+          "max": 0.15609680000000026
+        }
+      }
+    },
+    "due": {
+      "cold_wall_ms": {
+        "baseline": {
+          "n": 8,
+          "median": 18.605799999999817,
+          "p90": 27.221700000000055,
+          "max": 27.221700000000055
+        },
+        "instrumented": {
+          "n": 8,
+          "median": 19.57529999999997,
+          "p90": 19.777999999999793,
+          "max": 19.777999999999793
+        }
+      },
+      "warm_wall_ms_per_tick": {
+        "baseline": {
+          "n": 10,
+          "median": 0.0544395999999997,
+          "p90": 0.06152320000000145,
+          "max": 0.07041440000000147
+        },
+        "instrumented": {
+          "n": 10,
+          "median": 0.1028076000000001,
+          "p90": 0.11832599999999911,
+          "max": 0.12975879999999962
+        }
+      }
+    }
+  },
+  "node_emitter": {
+    "invocations": 200000,
+    "events_per_invocation": 12,
+    "cpu_ms_per_invocation": 0.001015,
+    "wall_ms_per_invocation": 0.001042143000000001,
+    "heap_used_delta_bytes": 32079320,
+    "heap_limit": "Node process net heap after batch, not peak/per-invocation or workerd heap; GC-dependent. No checkpoint event retained by closure. At most 12 strings <100 UTF-8 bytes each are sent to console; platform log buffering is outside this bound.",
+    "retained_heap_after_gc_delta_bytes": -248600
+  },
+  "node_cold": {
+    "baseline": {
+      "iterations": 200,
+      "cpu_ms_per_context": 0.235,
+      "wall_ms_per_context": 0.3632089999999994,
+      "limitation": "Node fresh VM context and declarations/helper creation only; not full cold Scheduled handler or workerd CPU"
+    },
+    "instrumented": {
+      "iterations": 200,
+      "cpu_ms_per_context": 0.39,
+      "wall_ms_per_context": 0.41731700000000044,
+      "limitation": "Node fresh VM context and declarations/helper creation only; not full cold Scheduled handler or workerd CPU"
+    }
+  },
+  "ready_overhead_gate": true
+}
