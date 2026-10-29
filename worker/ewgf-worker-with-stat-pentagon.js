@@ -1137,6 +1137,32 @@ const BACKGROUND_SYNC_FAILURE_BACKOFF_MS = [15 * 60 * 1000, 60 * 60 * 1000, 6 * 
 const BACKGROUND_SYNC_SCHEMA = "20260822-dormant-all-time-highest-rank";
 const WORKER_BUILD = "20260820-background-latest-and-queue-guard";
 
+const SCHEDULED_CHECKPOINT_STAGES = new Set([
+  "scheduled", "oauth", "users", "due_selected", "source", "targets", "cas",
+  "retry_state", "award", "diagnostics", "status", "status_fallback",
+]);
+const SCHEDULED_CHECKPOINT_OUTCOMES = new Set(["begin", "done", "failed", "skipped"]);
+
+function createScheduledCheckpoints() {
+  let emitted = 0;
+  let current = "scheduled";
+  const emit = (stage, outcome, due) => {
+    try {
+      if (emitted >= 12 || !SCHEDULED_CHECKPOINT_STAGES.has(stage)
+        || !SCHEDULED_CHECKPOINT_OUTCOMES.has(outcome)) return;
+      emitted += 1; // A failed sink still consumes its slot; never retry logging.
+      const suffix = stage === "due_selected" && (due === 0 || due === 1) ? ` due=${due}` : "";
+      console.log(`KENTOMO_SCHEDULED_CHECKPOINT ${stage} ${outcome}${suffix}`);
+    } catch { /* Diagnostics must not affect business/error/status processing. */ }
+  };
+  emit("scheduled", "begin");
+  return {
+    stage(stage) { if (SCHEDULED_CHECKPOINT_STAGES.has(stage)) current = stage; },
+    emit,
+    failed() { emit(current, "failed"); },
+  };
+}
+
 function base64Url(bytes) {
   let binary = "";
   const view = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
@@ -1419,14 +1445,20 @@ async function collectFirebasePlayerTargets(env, token, gameId) {
   return targets;
 }
 
-async function publishFirebaseSourceSnapshots(env, gameId, sourceSnapshots, metadata, existingToken = "") {
+async function publishFirebaseSourceSnapshots(env, gameId, sourceSnapshots, metadata, existingToken = "", checkpoint = null) {
   if (!env.FIREBASE_SERVICE_ACCOUNT_JSON || !sourceSnapshots || !Object.keys(sourceSnapshots).length) {
     return { targets: 0, shared: 0, skipped: "secret-missing-or-empty" };
   }
   const normalizedId = normalizedFirebaseGameId(gameId);
   const token = existingToken || await getFirebaseAccessToken(env);
+  checkpoint?.stage("targets");
+  checkpoint?.emit("targets", "begin");
   const targets = await collectFirebasePlayerTargets(env, token, gameId);
-  if (!targets.length) return { targets: 0, shared: 0 };
+  checkpoint?.emit("targets", "done");
+  if (!targets.length) {
+    checkpoint?.emit("cas", "skipped");
+    return { targets: 0, shared: 0 };
+  }
   const targetPaths = [];
   targets.forEach(target => {
     const ownerMemberPath = `users/${target.uid}/lists/${target.listId}/members/${target.memberId}`;
@@ -1450,6 +1482,7 @@ async function publishFirebaseSourceSnapshots(env, gameId, sourceSnapshots, meta
     fetchImpl: fetch,
   });
   const canonicalPath = `workerStatsByGameId/${normalizedId}`;
+  checkpoint?.stage("cas");
   const persistence = await persistCanonicalStatsAndViews({
     transport,
     canonicalPath,
@@ -1472,6 +1505,7 @@ async function publishFirebaseSourceSnapshots(env, gameId, sourceSnapshots, meta
     `sharedLists/${shareId}/updatedAt`,
     { method: "PUT", body: metadata.updatedAt },
   )));
+  checkpoint?.emit("cas", "done");
   return {
     targets: targets.length,
     paths: paths.length,
@@ -1511,9 +1545,11 @@ function scheduleCachedFirebaseSourceSnapshot(env, ctx, gameId, cachedResponse, 
   return task;
 }
 
-async function runBackgroundSync(env, existingToken = "") {
+async function runBackgroundSync(env, existingToken = "", checkpoint = null) {
   if (!env.FIREBASE_SERVICE_ACCOUNT_JSON) return { processed: 0, skipped: "secret-missing" };
   const token = existingToken || await getFirebaseAccessToken(env);
+  checkpoint?.stage("users");
+  checkpoint?.emit("users", "begin");
   const users = await firebaseRequest(env, token, "users");
   const locations = new Map();
   const shareOwners = new Map();
@@ -1543,19 +1579,26 @@ async function runBackgroundSync(env, existingToken = "") {
     return retryAt <= now
       && (syncState.schema !== BACKGROUND_SYNC_SCHEMA || now - Number(syncState.lastSyncedAt || 0) >= BACKGROUND_SYNC_INTERVAL_MS);
   }).sort(([a], [b]) => Number(state?.[a]?.lastSyncedAt || 0) - Number(state?.[b]?.lastSyncedAt || 0)).slice(0, BACKGROUND_SYNC_PER_TICK);
+  checkpoint?.emit("due_selected", "done", due.length);
   let processed = 0; let failures = 0;
   for (const [key, entry] of due) {
     try {
+      checkpoint?.stage("source");
+      checkpoint?.emit("source", "begin");
       const sourceSnapshots = buildBackgroundSourceSnapshots(await fetchAwardSnapshot(env, entry.gameId), now);
-      await publishFirebaseSourceSnapshots(env, entry.gameId, sourceSnapshots, statsMetadata(now, "worker-background-12h", "completed"), token);
+      checkpoint?.emit("source", "done");
+      await publishFirebaseSourceSnapshots(env, entry.gameId, sourceSnapshots, statsMetadata(now, "worker-background-12h", "completed"), token, checkpoint);
+      checkpoint?.stage("retry_state");
       await firebaseRequest(env, token, `backgroundSyncState/${key}`, { method: "PUT", body: { lastSyncedAt: now, lastAttemptAt: now, nextRetryAt: 0, failureCount: 0, lastError: "", gameId: entry.gameId, targetCount: entry.targets.length, schema: BACKGROUND_SYNC_SCHEMA } });
       processed += 1;
     } catch (error) {
+      checkpoint?.failed();
       failures += 1;
       const previous = state?.[key] || {};
       const failureCount = Math.min(Number(previous.failureCount || 0) + 1, BACKGROUND_SYNC_FAILURE_BACKOFF_MS.length);
       const retryAfter = BACKGROUND_SYNC_FAILURE_BACKOFF_MS[failureCount - 1];
       const message = error instanceof Error ? error.message : String(error);
+      checkpoint?.stage("retry_state");
       await firebaseRequest(env, token, `backgroundSyncState/${key}`, {
         method: "PUT",
         body: {
@@ -1680,7 +1723,7 @@ async function sharedListAccessSummary(env, shareId) {
   return { views, uniqueVisitors: cumulative.size, today: todayViews, last7Days: weekViews, daysTracked: dates.length };
 }
 
-async function runScheduledAutomation(env) {
+async function runScheduledAutomation(env, checkpoint = null) {
   const startedAt = new Date().toISOString();
   // One invocation uses the same service account and scope in every stage.
   // Keep its token local; do not repeat RSA import/sign and OAuth exchanges.
@@ -1689,21 +1732,33 @@ async function runScheduledAutomation(env) {
     // A schema migration affects visible player cards immediately, so it takes
     // priority over the monthly award backfill.  Keep one external profile
     // collection per invocation to stay below the Workers Free CPU limit.
+    checkpoint?.stage("oauth");
     token = await getFirebaseAccessToken(env);
-    const background = await runBackgroundSync(env, token);
+    checkpoint?.emit("oauth", "done");
+    const background = await runBackgroundSync(env, token, checkpoint);
+    checkpoint?.stage("award");
     const awards = background.processed > 0
       ? { processed: 0, skipped: "background-migration-priority" }
       : await runAwardAutomation(env, token);
+    checkpoint?.emit("award", background.processed > 0 ? "skipped" : "done");
+    checkpoint?.stage("diagnostics");
     const awardData = await awardDiagnostics(env, token);
+    checkpoint?.emit("diagnostics", "done");
     const backgroundOk = Number(background.failures || 0) === 0;
+    checkpoint?.stage("status");
     await firebaseRequest(env, token, "automationStatus", { method: "PUT", body: { ok: backgroundOk, workerBuild: WORKER_BUILD, lastRunAt: startedAt, completedAt: new Date().toISOString(), error: backgroundOk ? "" : `${background.failures} background sync item(s) failed; retry state recorded`, awards, awardData, background } });
+    checkpoint?.emit("status", "done");
   } catch (error) {
+    checkpoint?.failed();
     const message = error instanceof Error ? error.message : String(error);
     console.error("Kentomo scheduled work failed", message);
     try {
+      checkpoint?.stage("status_fallback");
       token ||= await getFirebaseAccessToken(env);
       await firebaseRequest(env, token, "automationStatus", { method: "PATCH", body: { ok: false, workerBuild: WORKER_BUILD, lastAttemptAt: startedAt, failedAt: new Date().toISOString(), error: message } });
+      checkpoint?.emit("status_fallback", "done");
     } catch (statusError) {
+      checkpoint?.failed();
       console.error("Kentomo status write failed", statusError instanceof Error ? statusError.message : String(statusError));
     }
   }
@@ -2203,6 +2258,6 @@ export default {
     }
   },
   async scheduled(controller, env, ctx) {
-    ctx.waitUntil(runScheduledAutomation(env));
+    ctx.waitUntil(runScheduledAutomation(env, createScheduledCheckpoints()));
   },
 };
